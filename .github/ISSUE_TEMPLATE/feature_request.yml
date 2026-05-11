@@ -1,0 +1,62 @@
+name: 💡 Návrh funkcionality
+description: Navrhni novú funkcionalitu alebo vylepšenie
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ďakujeme za nápad! Vyplňte prosím nasledujúce polia.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Aký problém riešite?
+      description: Aký problém alebo potreba viedla k tomuto návrhu?
+      placeholder: Frustruje ma, keď ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Navrhované riešenie
+      description: Ako by ste si predstavovali, že by to fungovalo?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatívy, ktoré ste zvažovali
+      description: Existujú iné prístupy? Prečo nie sú vhodné?
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Komponent
+      options:
+        - Backend API (apps/api)
+        - Webové UI (apps/web)
+        - MCP server (apps/mcp-server)
+        - Mobilná aplikácia (apps/mobile)
+        - Dokumentácia (docs)
+        - Cross-cutting / nový komponent
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorita (z vášho pohľadu)
+      options:
+        - Critical (blokuje prácu)
+        - High (významne by pomohlo)
+        - Medium (užitočné)
+        - Low (nice-to-have)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Ďalšie informácie
+      description: Mockupy, odkazy na podobné riešenia, prípady použitia...

@@ -1,0 +1,95 @@
+name: 🐛 Bug report
+description: Nahlás bug v systéme SFZ Asset Management
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ďakujeme, že nahlasujete bug! Vyplňte prosím nasledujúce polia čo najpodrobnejšie.
+
+        > ⚠️ **Pre bezpečnostné chyby** prosím použite [Security Advisory](../../security/advisories/new), NIE verejné issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Popis bugu
+      description: Stručný a jasný popis, čo je zlé.
+      placeholder: Pri kliknutí na ... sa zobrazí chyba ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Kroky na reprodukciu
+      description: Ako môžeme bug zopakovať?
+      placeholder: |
+        1. Choď na '...'
+        2. Klikni na '...'
+        3. Skroluj dolu na '...'
+        4. Vidíš chybu
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Očakávané správanie
+      placeholder: Očakával/a som, že ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Skutočné správanie
+      placeholder: Namiesto toho sa stalo ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Komponent
+      description: Ktorej časti systému sa bug týka?
+      options:
+        - Backend API (apps/api)
+        - Webové UI (apps/web)
+        - MCP server (apps/mcp-server)
+        - Mobilná aplikácia (apps/mobile)
+        - Dokumentácia (docs)
+        - Infraštruktúra / CI
+        - Neviem / iné
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Verzia / commit
+      description: Aká verzia alebo commit hash?
+      placeholder: napr. v0.1.0 alebo a1b2c3d
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Prostredie
+      options:
+        - Lokálne dev
+        - Staging
+        - Produkcia
+        - Iné
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logy / screenshots
+      description: Pridaj relevantné chybové hlášky, logy alebo screenshots.
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Ďalšie informácie
+      description: Hocičo, čo by mohlo pomôcť (verzia prehliadača, OS, kontext...).

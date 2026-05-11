@@ -1,2 +1,58 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf
+
+# Source code
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.dart text eol=lf
+*.py text eol=lf
+
+# Shell scripts must use LF
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Windows-specific scripts use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files (no diff, no merge)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg text
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+
+# GitHub linguist – vylúčiť generované/dokumentačné súbory zo štatistík jazykov repa
+docs/**         linguist-documentation
+*.md            linguist-documentation
+**/dist/**      linguist-generated
+**/build/**     linguist-generated
+**/.next/**     linguist-generated
+packages/api-client/** linguist-generated
+pnpm-lock.yaml  linguist-generated
+package-lock.json linguist-generated
+yarn.lock       linguist-generated

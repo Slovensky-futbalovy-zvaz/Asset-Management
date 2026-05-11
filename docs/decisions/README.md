@@ -1,0 +1,33 @@
+# Architecture Decision Records (ADR)
+
+Tento adresár obsahuje záznamy o významných architektonických rozhodnutiach v projekte.
+
+## Čo je ADR?
+
+ADR je krátky dokument, ktorý zachytáva jedno významné technické rozhodnutie: **kontext, možnosti, voľbu a dôsledky**. Slúži ako pamäť projektu – aby budúci členovia tímu (aj my sami o pol roka) vedeli, *prečo* sme niečo urobili tak, ako sme to urobili.
+
+## Kedy vytvoriť nové ADR?
+
+- Voľba technológie (framework, knižnica, DB)
+- Architektonický vzor (event sourcing, CQRS, ...)
+- Bezpečnostné rozhodnutie (auth flow, šifrovanie)
+- Významné zmeny v existujúcom rozhodnutí (vtedy nový ADR so statusom „Supersedes 000X")
+
+## Konvencie
+
+- Číslovanie: `NNNN-kratky-nazov-pomlckami.md` (napr. `0007-mongo-vs-postgres.md`)
+- Status: `Proposed` → `Accepted` → prípadne `Superseded` / `Deprecated`
+- Jazyk: slovenčina v texte, angličtina v identifikátoroch
+- Šablóna: [template.md](template.md)
+
+## Zoznam ADR
+
+| # | Názov | Status | Dátum |
+|---|-------|--------|-------|
+| 0001 | [Monorepo s pnpm + Turborepo](0001-monorepo-pnpm-turbo.md) | Accepted | máj 2026 |
+| 0002 | [NestJS ako backend framework](0002-backend-nestjs.md) | Accepted | máj 2026 |
+| 0003 | [MongoDB Atlas ako primárna databáza](0003-mongodb-atlas.md) | Accepted | máj 2026 |
+| 0004 | [Microsoft Entra ID ako identity provider](0004-auth-entra-id.md) | Accepted | máj 2026 |
+| 0005 | _(plánované)_ OpenAPI 3.1 ako kontrakt API | Proposed | – |
+| 0006 | _(plánované)_ MCP server pre AI integrácie | Proposed | – |
+| 0007 | _(plánované)_ Next.js + shadcn/ui pre frontend | Proposed | – |

@@ -1,0 +1,37 @@
+# CODEOWNERS – kto má byť automaticky pridaný ako reviewer pre dané cesty
+# Dokumentácia: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+#
+# Posledný matching riadok vyhráva. Vzory sú podobné .gitignore.
+#
+# ⚠️ Mená nižšie sú placeholdery – doplniť reálne GitHub handles tímu SFZ.
+
+# Default owner pre všetko – fallback
+*                                   @janletko
+
+# Dokumentácia a špecifikácie
+/docs/                              @janletko
+/docs/decisions/                    @janletko
+/docs/api/                          @janletko
+/README.md                          @janletko
+
+# Backend
+/apps/api/                          @janletko
+/packages/shared-types/             @janletko
+
+# Frontend
+/apps/web/                          @janletko
+/packages/ui/                       @janletko
+
+# MCP server
+/apps/mcp-server/                   @janletko
+
+# Mobil
+/apps/mobile/                       @janletko
+
+# Infraštruktúra a DevOps
+/infra/                             @janletko
+/.github/                           @janletko
+
+# Bezpečnostne citlivé súbory
+/SECURITY.md                        @janletko
+/LICENSE                            @janletko
