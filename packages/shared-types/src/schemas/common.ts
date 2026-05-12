@@ -73,7 +73,7 @@ export type SoftDelete = z.infer<typeof SoftDeleteSchema>;
 export const PhoneSchema = z
   .string()
   .regex(
-    /^(\+421|0)9\d{2}\s?\d{3}\s?\d{3}$/,
+    /^(\+421|0)\s?9\d{2}\s?\d{3}\s?\d{3}$/,
     'Telefón musí byť vo formáte +421 9XX XXX XXX alebo 09XX XXX XXX.',
   )
   .transform((val) => {
