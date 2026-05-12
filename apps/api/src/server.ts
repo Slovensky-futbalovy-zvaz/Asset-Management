@@ -28,6 +28,8 @@ import {
 
 import assetsRoutes from './modules/assets/assets.routes.js';
 import healthRoutes from './modules/health/health.routes.js';
+import usersRoutes from './modules/users/users.routes.js';
+import authPlugin from './plugins/auth.js';
 import configPlugin from './plugins/config.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import mongoPlugin from './plugins/mongo.js';
@@ -99,12 +101,14 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // --- Infrastructure ------------------------------------------------------
   await app.register(mongoPlugin);
+  await app.register(authPlugin);
 
   // --- API documentation ---------------------------------------------------
   await app.register(swaggerPlugin);
 
   // --- Domain routes -------------------------------------------------------
   await app.register(healthRoutes);
+  await app.register(usersRoutes);
   await app.register(assetsRoutes);
 
   // --- Root redirect to /docs ----------------------------------------------

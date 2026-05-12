@@ -56,13 +56,44 @@ const envSchema = z.object({
     .default('true')
     .transform((val) => val === 'true'),
 
-  // Auth (optional in slice #1 — wired up in slice #2)
-  ENTRA_TENANT_ID: z.string().optional(),
-  ENTRA_CLIENT_ID: z.string().optional(),
+  // ---------------------------------------------------------------------
+  // Auth — Microsoft Entra ID (slice #2)
+  // ---------------------------------------------------------------------
+  // ENTRA_TENANT_ID and ENTRA_API_CLIENT_ID are required in all environments.
+  // Get them from Azure Portal → Entra ID → App registrations → SFZ API.
+  //
+  // ENTRA_JWKS_URI and ENTRA_ISSUER are auto-derived from ENTRA_TENANT_ID
+  // and rarely need to be overridden. The override exists for unusual
+  // tenant configurations (e.g. national cloud, sovereign Azure).
+  ENTRA_TENANT_ID: z
+    .string()
+    .uuid('ENTRA_TENANT_ID must be a valid GUID (find it in Azure Portal → Entra ID → Overview).'),
+  ENTRA_API_CLIENT_ID: z
+    .string()
+    .uuid(
+      'ENTRA_API_CLIENT_ID must be a valid GUID (Application (client) ID from your API app registration).',
+    ),
+  ENTRA_ISSUER: z.string().url().optional(),
   ENTRA_JWKS_URI: z.string().url().optional(),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
+
+/**
+ * Fully resolved configuration — combines validated env vars with values
+ * derived from them (e.g. Entra ID issuer URL is built from tenant ID).
+ *
+ * Use this type when injecting config into services; use `AppConfig` only
+ * if you specifically need the env-var-only shape.
+ */
+export interface ResolvedConfig extends AppConfig {
+  /** Microsoft Entra ID v2.0 issuer URL — used to validate JWT `iss` claim. */
+  ENTRA_ISSUER_RESOLVED: string;
+  /** JWKS endpoint for fetching Entra ID signing keys. */
+  ENTRA_JWKS_URI_RESOLVED: string;
+  /** Accepted audiences for JWT `aud` claim (both raw GUID and api:// URI). */
+  ENTRA_ACCEPTED_AUDIENCES: readonly string[];
+}
 
 // ---------------------------------------------------------------------------
 // Fastify decoration — adds `fastify.config` to the instance
@@ -70,7 +101,7 @@ export type AppConfig = z.infer<typeof envSchema>;
 
 declare module 'fastify' {
   interface FastifyInstance {
-    config: AppConfig;
+    config: ResolvedConfig;
   }
 }
 
@@ -89,14 +120,47 @@ const configPlugin: FastifyPluginAsync = async (fastify) => {
     throw new Error('Environment validation failed. Check .env.local against .env.example.');
   }
 
-  fastify.decorate('config', parsed.data);
+  const env = parsed.data;
+
+  // -----------------------------------------------------------------------
+  // Derive Entra ID endpoints from tenant ID (with override support).
+  // -----------------------------------------------------------------------
+  //
+  // Issuer for v2.0 tokens follows the format:
+  //   https://login.microsoftonline.com/<tenant-id>/v2.0
+  //
+  // JWKS endpoint:
+  //   https://login.microsoftonline.com/<tenant-id>/discovery/v2.0/keys
+  //
+  // The audience in a JWT can appear either as the raw client ID GUID
+  // or as the Application ID URI (api://<client-id>). We accept both.
+  const issuer =
+    env.ENTRA_ISSUER ?? `https://login.microsoftonline.com/${env.ENTRA_TENANT_ID}/v2.0`;
+  const jwksUri =
+    env.ENTRA_JWKS_URI ??
+    `https://login.microsoftonline.com/${env.ENTRA_TENANT_ID}/discovery/v2.0/keys`;
+  const acceptedAudiences = Object.freeze([
+    env.ENTRA_API_CLIENT_ID,
+    `api://${env.ENTRA_API_CLIENT_ID}`,
+  ] as const);
+
+  const resolved: ResolvedConfig = {
+    ...env,
+    ENTRA_ISSUER_RESOLVED: issuer,
+    ENTRA_JWKS_URI_RESOLVED: jwksUri,
+    ENTRA_ACCEPTED_AUDIENCES: acceptedAudiences,
+  };
+
+  fastify.decorate('config', resolved);
   fastify.log.info(
     {
-      nodeEnv: parsed.data.NODE_ENV,
-      port: parsed.data.PORT,
-      mongoDb: parsed.data.MONGO_DB_NAME,
-      corsOrigins: parsed.data.CORS_ORIGINS,
-      swaggerEnabled: parsed.data.ENABLE_SWAGGER,
+      nodeEnv: resolved.NODE_ENV,
+      port: resolved.PORT,
+      mongoDb: resolved.MONGO_DB_NAME,
+      corsOrigins: resolved.CORS_ORIGINS,
+      swaggerEnabled: resolved.ENABLE_SWAGGER,
+      entraTenantId: `${resolved.ENTRA_TENANT_ID.slice(0, 8)}…`, // truncated for logs
+      entraIssuer: resolved.ENTRA_ISSUER_RESOLVED,
     },
     'Configuration loaded',
   );

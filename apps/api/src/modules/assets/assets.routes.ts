@@ -1,10 +1,9 @@
 /**
  * Assets routes — HTTP endpoints for asset management.
  *
- * Slice #1 implements only `GET /v1/assets` (list with pagination).
- * Other endpoints (POST, PATCH, DELETE, bulk operations) come in slice #2.
- *
- * Auth: not enforced yet — will be added in slice #2 via @fastify/jwt.
+ * Slice #1 implemented `GET /v1/assets` as public.
+ * Slice #2 makes it require authentication — any valid Entra ID JWT works.
+ * Slice #2b will add POST / PATCH / DELETE with role-based authorization.
  */
 
 import { z } from 'zod';
@@ -59,12 +58,14 @@ const assetsRoutes: FastifyPluginAsync = async (fastify) => {
   app.get(
     '/v1/assets',
     {
+      preHandler: fastify.requireAuth,
       schema: {
         tags: ['Assets'],
         summary: 'List assets',
         description:
           'Returns a paginated list of assets, sorted by creation date (newest first). ' +
-          'Soft-deleted assets are excluded.',
+          'Soft-deleted assets are excluded. Requires authentication.',
+        security: [{ bearerAuth: [] }],
         querystring: ListAssetsQuerySchema,
         response: {
           200: ListAssetsResponseSchema,

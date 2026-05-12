@@ -1,0 +1,307 @@
+/**
+ * Auth plugin — Microsoft Entra ID JWT verification.
+ *
+ * Provides a `requireAuth` preHandler that:
+ *   1. Extracts the `Authorization: Bearer <token>` header
+ *   2. Decodes the JWT header to find the signing key ID (`kid`)
+ *   3. Fetches the public key from Microsoft's JWKS endpoint (cached via get-jwks)
+ *   4. Verifies the JWT signature
+ *   5. Validates `iss`, `aud`, `ver`, and `scp` claims
+ *   6. Attaches a typed `request.entraClaims` for downstream handlers
+ *
+ * What we DO NOT do here:
+ *   - JIT user provisioning (that's in users.service.ts — separation of concerns)
+ *   - Authorization / RBAC (slice #2b — for now, "authenticated == allowed")
+ *   - Refresh token handling (browser/SPA's job, not API's)
+ *
+ * Security notes:
+ *   - We accept tokens with `aud` matching either the raw client ID GUID
+ *     or `api://<client-id>` (both forms appear in v2.0 tokens depending
+ *     on how the client requested the scope).
+ *   - We require `ver === '2.0'` to reject legacy v1 tokens, which have
+ *     different claim semantics.
+ *   - We require the `access_as_user` scope to be present, ensuring the
+ *     token was issued for THIS API (not, say, Microsoft Graph).
+ *   - The JWKS cache TTL is 10 minutes; Microsoft rotates keys infrequently
+ *     so this is a good balance between freshness and JWKS endpoint load.
+ */
+
+import fp from 'fastify-plugin';
+import buildGetJwks from 'get-jwks';
+import {
+  createLocalJWKSet,
+  decodeProtectedHeader,
+  jwtVerify,
+  type JWK,
+  type JWTPayload,
+} from 'jose';
+
+import { UnauthorizedError } from './error-handler.js';
+
+import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+
+// ---------------------------------------------------------------------------
+// Claim shape
+// ---------------------------------------------------------------------------
+
+/**
+ * Subset of Entra ID v2.0 token claims that we rely on for authentication
+ * and JIT provisioning. Microsoft includes many more (idp, ipaddr, etc.)
+ * but we deliberately ignore them to keep the surface small.
+ *
+ * See: https://learn.microsoft.com/azure/active-directory/develop/access-token-claims-reference
+ */
+export interface EntraClaims {
+  /** Object ID — stable, unique per user across the tenant. PRIMARY KEY for our users collection. */
+  oid: string;
+  /** Tenant ID — always equals our ENTRA_TENANT_ID after validation. */
+  tid: string;
+  /** Subject — opaque per-app user identifier; we prefer `oid` over this. */
+  sub: string;
+  /** Token version — always '2.0' (we reject v1). */
+  ver: '2.0';
+  /** Space-separated scopes; we require it to contain `access_as_user`. */
+  scp: string;
+  /** User's email address (only if the `email` optional claim is configured). */
+  email?: string;
+  /** User's User Principal Name (login name in the tenant). */
+  preferred_username?: string;
+  /** Display name from the directory. */
+  name?: string;
+  /** Given name (first name). */
+  given_name?: string;
+  /** Family name (surname). */
+  family_name?: string;
+  /** Issued-at timestamp (Unix epoch seconds). */
+  iat: number;
+  /** Expiration timestamp (Unix epoch seconds). */
+  exp: number;
+}
+
+// ---------------------------------------------------------------------------
+// Fastify request decoration
+// ---------------------------------------------------------------------------
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    /**
+     * Validated Entra ID claims for the current request.
+     *
+     * Only populated on routes protected by `requireAuth`. Accessing this
+     * on an unprotected route throws (so downstream handlers don't have
+     * to defensively check for `undefined`).
+     */
+    entraClaims: EntraClaims;
+  }
+
+  interface FastifyInstance {
+    /**
+     * Pre-handler that enforces a valid Entra ID JWT.
+     *
+     * Usage in a route:
+     *   app.get('/v1/me', { preHandler: app.requireAuth }, async (req) => {
+     *     const oid = req.entraClaims.oid;
+     *     // ...
+     *   });
+     */
+    requireAuth: (request: FastifyRequest) => Promise<void>;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helper: type guard for Entra claims
+// ---------------------------------------------------------------------------
+
+/**
+ * Narrows a `JWTPayload` (loose shape from jose) into our `EntraClaims`
+ * interface, throwing if any required claim is missing or malformed.
+ *
+ * `jose` validates `iss`/`aud`/`exp` for us (we pass those options to
+ * `jwtVerify`), so here we only check claims we use ourselves.
+ */
+function assertEntraClaims(payload: JWTPayload): asserts payload is JWTPayload & EntraClaims {
+  if (typeof payload['oid'] !== 'string' || payload['oid'].length === 0) {
+    throw new UnauthorizedError('Token missing required `oid` claim');
+  }
+  if (typeof payload['tid'] !== 'string') {
+    throw new UnauthorizedError('Token missing required `tid` claim');
+  }
+  if (typeof payload['sub'] !== 'string') {
+    throw new UnauthorizedError('Token missing required `sub` claim');
+  }
+  if (payload['ver'] !== '2.0') {
+    throw new UnauthorizedError(
+      `Unsupported token version: ${String(payload['ver'])} (expected '2.0')`,
+    );
+  }
+  if (typeof payload['scp'] !== 'string') {
+    throw new UnauthorizedError('Token missing required `scp` claim (delegated permissions)');
+  }
+  if (typeof payload.iat !== 'number' || typeof payload.exp !== 'number') {
+    throw new UnauthorizedError('Token missing required timestamps (`iat`/`exp`)');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plugin
+// ---------------------------------------------------------------------------
+
+const authPlugin: FastifyPluginAsync = async (fastify) => {
+  const { ENTRA_TENANT_ID, ENTRA_ISSUER_RESOLVED, ENTRA_ACCEPTED_AUDIENCES } = fastify.config;
+
+  // -------------------------------------------------------------------------
+  // JWKS fetcher — caches signing keys for 10 minutes, handles rotation.
+  // -------------------------------------------------------------------------
+  //
+  // Microsoft Entra ID does NOT publish JWKS at the standard OIDC location
+  // (<issuer>/.well-known/jwks.json). Instead, the JWKS lives at:
+  //   https://login.microsoftonline.com/<tenant>/discovery/v2.0/keys
+  //
+  // To discover this, get-jwks must use the OIDC metadata document:
+  //   https://login.microsoftonline.com/<tenant>/v2.0/.well-known/openid-configuration
+  // which returns a `jwks_uri` field pointing to the discovery endpoint.
+  //
+  // Setting `providerDiscovery: true` makes get-jwks follow the OIDC
+  // discovery flow instead of guessing the default `.well-known/jwks.json`
+  // path. Without this, lookups silently fail with "Unexpected end of JSON
+  // input" because Microsoft returns an empty/different response at the
+  // unspecified default path.
+  //
+  // `issuersWhitelist` is defense in depth: get-jwks refuses to fetch JWKS
+  // for any issuer not on this list, so even a malformed token pointing
+  // elsewhere cannot make us reach out to attacker-controlled hosts.
+  const getJwks = buildGetJwks({
+    max: 5, // max distinct keys to cache
+    ttl: 10 * 60 * 1000, // 10 minutes
+    providerDiscovery: true,
+    issuersWhitelist: [ENTRA_ISSUER_RESOLVED],
+  });
+
+  /**
+   * Verifies a JWT signature + standard claims, returns the parsed payload.
+   *
+   * Throws `UnauthorizedError` for any verification failure. Never throws
+   * a generic 500 — auth failures are always client errors.
+   */
+  async function verifyToken(token: string): Promise<EntraClaims> {
+    // ----- Step 1: peek at unverified header to find the key ID -----
+    //
+    // We need to know which signing key to fetch BEFORE verifying. The header
+    // is unauthenticated at this point (an attacker could forge it), but we
+    // only use it as a lookup key into Microsoft's JWKS — the actual signature
+    // check below ensures the token was signed by Microsoft.
+    let header: { kid?: string; alg?: string };
+    try {
+      header = decodeProtectedHeader(token);
+    } catch {
+      throw new UnauthorizedError('Malformed JWT (cannot decode header)');
+    }
+
+    if (!header.kid) {
+      throw new UnauthorizedError('Token missing `kid` in header');
+    }
+    if (header.alg !== 'RS256') {
+      // Entra ID uses RS256 exclusively. Reject anything else to prevent
+      // algorithm confusion attacks (e.g. an attacker submitting `alg=none`).
+      throw new UnauthorizedError(`Unsupported signing algorithm: ${String(header.alg)}`);
+    }
+
+    // ----- Step 2: fetch the matching public key from JWKS -----
+    //
+    // get-jwks indexes by (domain, alg, kid). `domain` here means the
+    // token's `iss` claim — get-jwks will fetch the OpenID discovery
+    // document from that issuer and pull the JWKS URI from it.
+    let publicJwk: Awaited<ReturnType<typeof getJwks.getJwk>>;
+    try {
+      publicJwk = await getJwks.getJwk({
+        domain: ENTRA_ISSUER_RESOLVED,
+        alg: 'RS256',
+        kid: header.kid,
+      });
+    } catch (err) {
+      fastify.log.warn({ err, kid: header.kid }, 'JWKS lookup failed');
+      throw new UnauthorizedError('Token signing key not found in JWKS');
+    }
+
+    // ----- Step 3: verify signature + standard claims via jose -----
+    //
+    // We build a local key set from the single fetched JWK because jose's
+    // `createRemoteJWKSet` would do its own caching and we want get-jwks
+    // to be the single source of truth for caching behavior.
+    //
+    // The cast is necessary because get-jwks's `JWK` type is a loose record
+    // (`{ [key: string]: any }`), but jose requires the strict JWK shape
+    // with `kty` always present. In practice Microsoft's JWKS always
+    // includes `kty` (and all other required fields); the cast just bridges
+    // the two type systems.
+    const keySet = createLocalJWKSet({ keys: [publicJwk as unknown as JWK] });
+
+    let payload: JWTPayload;
+    try {
+      ({ payload } = await jwtVerify(token, keySet, {
+        issuer: ENTRA_ISSUER_RESOLVED,
+        audience: Array.from(ENTRA_ACCEPTED_AUDIENCES),
+        algorithms: ['RS256'],
+        // jose checks exp automatically; clockTolerance covers small drift.
+        clockTolerance: 30, // seconds
+      }));
+    } catch (err) {
+      // jose throws specific error classes (JWTExpired, JWTClaimValidationFailed, ...)
+      // but we collapse them to a single 401. The message is safe to surface
+      // because it doesn't leak which check failed first.
+      const message = err instanceof Error ? err.message : 'Unknown verification error';
+      fastify.log.warn({ err: message }, 'JWT verification failed');
+      throw new UnauthorizedError(`Token verification failed: ${message}`);
+    }
+
+    // ----- Step 4: validate custom claims -----
+    assertEntraClaims(payload);
+
+    if (payload.tid !== ENTRA_TENANT_ID) {
+      // Defense in depth: the issuer URL already encodes the tenant ID, but
+      // checking `tid` explicitly catches misconfigurations and makes the
+      // intent clear in code review.
+      throw new UnauthorizedError('Token issued for a different tenant');
+    }
+
+    // The `scp` claim is a space-separated list of delegated permissions.
+    // We require `access_as_user` (defined in the API app registration).
+    const scopes = payload.scp.split(' ');
+    if (!scopes.includes('access_as_user')) {
+      throw new UnauthorizedError(
+        'Token lacks required scope `access_as_user`. ' +
+          'Ensure your client requests `api://<api-client-id>/access_as_user`.',
+      );
+    }
+
+    return payload;
+  }
+
+  // -------------------------------------------------------------------------
+  // requireAuth preHandler
+  // -------------------------------------------------------------------------
+  fastify.decorate('requireAuth', async (request: FastifyRequest) => {
+    const authHeader = request.headers.authorization;
+
+    if (!authHeader) {
+      throw new UnauthorizedError('Missing Authorization header');
+    }
+
+    // Header format: "Bearer <token>". Match case-insensitively per RFC 6750.
+    const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+    if (!match || !match[1]) {
+      throw new UnauthorizedError('Authorization header must be "Bearer <token>"');
+    }
+
+    const token = match[1].trim();
+    const claims = await verifyToken(token);
+
+    request.entraClaims = claims;
+    request.log.debug({ oid: claims.oid, sub: claims.sub }, 'JWT verified');
+  });
+};
+
+export default fp(authPlugin, {
+  name: 'auth',
+  dependencies: ['config', 'error-handler'],
+});

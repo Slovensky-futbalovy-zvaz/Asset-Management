@@ -47,15 +47,18 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
       ],
       tags: [
         { name: 'Health', description: 'Liveness and readiness probes' },
+        { name: 'Users', description: 'User accounts and current-user lookup' },
         { name: 'Assets', description: 'Physical asset inventory' },
       ],
       components: {
         securitySchemes: {
-          BearerAuth: {
+          bearerAuth: {
             type: 'http',
             scheme: 'bearer',
             bearerFormat: 'JWT',
-            description: 'Microsoft Entra ID JWT token (wired up in slice #2)',
+            description:
+              'Microsoft Entra ID access token (v2.0). Obtain via device code flow ' +
+              'using the CLI app registration — see apps/api/README.md.',
           },
         },
       },
