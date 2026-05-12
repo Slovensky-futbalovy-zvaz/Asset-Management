@@ -24,8 +24,9 @@ Tento dokument popisuje dátový model systému SFZ Asset Management. Všetky ko
 ## 1. Princípy
 
 - **MongoDB ako document store** – využívame flexibilitu pre kategóriovo špecifické atribúty (`customFields` v `assets`).
+- **Prístup k DB:** natívny `mongodb` driver + Repository pattern, **bez Mongoose** – viď [ADR-0005](../decisions/0005-mongo-native-driver.md).
 - **Validácia na aplikačnej vrstve** – Zod schémy ako single source of truth, generujú TypeScript typy aj JSON Schema.
-- **JSON Schema validácia v Mongo** – pre kritické kolekcie nastavíme aj `$jsonSchema` validator na strane Mongo (defensive depth).
+- **JSON Schema validácia v Mongo** – pre všetky kolekcie nastavíme `$jsonSchema` validator na strane Mongo (vygenerovaný zo Zod cez `zod-to-json-schema`) ako defense in depth.
 - **Soft-delete namiesto hard-delete** – záznamy sa nemažú, len sa označia `deletedAt`. Audit log a história zostávajú.
 - **Append-only pre audit** – `audit_log` a `asset_history` sú write-once, nikdy sa neupravujú ani neodstraňujú.
 - **ObjectId pre _id** – štandardný MongoDB ObjectId pre primárne kľúče, plus business identifikátory (`inventoryNumber`, `qrCode`).
@@ -742,3 +743,5 @@ Detaily migračnej stratégie budú v samostatnom dokumente `docs/architecture/m
 - [Architektúra – prehľad](README.md)
 - [API špecifikácia](../api/openapi.yaml) – mapuje schémy na endpointy
 - [ADR-0001 – Monorepo](../decisions/0001-monorepo-pnpm-turbo.md)
+- [ADR-0003 – MongoDB Atlas](../decisions/0003-mongodb-atlas.md)
+- [ADR-0005 – Natívny driver + Repository pattern](../decisions/0005-mongo-native-driver.md)

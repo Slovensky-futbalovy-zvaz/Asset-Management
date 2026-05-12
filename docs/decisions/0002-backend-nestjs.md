@@ -97,13 +97,13 @@ Hlavné dôvody:
 
 ## Implementačné poznámky
 
-- **Validácia:** `class-validator` + `class-transformer` (NestJS default) ALEBO Zod cez `nestjs-zod`. Posledné je preferované pre konzistenciu so zvyškom stacku (FE má Zod).
-- **MongoDB:** `@nestjs/mongoose` (Mongoose ODM). Schémy ako TS triedy s decorators.
-- **OpenAPI:** `@nestjs/swagger`. Spec sa vygeneruje do `docs/api/openapi.yaml` cez CLI skript pri builde.
+- **Validácia:** Zod cez `nestjs-zod` (jednotná validácia request/response, zdieľaná so schémami v `packages/shared-types/`).
+- **MongoDB:** natívny `mongodb` driver + vlastný Repository pattern, **bez Mongoose** – viď [ADR-0005](0005-mongo-native-driver.md).
+- **OpenAPI:** `@nestjs/swagger` + `nestjs-zod`. Spec sa vygeneruje do `docs/api/openapi.yaml` cez CLI skript pri builde.
 - **Auth:** `@nestjs/passport` + `passport-azure-ad` pre Entra ID OIDC. JWT refresh tokeny vlastné cez `@nestjs/jwt`.
-- **Konfigurácia:** `@nestjs/config` s Zod validáciou env premenných.
+- **Konfigurácia:** `@nestjs/config` so Zod validáciou env premenných.
 - **Logy:** `nestjs-pino` (Pino je rýchlejší a štruktúrovanejší než Winston).
-- **Queue (notifikácie):** `@nestjs/bull` + Redis.
+- **Queue (notifikácie):** `@nestjs/bullmq` + Redis.
 
 ## Referencie
 

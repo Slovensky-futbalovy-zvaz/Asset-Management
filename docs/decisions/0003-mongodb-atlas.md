@@ -96,11 +96,11 @@ Hlavné dôvody:
 
 ## Implementačné poznámky
 
-- **ODM:** Mongoose (cez `@nestjs/mongoose`). Schémy definované ako TS triedy s decorators.
-- **Validácia:** Zod schémy v `packages/shared-types/` sú single source of truth; Mongoose schémy sa odvodzujú z nich. Pre defensive depth si pre kritické kolekcie nastavíme aj `$jsonSchema` validator na strane Mongo.
+- **Prístup k DB:** natívny `mongodb` driver + vlastný Repository pattern. **Bez Mongoose alebo iného ODM** – viď [ADR-0005](0005-mongo-native-driver.md).
+- **Validation source of truth:** Zod schémy v `packages/shared-types/`. Z nich generujeme JSON Schema pre Mongo `$jsonSchema` validator (defense in depth) aj TypeScript typy.
 - **Transakcie:** používame multi-document transactions pre operácie ako "vytvoriť loan + zmeniť stav assetov + zapísať protokol" – musia byť atomické.
-- **Indexy:** definované v migráciách, nie ad-hoc cez Mongoose `index: true` (lepšia kontrola).
-- **Connection pooling:** default Mongoose nastavenie + monitoring cez Atlas dashboard.
+- **Indexy:** definované v migráciách (TS skripty v `apps/api/src/migrations/`).
+- **Connection pooling:** default nastavenie natívneho driveru + monitoring cez Atlas dashboard.
 
 ## Plán nákladov (orientačne)
 
@@ -115,5 +115,5 @@ Hlavné dôvody:
 
 - [MongoDB Atlas](https://www.mongodb.com/atlas)
 - [Atlas Search](https://www.mongodb.com/docs/atlas/atlas-search/)
-- [Mongoose dokumentácia](https://mongoosejs.com/)
-- [NestJS Mongoose integration](https://docs.nestjs.com/techniques/mongodb)
+- [MongoDB Node.js Driver](https://www.mongodb.com/docs/drivers/node/current/)
+- [ADR-0005: Natívny driver + Repository pattern](0005-mongo-native-driver.md)
