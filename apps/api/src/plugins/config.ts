@@ -25,19 +25,30 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent']).default('info'),
 
   // MongoDB
-  MONGO_URI: z.string().url('MONGO_URI must be a valid mongodb+srv:// or mongodb:// URL'),
+  MONGO_URI: z
+    .string()
+    .min(1, 'MONGO_URI is required')
+    .refine(
+      (val) => val.startsWith('mongodb://') || val.startsWith('mongodb+srv://'),
+      'MONGO_URI must start with mongodb:// or mongodb+srv://',
+    ),
   MONGO_DB_NAME: z.string().min(1).default('sfz_asset_management'),
 
   // CORS
+  // Accepts either:
+  //   - '*' (wildcard, allow all origins) — for early dev only, NEVER in real prod
+  //   - comma-separated list of origins: 'https://app.sfz.sk,https://staging.sfz.sk'
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3001')
-    .transform((val) =>
-      val
+    .transform((val) => {
+      const trimmed = val.trim();
+      if (trimmed === '*') return '*' as const;
+      return trimmed
         .split(',')
         .map((s) => s.trim())
-        .filter(Boolean),
-    ),
+        .filter(Boolean);
+    }),
 
   // Feature flags
   ENABLE_SWAGGER: z

@@ -87,7 +87,9 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await app.register(fastifyCors, {
     origin: app.config.CORS_ORIGINS,
-    credentials: true,
+    // Credentials NOT allowed with origin '*' (browser security rule).
+    // Only enable credentials when using a specific allowlist.
+    credentials: app.config.CORS_ORIGINS !== '*',
   });
 
   await app.register(fastifyRateLimit, {
