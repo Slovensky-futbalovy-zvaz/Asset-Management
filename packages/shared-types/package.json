@@ -1,0 +1,61 @@
+{
+  "name": "@sfz/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zdrojové Zod schémy pre celý SFZ Asset Management — single source of truth pre dátové štruktúry. Z týchto schém sa generujú: TypeScript typy, JSON Schema (pre Mongo $jsonSchema validátory), OpenAPI komponenty, frontend form validation.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js"
+    },
+    "./enums": {
+      "types": "./dist/enums/index.d.ts",
+      "import": "./dist/enums/index.js"
+    },
+    "./json-schema": "./generated/json-schema.json"
+  },
+  "files": [
+    "dist",
+    "generated",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && pnpm run generate:json-schema",
+    "dev": "tsc -p tsconfig.json --watch",
+    "generate:json-schema": "tsx scripts/generate-json-schema.ts",
+    "generate:mongo-validators": "tsx scripts/generate-mongo-validators.ts",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist generated *.tsbuildinfo"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1",
+    "vitest": "^2.1.2"
+  },
+  "keywords": [
+    "sfz",
+    "zod",
+    "schema",
+    "types",
+    "json-schema"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

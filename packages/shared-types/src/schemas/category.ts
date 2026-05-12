@@ -1,0 +1,79 @@
+import { z } from 'zod';
+
+import { AssetType } from '../enums/asset-type.js';
+
+import { BaseDocumentSchema, ObjectIdSchema, SoftDeleteSchema } from './common.js';
+
+/**
+ * Kategória majetku — hierarchická taxonómia (strom).
+ *
+ * Príklad hierarchie:
+ *   IT
+ *   ├── Notebooky
+ *   │   ├── Pracovné notebooky
+ *   │   └── Vývojárske notebooky
+ *   ├── Mobily
+ *   └── Periférie
+ *       ├── Klávesnice
+ *       └── Myši
+ */
+export const CategorySchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend({
+  /** Názov kategórie. */
+  name: z.string().min(1).max(200).trim(),
+
+  /** Slug pre URL (auto-generated z name). */
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug musí byť lowercase s pomlčkami.')
+    .max(200),
+
+  /** ID nadradenej kategórie (null pre root kategórie). */
+  parentId: ObjectIdSchema.nullable().default(null),
+
+  /** Top-level typ — určuje, aké `specs` polia patria do tejto kategórie. */
+  assetType: z.enum(
+    Object.values(AssetType) as [string, ...string[]],
+  ) as z.ZodType<AssetType>,
+
+  /** Voliteľný popis. */
+  description: z.string().max(1000).nullable().default(null),
+
+  /** Ikonka pre UI (lucide-react icon name). */
+  icon: z.string().max(50).nullable().default(null),
+
+  /** Farba kategórie v UI (HEX, z design tokens accent palety). */
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Farba musí byť hex (napr. #1450df).')
+    .nullable()
+    .default(null),
+
+  /** ID schvaľovateľov, ktorí môžu schvaľovať zápožičky tejto kategórie. */
+  approverIds: z.array(ObjectIdSchema).default([]),
+
+  /** Či zápožičky tejto kategórie vyžadujú schválenie (default per asset, ale tu globálne). */
+  requiresApprovalByDefault: z.boolean().default(true),
+
+  /** Maximálna doba zápožičky v dňoch (null = bez limitu). */
+  maxLoanDays: z.number().int().positive().max(3650).nullable().default(null),
+
+  /** Či je kategória aktívna (môže sa pridávať nový majetok). */
+  isActive: z.boolean().default(true),
+
+  /** Poradie v zoznamoch (nižšie = vyššie). */
+  sortOrder: z.number().int().default(0),
+});
+
+export type Category = z.infer<typeof CategorySchema>;
+
+export const CreateCategorySchema = CategorySchema.omit({
+  _id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
+  deletedAt: true,
+  deletedBy: true,
+});
+
+export type CreateCategoryInput = z.infer<typeof CreateCategorySchema>;

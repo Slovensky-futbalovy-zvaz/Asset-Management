@@ -1,0 +1,251 @@
+import { z } from 'zod';
+
+import { AssetCondition } from '../enums/asset-type.js';
+import { LoanRequestStatus, LoanStatus } from '../enums/loan-status.js';
+
+import {
+  BaseDocumentSchema,
+  ObjectIdSchema,
+  SoftDeleteSchema,
+  TimestampSchema,
+} from './common.js';
+
+// ─────────────────────────────────────────────────────────────────────
+// Loan Request — žiadosť o zápožičku (PRED schválením)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Položka v žiadosti — referencia na konkrétny asset.
+ */
+export const LoanRequestItemSchema = z.object({
+  /** ID požadovaného assetu. */
+  assetId: ObjectIdSchema,
+
+  /** Krátky popis pre čas, keď je už request, ale ešte nie schválený. */
+  snapshot: z.object({
+    inventoryNumber: z.string(),
+    name: z.string(),
+  }),
+
+  /** Stav schválenia tejto konkrétnej položky (pri partial approval). */
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'SUBSTITUTED']).default('PENDING'),
+
+  /** Ak SUBSTITUTED, ID navrhnutej náhrady. */
+  substitutedWithAssetId: ObjectIdSchema.nullable().default(null),
+
+  /** Poznámka schvaľovateľa (napr. dôvod zamietnutia). */
+  approverNote: z.string().max(1000).nullable().default(null),
+});
+
+export type LoanRequestItem = z.infer<typeof LoanRequestItemSchema>;
+
+/**
+ * Žiadosť o zápožičku — vytvára používateľ pred prevzatím.
+ */
+export const LoanRequestSchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend({
+  /** ID žiadateľa. */
+  requesterId: ObjectIdSchema,
+
+  /** Účel — krátky text, prečo si zápožičku berie. */
+  purpose: z.string().min(3, 'Účel je povinný.').max(500),
+
+  /** Plánovaný termín od. */
+  plannedFrom: TimestampSchema,
+
+  /** Plánovaný termín do. */
+  plannedTo: TimestampSchema,
+
+  /** Položky v žiadosti (môžu byť rôzni schvaľovatelia podľa kategórie). */
+  items: z.array(LoanRequestItemSchema).min(1, 'Žiadosť musí mať aspoň jednu položku.'),
+
+  /** Celkový stav žiadosti. */
+  status: z.enum(
+    Object.values(LoanRequestStatus) as [string, ...string[]],
+  ) as z.ZodType<LoanRequestStatus>,
+
+  /** Zoznam schvaľovateľov (môže byť viacero pri hromadných žiadostiach). */
+  approvers: z.array(
+    z.object({
+      userId: ObjectIdSchema,
+      categoryScope: z.array(ObjectIdSchema), // Aké kategórie tento schvaľovateľ schvaľuje
+      decidedAt: TimestampSchema.nullable().default(null),
+      decision: z.enum(['APPROVED', 'REJECTED']).nullable().default(null),
+      note: z.string().max(1000).nullable().default(null),
+    }),
+  ),
+
+  /** Ak je APPROVED, ID vytvoreného Loan dokumentu. */
+  resultingLoanId: ObjectIdSchema.nullable().default(null),
+
+  /** Ak je REJECTED alebo CANCELLED, dôvod. */
+  rejectionReason: z.string().max(1000).nullable().default(null),
+
+  /** Hromadná žiadosť pre tím — voliteľná referencia na team. */
+  teamId: ObjectIdSchema.nullable().default(null),
+
+  /** Hash na idempotenciu — ten istý hash = duplicitná žiadosť, vrátime existujúcu. */
+  idempotencyKey: z.string().max(100).nullable().default(null),
+});
+
+export type LoanRequest = z.infer<typeof LoanRequestSchema>;
+
+export const CreateLoanRequestSchema = LoanRequestSchema.omit({
+  _id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
+  deletedAt: true,
+  deletedBy: true,
+  status: true,
+  approvers: true,
+  resultingLoanId: true,
+  rejectionReason: true,
+}).extend({
+  /** Status sa vždy nastavuje na PENDING pri vytvorení. */
+  status: z.literal(LoanRequestStatus.PENDING).default(LoanRequestStatus.PENDING),
+});
+
+export type CreateLoanRequestInput = z.infer<typeof CreateLoanRequestSchema>;
+
+// ─────────────────────────────────────────────────────────────────────
+// Loan — aktívna zápožička (PO schválení a prevzatí)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Stav konkrétnej položky v zápožičke pri prevzatí/vrátení.
+ */
+export const LoanItemConditionSchema = z.object({
+  /** Stav pri prevzatí (vyplnené pri vzniku Loan-u). */
+  atPickup: z.object({
+    condition: z.enum(
+      Object.values(AssetCondition) as [string, ...string[]],
+    ) as z.ZodType<AssetCondition>,
+    note: z.string().max(1000).nullable().default(null),
+    photoIds: z.array(ObjectIdSchema).default([]),
+  }),
+
+  /** Stav pri vrátení (vyplnené pri vrátení). */
+  atReturn: z
+    .object({
+      condition: z.enum(
+        Object.values(AssetCondition) as [string, ...string[]],
+      ) as z.ZodType<AssetCondition>,
+      note: z.string().max(1000).nullable().default(null),
+      photoIds: z.array(ObjectIdSchema).default([]),
+      requiresService: z.boolean().default(false),
+    })
+    .nullable()
+    .default(null),
+});
+
+export type LoanItemCondition = z.infer<typeof LoanItemConditionSchema>;
+
+/**
+ * Položka aktívnej zápožičky.
+ */
+export const LoanItemSchema = z.object({
+  assetId: ObjectIdSchema,
+  snapshot: z.object({
+    inventoryNumber: z.string(),
+    name: z.string(),
+  }),
+  condition: LoanItemConditionSchema,
+});
+
+export type LoanItem = z.infer<typeof LoanItemSchema>;
+
+/**
+ * Loan = aktívna zápožička.
+ */
+export const LoanSchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend({
+  /** Referencia na žiadosť, z ktorej zápožička vznikla. */
+  requestId: ObjectIdSchema,
+
+  /** Vypožičiavajúca osoba. */
+  borrowerId: ObjectIdSchema,
+
+  /** Účel (skopírovaný z LoanRequest pri vzniku). */
+  purpose: z.string().min(3).max(500),
+
+  /** Reálny dátum prevzatia. */
+  pickedUpAt: TimestampSchema,
+
+  /** Osoba, ktorá majetok odovzdala (správca skladu). */
+  handedOverBy: ObjectIdSchema,
+
+  /** Dohodnutý termín vrátenia. */
+  dueAt: TimestampSchema,
+
+  /** Reálny dátum vrátenia (null kým aktívne). */
+  returnedAt: TimestampSchema.nullable().default(null),
+
+  /** Osoba, ktorá majetok prijala späť (správca skladu). */
+  returnedTo: ObjectIdSchema.nullable().default(null),
+
+  /** Položky v zápožičke + stavy. */
+  items: z.array(LoanItemSchema).min(1),
+
+  /** Aktuálny stav zápožičky. */
+  status: z.enum(
+    Object.values(LoanStatus) as [string, ...string[]],
+  ) as z.ZodType<LoanStatus>,
+
+  /** Počet predĺžení. */
+  extensionCount: z.number().int().nonnegative().default(0),
+
+  /** ID protokolu o odovzdaní (PDF v storage). */
+  handoverProtocolId: ObjectIdSchema.nullable().default(null),
+
+  /** ID protokolu o vrátení (PDF v storage). */
+  returnProtocolId: ObjectIdSchema.nullable().default(null),
+
+  /** Voľné poznámky. */
+  notes: z.string().max(2000).nullable().default(null),
+});
+
+export type Loan = z.infer<typeof LoanSchema>;
+
+/**
+ * Vytvorenie zápožičky pri prevzatí.
+ */
+export const CreateLoanSchema = LoanSchema.omit({
+  _id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
+  deletedAt: true,
+  deletedBy: true,
+  returnedAt: true,
+  returnedTo: true,
+  status: true,
+  extensionCount: true,
+  handoverProtocolId: true,
+  returnProtocolId: true,
+}).extend({
+  status: z.literal(LoanStatus.ACTIVE).default(LoanStatus.ACTIVE),
+});
+
+export type CreateLoanInput = z.infer<typeof CreateLoanSchema>;
+
+/**
+ * Vrátenie zápožičky — vyplní sa pri prevzatí späť do skladu.
+ */
+export const ReturnLoanSchema = z.object({
+  returnedTo: ObjectIdSchema,
+  items: z.array(
+    z.object({
+      assetId: ObjectIdSchema,
+      condition: z.enum(
+        Object.values(AssetCondition) as [string, ...string[]],
+      ) as z.ZodType<AssetCondition>,
+      note: z.string().max(1000).nullable().default(null),
+      photoIds: z.array(ObjectIdSchema).default([]),
+      requiresService: z.boolean().default(false),
+    }),
+  ),
+  notes: z.string().max(2000).nullable().default(null),
+});
+
+export type ReturnLoanInput = z.infer<typeof ReturnLoanSchema>;
