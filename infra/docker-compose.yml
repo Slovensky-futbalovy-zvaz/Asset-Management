@@ -1,0 +1,118 @@
+# Docker Compose pre lokálny vývoj SFZ Asset Management
+#
+# Spustenie:
+#   docker compose -f infra/docker-compose.yml up -d
+#
+# Zastavenie:
+#   docker compose -f infra/docker-compose.yml down
+#
+# Reset dát (vymaže všetky lokálne dáta):
+#   docker compose -f infra/docker-compose.yml down -v
+
+name: sfz-asset-management
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # MongoDB — replica set pre podporu transakcií a change streams
+  # ─────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: sfz-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme-local-only}
+      MONGO_INITDB_DATABASE: sfz_asset_management
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro
+    command: ["mongod", "--bind_ip_all"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ─────────────────────────────────────────────────────────────────
+  # Mongo Express — web UI pre prehliadanie databázy
+  # http://localhost:8081
+  # ─────────────────────────────────────────────────────────────────
+  mongo-express:
+    image: mongo-express:1
+    container_name: sfz-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-changeme-local-only}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-changeme-local-only}@mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────────────────────────
+  # MailHog — fake SMTP server pre testovanie e-mailov
+  # SMTP: localhost:1025, Web UI: http://localhost:8025
+  # ─────────────────────────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: sfz-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+
+  # ─────────────────────────────────────────────────────────────────
+  # MinIO — S3-kompatibilný object storage pre attachments
+  # API: localhost:9000, Console: http://localhost:9001
+  # ─────────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: sfz-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme-local-only}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────────
+  # MinIO bucket setup — vytvorenie predvolených bucketov pri štarte
+  # ─────────────────────────────────────────────────────────────────
+  minio-setup:
+    image: minio/mc:latest
+    container_name: sfz-minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set sfzminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-changeme-local-only};
+      /usr/bin/mc mb --ignore-existing sfzminio/sfz-asset-attachments;
+      /usr/bin/mc mb --ignore-existing sfzminio/sfz-asset-protocols;
+      /usr/bin/mc anonymous set download sfzminio/sfz-asset-attachments;
+      exit 0;
+      "
+
+volumes:
+  mongodb_data:
+    name: sfz-mongodb-data
+  mongodb_config:
+    name: sfz-mongodb-config
+  minio_data:
+    name: sfz-minio-data
