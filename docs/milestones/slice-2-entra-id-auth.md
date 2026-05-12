@@ -11,6 +11,8 @@ provisioning užívateľov v Mongo, ochrana existujúcich CRUD endpointov.
 
 ✅ **Auth funguje end-to-end lokálne aj v prod:**
 
+- Production URL: `https://asset-management-pw5ct885v-ltksolutions-projects.vercel.app`
+  (URL sa mení s každým deployom; alias bude pridaný neskôr)
 - Microsoft Entra ID JWT validácia (signature + claims)
 - JIT provisioning užívateľa s default rolou `EMPLOYEE` pri prvom prihlásení
 - `users` collection v Mongo s 3 indexmi (vrátane unique `entraOid`)
@@ -271,19 +273,34 @@ Zvyšok bolo "Claude píše kód, používateľ build/lint/typecheck — všetko
 ## Commity (chronologicky)
 
 ```
-TBD: feat(api): add Entra ID auth + JIT provisioning (slice #2)
+9b7c464  feat(api): add Entra ID auth + JIT user provisioning (slice #2)
 ```
 
-(Plánovaný single commit; alternatívne rozdeliť na 3:
-config+plugin, users module, scripts+docs.)
+Single squash-style commit (15 zmenených / nových súborov). Alternatívne sa
+slice mohol rozdeliť na 3 menšie (config+plugin, users module,
+scripts+docs), ale vrstvy su prepletené (auth plugin sa používa v users
+routes, ktoré zase rozhodujú o tom, čo tam v config-u byt musí) — jeden
+funkčný celok bol čistejší.
 
 ## End-to-end verifikácia
 
+### Lokálne
+
 ```bash
-# Lokálne (apps/api):
+cd apps/api
 pnpm dev                            # spustí server na :3000
 bash scripts/dev-auth-test.sh       # device code flow + 3 protected endpoint calls
 ```
+
+### Produkčný Vercel deploy
+
+```bash
+cd apps/api
+API_BASE="https://asset-management-pw5ct885v-ltksolutions-projects.vercel.app" \
+  bash scripts/dev-auth-test.sh
+```
+
+Obe spustená vrátia identický výsledok (rovnaký Mongo Atlas cluster):
 
 Output (redacted):
 
