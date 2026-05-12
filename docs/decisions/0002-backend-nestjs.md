@@ -1,11 +1,13 @@
 # 0002. NestJS ako backend framework
 
-|                   |                                                         |
-| ----------------- | ------------------------------------------------------- |
-| **Status**        | Accepted                                                |
-| **Dátum**         | máj 2026                                                |
-| **Autori**        | tím SFZ Asset Management                                |
-| **Súvisiace ADR** | [0001-monorepo-pnpm-turbo](0001-monorepo-pnpm-turbo.md) |
+|                   |                                                                                                          |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| **Status**        | 🚫 Superseded by [ADR-0009](0009-backend-fastify.md) (máj 2026)                                          |
+| **Dátum**         | máj 2026                                                                                                 |
+| **Autori**        | tím SFZ Asset Management                                                                                 |
+| **Súvisiace ADR** | [0001-monorepo-pnpm-turbo](0001-monorepo-pnpm-turbo.md), [0009-backend-fastify](0009-backend-fastify.md) |
+
+> **⚠️ Toto rozhodnutie bolo zmenené.** Pôvodne sme zvolili NestJS, ale ešte pred začiatkom implementácie sme rozhodnutie revidovali v prospech Fastify. Dôvody sú popísané v [ADR-0009](0009-backend-fastify.md). Tento dokument zachovávame pre historickú kontinuitu a transparentnosť rozhodovacieho procesu.
 
 ## Kontext
 
