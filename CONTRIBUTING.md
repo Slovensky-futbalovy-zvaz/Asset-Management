@@ -13,19 +13,20 @@
 
 Formát: `typ(scope): krátky popis`
 
-| Typ | Použitie |
-|-----|----------|
-| `feat` | Nová funkcionalita |
-| `fix` | Oprava bugu |
-| `docs` | Iba dokumentácia |
-| `style` | Formátovanie, bez funkčnej zmeny |
-| `refactor` | Refactor bez zmeny správania |
-| `perf` | Výkonová optimalizácia |
-| `test` | Pridanie/úprava testov |
-| `chore` | Údržba, build, dependencies |
-| `ci` | CI/CD zmeny |
+| Typ        | Použitie                         |
+| ---------- | -------------------------------- |
+| `feat`     | Nová funkcionalita               |
+| `fix`      | Oprava bugu                      |
+| `docs`     | Iba dokumentácia                 |
+| `style`    | Formátovanie, bez funkčnej zmeny |
+| `refactor` | Refactor bez zmeny správania     |
+| `perf`     | Výkonová optimalizácia           |
+| `test`     | Pridanie/úprava testov           |
+| `chore`    | Údržba, build, dependencies      |
+| `ci`       | CI/CD zmeny                      |
 
 **Príklady:**
+
 ```
 feat(api): add bulk loan endpoint
 fix(web): correct QR scanner on Safari iOS
@@ -62,6 +63,7 @@ Husky + lint-staged toto presadia automaticky.
 ## Testovanie
 
 Cieľová coverage:
+
 - **Backend (NestJS):** 70 %+ na business logiku (use cases, services).
 - **Frontend (Next.js):** 60 %+, dôraz na E2E (Playwright) pre kritické flows.
 - **MCP server:** 80 %+ – malý povrch, mali by sme to vedieť dobre otestovať.

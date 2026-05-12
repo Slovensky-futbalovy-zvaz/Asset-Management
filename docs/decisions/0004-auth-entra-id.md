@@ -1,10 +1,10 @@
 # 0004. Microsoft Entra ID ako identity provider
 
-| | |
-|---|---|
-| **Status** | Accepted |
-| **Dátum** | máj 2026 |
-| **Autori** | tím SFZ Asset Management |
+|                   |                                       |
+| ----------------- | ------------------------------------- |
+| **Status**        | Accepted                              |
+| **Dátum**         | máj 2026                              |
+| **Autori**        | tím SFZ Asset Management              |
 | **Súvisiace ADR** | [0002-nestjs](0002-backend-nestjs.md) |
 
 ## Kontext
@@ -72,23 +72,27 @@ Začať jednoducho s e-mail/heslo, pridať Entra ID neskôr.
 Zvolili sme **Microsoft Entra ID (Možnosť A)** ako primárny IdP pre interných používateľov SFZ.
 
 Pre **externých používateľov** zvolíme **hybridný prístup**:
+
 - Externý účet v našej `users` kolekcii (lokálne hashované heslo cez Argon2 ALEBO magic link prihlasovanie).
 - Žiadna Entra External ID v prvej fáze (zníži komplexitu) – vyhodnotíme neskôr ak narastie počet externých.
 
 ## Dôsledky
 
 ### Pozitívne
+
 - Zero-friction prihlasovanie pre zamestnancov SFZ.
 - MFA a Conditional Access nastavujú SFZ Entra admini – bez práce na strane aplikácie.
 - Audit prihlásení v Entra ID logoch.
 - Automatický sync zmien (zamestnanec odíde → účet deaktivovaný cez SCIM/cron).
 
 ### Negatívne / kompromisy
+
 - Vendor lock-in voči Microsoftu (mitigácia: štandardné OIDC, dá sa migrovať).
 - Pre externých potrebujeme paralelný systém (lokálne účty s heslom alebo magic link).
 - Lokálny dev vyžaduje buď test tenant Entra ID alebo mock OIDC provider (napr. `oidc-provider` lokálne).
 
 ### Riziká, ktoré treba sledovať
+
 - Zmena Entra ID licenčného modelu Microsoftu.
 - Sync používateľov s Microsoft Graph – treba reflektovať deaktivácie účtov (cron job, max delay 1 deň).
 - Race condition pri prvom prihlásení: vytvorenie lokálneho `User` recordu z Entra claims.
@@ -135,6 +139,7 @@ Default rola pre prihlásených bez mapovanej skupiny: `employee`.
 ## Migračná stratégia (ak by sa neskôr menilo)
 
 Ak by sme niekedy chceli migrovať na iný IdP (Keycloak, vlastné):
+
 1. Pridáme nový IdP ako alternatívnu možnosť (parallel auth).
 2. Migrujeme externých používateľov (lokálne hashy zostanú alebo sa vyžiadne reset).
 3. Interní cez federáciu zostávajú na Entra ID alebo prejdú na nový IdP.

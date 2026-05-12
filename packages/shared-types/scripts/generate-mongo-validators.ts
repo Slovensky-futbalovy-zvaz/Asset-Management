@@ -100,7 +100,9 @@ async function main(): Promise<void> {
   await mkdir(dirname(OUTPUT_PATH), { recursive: true });
   await writeFile(OUTPUT_PATH, commands.join('\n'), 'utf-8');
 
-  console.info(`\n✅ Vygenerovaných ${Object.keys(SCHEMA_TO_COLLECTION).length} commandov do ${OUTPUT_PATH}`);
+  console.info(
+    `\n✅ Vygenerovaných ${Object.keys(SCHEMA_TO_COLLECTION).length} commandov do ${OUTPUT_PATH}`,
+  );
 }
 
 main().catch((err: unknown) => {

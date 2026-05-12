@@ -19,7 +19,9 @@ export const LoanRequestStatus = {
 
 export type LoanRequestStatus = (typeof LoanRequestStatus)[keyof typeof LoanRequestStatus];
 
-export const LOAN_REQUEST_STATUS_VALUES = Object.values(LoanRequestStatus) as readonly LoanRequestStatus[];
+export const LOAN_REQUEST_STATUS_VALUES = Object.values(
+  LoanRequestStatus,
+) as readonly LoanRequestStatus[];
 
 /**
  * Stavy aktívnej zápožičky.

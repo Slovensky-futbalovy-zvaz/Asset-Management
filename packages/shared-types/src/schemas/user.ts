@@ -58,9 +58,9 @@ export const UserSchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend({
   passwordHash: z.string().nullable().default(null),
 
   /** Roly používateľa. Používateľ môže mať viacero rolí naraz. */
-  roles: z.array(
-    z.enum(Object.values(UserRole) as [string, ...string[]]) as z.ZodType<UserRole>,
-  ).min(1, 'Používateľ musí mať aspoň jednu rolu.'),
+  roles: z
+    .array(z.enum(Object.values(UserRole) as [string, ...string[]]) as z.ZodType<UserRole>)
+    .min(1, 'Používateľ musí mať aspoň jednu rolu.'),
 
   /** ID organizačnej jednotky / útvaru SFZ (alebo klubu pre EXTERNAL). */
   organizationalUnit: z
@@ -145,8 +145,7 @@ export const UpdateUserSchema = UserSchema.omit({
   passwordHash: true,
   accountType: true,
   entraOid: true,
-})
-  .partial();
+}).partial();
 
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 

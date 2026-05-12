@@ -9,6 +9,7 @@ JE: bezpečné, vedené prostredie, kde nemôžeš nič pokaziť.
 
 Premenné na vyplnenie sú v {{ dvojitých zložených zátvorkách }}.
 Komentáre v <!-- ... --> odstráň po vyplnení.
+
 -->
 
 # {{ Názov tutoriálu – napr. "Tvoje prvé prihlásenie" }}
@@ -58,4 +59,5 @@ Komentáre v <!-- ... --> odstráň po vyplnení.
 ---
 
 <!-- Footer s metadátami pre dokumentáciu, nemusí byť vždy potrebný -->
+
 <sub>Posledná aktualizácia: {{ YYYY-MM-DD }} · Cieľová rola: {{ napr. všetci používatelia }}</sub>

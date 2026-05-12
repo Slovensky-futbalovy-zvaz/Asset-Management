@@ -1,10 +1,10 @@
 # 0002. NestJS ako backend framework
 
-| | |
-|---|---|
-| **Status** | Accepted |
-| **Dátum** | máj 2026 |
-| **Autori** | tím SFZ Asset Management |
+|                   |                                                         |
+| ----------------- | ------------------------------------------------------- |
+| **Status**        | Accepted                                                |
+| **Dátum**         | máj 2026                                                |
+| **Autori**        | tím SFZ Asset Management                                |
 | **Súvisiace ADR** | [0001-monorepo-pnpm-turbo](0001-monorepo-pnpm-turbo.md) |
 
 ## Kontext
@@ -64,6 +64,7 @@ Backend ako súčasť `apps/web`.
 ### Možnosť E: Encore / tRPC / Hono
 
 Moderné alternatívy. Pre náš case:
+
 - **tRPC:** výborné pre TS-only stack, ale chýba podpora pre Flutter klienta (Dart nevie tRPC) – diskvalifikované.
 - **Hono:** veľmi rýchly, ale mladý a chudobný ekosystém.
 - **Encore:** vendor-lock, neopen platform – diskvalifikované.
@@ -73,6 +74,7 @@ Moderné alternatívy. Pre náš case:
 Zvolili sme **NestJS (Možnosť A)**.
 
 Hlavné dôvody:
+
 1. **OpenAPI 3.1 generovanie** zo zdrojového kódu funguje out-of-the-box (`@nestjs/swagger`) – kritické pre nás, lebo z OpenAPI generujeme TS klienta aj budúceho Flutter klienta.
 2. **Štandardná štruktúra** – noví prispievatelia open-source projektu vedia hneď, kde čo hľadať.
 3. **Modulárna architektúra** s DI – ľahšie testovanie, refactoring, jasné rozhraní medzi modulmi (Asset, Loan, User, Auth, ...).
@@ -82,17 +84,20 @@ Hlavné dôvody:
 ## Dôsledky
 
 ### Pozitívne
+
 - Rýchlejší onboarding nových vývojárov (NestJS dokumentácia + štandardné patterns).
 - OpenAPI sa generuje automaticky – nikdy out-of-sync.
 - Konzistentná štruktúra naprieč modulmi.
 - Bohatý ekosystém oficiálnych modulov (`@nestjs/mongoose`, `@nestjs/bull`, `@nestjs/throttler`, `@nestjs/cache-manager`).
 
 ### Negatívne / kompromisy
+
 - Mierne vyšší boilerplate ako Fastify alebo plain Express.
 - Performance ceiling ~25-30k req/s. Pre náš scale je toto irrelevant, ale zaznamenávame.
 - Decorators + reflection – v zriedkavých prípadoch ťažšie pre static analysis.
 
 ### Riziká, ktoré treba sledovať
+
 - Major version bumpy NestJS (z v10 na v11, ...) – treba ich prečítať pred upgrade a otestovať. NestJS má slušnú backward compat, ale občas sú breaking changes v guard/decorator API.
 
 ## Implementačné poznámky

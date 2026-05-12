@@ -1,11 +1,11 @@
 # NNNN. Názov rozhodnutia
 
-| | |
-|---|---|
-| **Status** | Proposed / Accepted / Superseded by [ADR-XXXX](...) / Deprecated |
-| **Dátum** | RRRR-MM-DD |
-| **Autori** | _meno_ |
-| **Súvisiace ADR** | _odkazy na predchádzajúce alebo súvisiace ADR_ |
+|                   |                                                                  |
+| ----------------- | ---------------------------------------------------------------- |
+| **Status**        | Proposed / Accepted / Superseded by [ADR-XXXX](...) / Deprecated |
+| **Dátum**         | RRRR-MM-DD                                                       |
+| **Autori**        | _meno_                                                           |
+| **Súvisiace ADR** | _odkazy na predchádzajúce alebo súvisiace ADR_                   |
 
 ## Kontext
 
@@ -16,10 +16,12 @@ Aký je problém alebo situácia, ktorú riešime? Aké sú obmedzenia (technick
 Stručný popis 2–4 zvažovaných možností.
 
 ### Možnosť A: ...
+
 - Plus: ...
 - Mínus: ...
 
 ### Možnosť B: ...
+
 - Plus: ...
 - Mínus: ...
 
@@ -30,12 +32,15 @@ Akú možnosť sme zvolili a prečo. Buď konkrétny.
 ## Dôsledky
 
 ### Pozitívne
+
 - ...
 
 ### Negatívne / kompromisy
+
 - ...
 
 ### Riziká, ktoré treba sledovať
+
 - ...
 
 ## Referencie

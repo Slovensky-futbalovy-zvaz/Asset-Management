@@ -1,11 +1,11 @@
 # API špecifikácia
 
-| | |
-|---|---|
-| **Verzia API** | v1 |
-| **Špecifikácia** | OpenAPI 3.1 |
-| **Súbor** | [openapi.yaml](openapi.yaml) |
-| **Status** | 🟡 Draft v0.1 |
+|                  |                              |
+| ---------------- | ---------------------------- |
+| **Verzia API**   | v1                           |
+| **Špecifikácia** | OpenAPI 3.1                  |
+| **Súbor**        | [openapi.yaml](openapi.yaml) |
+| **Status**       | 🟡 Draft v0.1                |
 
 ## Princípy API dizajnu
 
@@ -46,6 +46,7 @@ GET /api/v1/assets?limit=50&cursor=eyJ...
 ```
 
 Odpoveď:
+
 ```json
 {
   "data": [...],

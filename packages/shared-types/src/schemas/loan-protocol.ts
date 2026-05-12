@@ -61,14 +61,7 @@ export const LoanProtocolSchema = BaseDocumentSchema.extend({
         serialNumber: z.string().nullable(),
         category: z.string(),
       }),
-      condition: z.enum([
-        'NEW',
-        'EXCELLENT',
-        'GOOD',
-        'FAIR',
-        'POOR',
-        'UNUSABLE',
-      ]),
+      condition: z.enum(['NEW', 'EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'UNUSABLE']),
       conditionNote: z.string().max(1000).nullable().default(null),
       photoIds: z.array(ObjectIdSchema).default([]),
     }),
@@ -103,15 +96,21 @@ export const LoanProtocolSchema = BaseDocumentSchema.extend({
   pdfAttachmentId: ObjectIdSchema.nullable().default(null),
 
   /** SHA-256 hash PDF — pre dôkaz integrity protokolu. */
-  pdfSha256: z.string().regex(/^[a-f0-9]{64}$/i).nullable().default(null),
+  pdfSha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i)
+    .nullable()
+    .default(null),
 
   /** Stav. */
-  status: z.enum([
-    'DRAFT', // Pripravený, ale nepodpísaný
-    'SIGNED', // Podpísaný oboma stranami
-    'AMENDED', // Bol nahradený dodatkom (referenciu nájdeš cez `originalProtocolId` v novšom protokole)
-    'VOIDED', // Anulovaný (nie sa nemení obsah, ale označí sa)
-  ]).default('DRAFT'),
+  status: z
+    .enum([
+      'DRAFT', // Pripravený, ale nepodpísaný
+      'SIGNED', // Podpísaný oboma stranami
+      'AMENDED', // Bol nahradený dodatkom (referenciu nájdeš cez `originalProtocolId` v novšom protokole)
+      'VOIDED', // Anulovaný (nie sa nemení obsah, ale označí sa)
+    ])
+    .default('DRAFT'),
 });
 
 export type LoanProtocol = z.infer<typeof LoanProtocolSchema>;

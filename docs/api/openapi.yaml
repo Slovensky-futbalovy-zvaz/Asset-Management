@@ -65,7 +65,7 @@ paths:
       summary: Health check
       security: []
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -82,8 +82,8 @@ paths:
       summary: Readiness check (DB, dependencies)
       security: []
       responses:
-        '200': { description: Ready }
-        '503': { description: Not ready }
+        "200": { description: Ready }
+        "503": { description: Not ready }
 
   # ===== Auth =====
   /auth/login:
@@ -96,7 +96,7 @@ paths:
           name: returnUrl
           schema: { type: string }
       responses:
-        '302':
+        "302":
           description: Redirect na Entra ID
 
   /auth/callback:
@@ -114,11 +114,11 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        '200':
+        "200":
           description: Login úspešný, tokeny vrátené
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AuthResult' }
+              schema: { $ref: "#/components/schemas/AuthResult" }
 
   /auth/refresh:
     post:
@@ -135,29 +135,29 @@ paths:
               properties:
                 refreshToken: { type: string }
       responses:
-        '200':
+        "200":
           description: Nový access token
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AuthResult' }
+              schema: { $ref: "#/components/schemas/AuthResult" }
 
   /auth/logout:
     post:
       tags: [Auth]
       summary: Odhlásenie (invalidácia refresh tokenu)
       responses:
-        '204': { description: Odhlásený }
+        "204": { description: Odhlásený }
 
   /auth/me:
     get:
       tags: [Auth]
       summary: Informácie o aktuálnom prihlásenom používateľovi
       responses:
-        '200':
+        "200":
           description: Aktuálny používateľ
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema: { $ref: "#/components/schemas/User" }
 
   # ===== Users =====
   /users:
@@ -165,9 +165,9 @@ paths:
       tags: [Users]
       summary: Zoznam používateľov
       parameters:
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Sort'
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Sort"
         - in: query
           name: search
           schema: { type: string }
@@ -176,16 +176,16 @@ paths:
           schema: { type: string, enum: [internal, external] }
         - in: query
           name: role
-          schema: { $ref: '#/components/schemas/UserRole' }
+          schema: { $ref: "#/components/schemas/UserRole" }
         - in: query
           name: status
           schema: { type: string, enum: [active, suspended, deactivated] }
       responses:
-        '200':
+        "200":
           description: Zoznam používateľov
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/UserListResponse' }
+              schema: { $ref: "#/components/schemas/UserListResponse" }
     post:
       tags: [Users]
       summary: Vytvoriť externého používateľa
@@ -196,31 +196,31 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateExternalUserRequest' }
+            schema: { $ref: "#/components/schemas/CreateExternalUserRequest" }
       responses:
-        '201':
+        "201":
           description: Vytvorený
           headers:
             Location:
               schema: { type: string }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '409': { $ref: '#/components/responses/Conflict' }
+              schema: { $ref: "#/components/schemas/User" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /users/{userId}:
     parameters:
-      - $ref: '#/components/parameters/UserId'
+      - $ref: "#/components/parameters/UserId"
     get:
       tags: [Users]
       summary: Detail používateľa
       responses:
-        '200':
+        "200":
           description: Používateľ
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema: { $ref: "#/components/schemas/User" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Users]
       summary: Aktualizovať používateľa
@@ -228,17 +228,17 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
+            schema: { $ref: "#/components/schemas/UpdateUserRequest" }
       responses:
-        '200':
+        "200":
           description: Aktualizovaný
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema: { $ref: "#/components/schemas/User" }
 
   /users/{userId}/loans:
     parameters:
-      - $ref: '#/components/parameters/UserId'
+      - $ref: "#/components/parameters/UserId"
     get:
       tags: [Users]
       summary: Zápožičky používateľa
@@ -247,11 +247,11 @@ paths:
           name: status
           schema: { type: string, enum: [active, returned, all], default: active }
       responses:
-        '200':
+        "200":
           description: Zoznam zápožičiek
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanListResponse' }
+              schema: { $ref: "#/components/schemas/LoanListResponse" }
 
   # ===== Categories =====
   /categories:
@@ -259,13 +259,13 @@ paths:
       tags: [Categories]
       summary: Zoznam kategórií
       responses:
-        '200':
+        "200":
           description: Zoznam
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Category' }
+                items: { $ref: "#/components/schemas/Category" }
     post:
       tags: [Categories]
       summary: Vytvoriť kategóriu
@@ -273,13 +273,13 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateCategoryRequest' }
+            schema: { $ref: "#/components/schemas/CreateCategoryRequest" }
       responses:
-        '201':
+        "201":
           description: Vytvorená
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Category' }
+              schema: { $ref: "#/components/schemas/Category" }
 
   /categories/{categoryId}:
     parameters:
@@ -291,11 +291,11 @@ paths:
       tags: [Categories]
       summary: Detail kategórie
       responses:
-        '200':
+        "200":
           description: Kategória
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Category' }
+              schema: { $ref: "#/components/schemas/Category" }
     patch:
       tags: [Categories]
       summary: Aktualizovať kategóriu
@@ -303,13 +303,13 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UpdateCategoryRequest' }
+            schema: { $ref: "#/components/schemas/UpdateCategoryRequest" }
       responses:
-        '200':
+        "200":
           description: Aktualizovaná
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Category' }
+              schema: { $ref: "#/components/schemas/Category" }
 
   # ===== Locations =====
   /locations:
@@ -317,13 +317,13 @@ paths:
       tags: [Locations]
       summary: Zoznam lokalít
       responses:
-        '200':
+        "200":
           description: Zoznam
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Location' }
+                items: { $ref: "#/components/schemas/Location" }
     post:
       tags: [Locations]
       summary: Vytvoriť lokalitu
@@ -331,13 +331,13 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateLocationRequest' }
+            schema: { $ref: "#/components/schemas/CreateLocationRequest" }
       responses:
-        '201':
+        "201":
           description: Vytvorená
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Location' }
+              schema: { $ref: "#/components/schemas/Location" }
 
   /locations/{locationId}:
     parameters:
@@ -348,24 +348,24 @@ paths:
     get:
       tags: [Locations]
       responses:
-        '200':
+        "200":
           description: Lokalita
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Location' }
+              schema: { $ref: "#/components/schemas/Location" }
     patch:
       tags: [Locations]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UpdateLocationRequest' }
+            schema: { $ref: "#/components/schemas/UpdateLocationRequest" }
       responses:
-        '200':
+        "200":
           description: Aktualizovaná
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Location' }
+              schema: { $ref: "#/components/schemas/Location" }
 
   # ===== Assets =====
   /assets:
@@ -373,16 +373,16 @@ paths:
       tags: [Assets]
       summary: Vyhľadávanie a zoznam majetku
       parameters:
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Sort'
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Sort"
         - in: query
           name: search
           description: Full-text v názve, popise, sériovom čísle, tagoch
           schema: { type: string }
         - in: query
           name: status
-          schema: { $ref: '#/components/schemas/AssetStatus' }
+          schema: { $ref: "#/components/schemas/AssetStatus" }
         - in: query
           name: categoryId
           schema: { type: string }
@@ -400,11 +400,11 @@ paths:
           name: includeDisposed
           schema: { type: boolean, default: false }
       responses:
-        '200':
+        "200":
           description: Zoznam
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AssetListResponse' }
+              schema: { $ref: "#/components/schemas/AssetListResponse" }
     post:
       tags: [Assets]
       summary: Zaevidovať nový majetok
@@ -412,15 +412,15 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateAssetRequest' }
+            schema: { $ref: "#/components/schemas/CreateAssetRequest" }
       responses:
-        '201':
+        "201":
           description: Vytvorený
           headers:
             Location: { schema: { type: string } }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Asset' }
+              schema: { $ref: "#/components/schemas/Asset" }
 
   /assets/bulk-import:
     post:
@@ -441,11 +441,11 @@ paths:
                   type: boolean
                   description: Ak true, len validuje, neukladá
       responses:
-        '200':
+        "200":
           description: Výsledok importu
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/BulkImportResult' }
+              schema: { $ref: "#/components/schemas/BulkImportResult" }
 
   /assets/lookup/qr/{qrCode}:
     parameters:
@@ -457,12 +457,12 @@ paths:
       tags: [Assets]
       summary: Vyhľadať majetok podľa QR kódu
       responses:
-        '200':
+        "200":
           description: Asset
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Asset' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema: { $ref: "#/components/schemas/Asset" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /assets/lookup/inventory/{inventoryNumber}:
     parameters:
@@ -474,26 +474,26 @@ paths:
       tags: [Assets]
       summary: Vyhľadať majetok podľa inventárneho čísla
       responses:
-        '200':
+        "200":
           description: Asset
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Asset' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema: { $ref: "#/components/schemas/Asset" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /assets/{assetId}:
     parameters:
-      - $ref: '#/components/parameters/AssetId'
+      - $ref: "#/components/parameters/AssetId"
     get:
       tags: [Assets]
       summary: Detail majetku
       responses:
-        '200':
+        "200":
           description: Asset
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Asset' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema: { $ref: "#/components/schemas/Asset" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Assets]
       summary: Aktualizovať majetok
@@ -501,17 +501,17 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UpdateAssetRequest' }
+            schema: { $ref: "#/components/schemas/UpdateAssetRequest" }
       responses:
-        '200':
+        "200":
           description: Aktualizovaný
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Asset' }
+              schema: { $ref: "#/components/schemas/Asset" }
 
   /assets/{assetId}/dispose:
     parameters:
-      - $ref: '#/components/parameters/AssetId'
+      - $ref: "#/components/parameters/AssetId"
     post:
       tags: [Assets]
       summary: Vyradiť majetok
@@ -525,31 +525,31 @@ paths:
               properties:
                 reason: { type: string, minLength: 5 }
       responses:
-        '200':
+        "200":
           description: Vyradený
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Asset' }
+              schema: { $ref: "#/components/schemas/Asset" }
 
   /assets/{assetId}/history:
     parameters:
-      - $ref: '#/components/parameters/AssetId'
+      - $ref: "#/components/parameters/AssetId"
     get:
       tags: [Assets]
       summary: História pohybov položky
       parameters:
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Cursor'
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
       responses:
-        '200':
+        "200":
           description: História
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AssetHistoryListResponse' }
+              schema: { $ref: "#/components/schemas/AssetHistoryListResponse" }
 
   /assets/{assetId}/qr:
     parameters:
-      - $ref: '#/components/parameters/AssetId'
+      - $ref: "#/components/parameters/AssetId"
     get:
       tags: [Assets]
       summary: Stiahnuť QR kód ako PNG/SVG
@@ -561,7 +561,7 @@ paths:
           name: size
           schema: { type: integer, default: 256 }
       responses:
-        '200':
+        "200":
           description: QR kód
           content:
             image/png: { schema: { type: string, format: binary } }
@@ -570,7 +570,7 @@ paths:
 
   /assets/{assetId}/photos:
     parameters:
-      - $ref: '#/components/parameters/AssetId'
+      - $ref: "#/components/parameters/AssetId"
     post:
       tags: [Assets]
       summary: Pridať fotografiu k majetku
@@ -585,11 +585,11 @@ paths:
                 file: { type: string, format: binary }
                 isPrimary: { type: boolean, default: false }
       responses:
-        '201':
+        "201":
           description: Pridaná
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Attachment' }
+              schema: { $ref: "#/components/schemas/Attachment" }
 
   # ===== Loan Requests =====
   /loan-requests:
@@ -597,8 +597,8 @@ paths:
       tags: [LoanRequests]
       summary: Zoznam žiadostí o vypožičanie
       parameters:
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Cursor'
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
         - in: query
           name: status
           schema: { type: string, enum: [pending, approved, rejected, cancelled, fulfilled] }
@@ -606,32 +606,32 @@ paths:
           name: requesterId
           schema: { type: string }
       responses:
-        '200':
+        "200":
           description: Zoznam
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanRequestListResponse' }
+              schema: { $ref: "#/components/schemas/LoanRequestListResponse" }
     post:
       tags: [LoanRequests]
       summary: Vytvoriť žiadosť o vypožičanie
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateLoanRequestRequest' }
+            schema: { $ref: "#/components/schemas/CreateLoanRequestRequest" }
       responses:
-        '201':
+        "201":
           description: Vytvorená
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanRequest' }
-        '409':
+              schema: { $ref: "#/components/schemas/LoanRequest" }
+        "409":
           description: Niektoré položky nie sú dostupné
           content:
             application/problem+json:
-              schema: { $ref: '#/components/schemas/ProblemDetails' }
+              schema: { $ref: "#/components/schemas/ProblemDetails" }
 
   /loan-requests/{requestId}:
     parameters:
@@ -642,11 +642,11 @@ paths:
     get:
       tags: [LoanRequests]
       responses:
-        '200':
+        "200":
           description: Detail
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanRequest' }
+              schema: { $ref: "#/components/schemas/LoanRequest" }
 
   /loan-requests/{requestId}/approve:
     parameters:
@@ -665,11 +665,11 @@ paths:
               properties:
                 comment: { type: string }
       responses:
-        '200':
+        "200":
           description: Schválená
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanRequest' }
+              schema: { $ref: "#/components/schemas/LoanRequest" }
 
   /loan-requests/{requestId}/reject:
     parameters:
@@ -690,11 +690,11 @@ paths:
               properties:
                 comment: { type: string, minLength: 5 }
       responses:
-        '200':
+        "200":
           description: Zamietnutá
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanRequest' }
+              schema: { $ref: "#/components/schemas/LoanRequest" }
 
   /loan-requests/{requestId}/cancel:
     parameters:
@@ -706,11 +706,11 @@ paths:
       tags: [LoanRequests]
       summary: Zrušiť vlastnú žiadosť
       responses:
-        '200':
+        "200":
           description: Zrušená
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanRequest' }
+              schema: { $ref: "#/components/schemas/LoanRequest" }
 
   # ===== Loans =====
   /loans:
@@ -718,8 +718,8 @@ paths:
       tags: [Loans]
       summary: Zoznam zápožičiek
       parameters:
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Cursor'
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
         - in: query
           name: status
           schema: { type: string, enum: [active, partially_returned, returned, overdue] }
@@ -730,27 +730,27 @@ paths:
           name: overdue
           schema: { type: boolean }
       responses:
-        '200':
+        "200":
           description: Zoznam
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanListResponse' }
+              schema: { $ref: "#/components/schemas/LoanListResponse" }
     post:
       tags: [Loans]
       summary: Vydať majetok (zo schválenej žiadosti alebo rýchle vypožičanie)
       parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CreateLoanRequest' }
+            schema: { $ref: "#/components/schemas/CreateLoanRequest" }
       responses:
-        '201':
+        "201":
           description: Vytvorená zápožička + PDF protokol
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanWithProtocol' }
+              schema: { $ref: "#/components/schemas/LoanWithProtocol" }
 
   /loans/{loanId}:
     parameters:
@@ -761,11 +761,11 @@ paths:
     get:
       tags: [Loans]
       responses:
-        '200':
+        "200":
           description: Detail
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Loan' }
+              schema: { $ref: "#/components/schemas/Loan" }
 
   /loans/{loanId}/extend:
     parameters:
@@ -787,11 +787,11 @@ paths:
                 newDueAt: { type: string, format: date-time }
                 reason: { type: string }
       responses:
-        '200':
+        "200":
           description: Predĺžená
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Loan' }
+              schema: { $ref: "#/components/schemas/Loan" }
 
   /loans/{loanId}/return:
     parameters:
@@ -806,13 +806,13 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ReturnLoanRequest' }
+            schema: { $ref: "#/components/schemas/ReturnLoanRequest" }
       responses:
-        '200':
+        "200":
           description: Vrátený + return protokol
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanWithProtocol' }
+              schema: { $ref: "#/components/schemas/LoanWithProtocol" }
 
   # ===== Protocols =====
   /protocols/{protocolId}:
@@ -825,11 +825,11 @@ paths:
       tags: [Protocols]
       summary: Metadata protokolu
       responses:
-        '200':
+        "200":
           description: Protokol
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanProtocol' }
+              schema: { $ref: "#/components/schemas/LoanProtocol" }
 
   /protocols/{protocolId}/pdf:
     parameters:
@@ -841,7 +841,7 @@ paths:
       tags: [Protocols]
       summary: Stiahnuť PDF protokol
       responses:
-        '200':
+        "200":
           description: PDF
           content:
             application/pdf:
@@ -869,11 +869,11 @@ paths:
                   type: string
                   description: Base64 PNG pre method=drawn
       responses:
-        '200':
+        "200":
           description: Podpísaný
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanProtocol' }
+              schema: { $ref: "#/components/schemas/LoanProtocol" }
 
   # ===== Notifications =====
   /notifications:
@@ -881,17 +881,17 @@ paths:
       tags: [Notifications]
       summary: In-app notifikácie aktuálneho používateľa
       parameters:
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Cursor'
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
         - in: query
           name: unreadOnly
           schema: { type: boolean, default: false }
       responses:
-        '200':
+        "200":
           description: Zoznam
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/NotificationListResponse' }
+              schema: { $ref: "#/components/schemas/NotificationListResponse" }
 
   /notifications/{notificationId}/read:
     parameters:
@@ -903,14 +903,14 @@ paths:
       tags: [Notifications]
       summary: Označiť ako prečítané
       responses:
-        '204': { description: OK }
+        "204": { description: OK }
 
   /notifications/read-all:
     post:
       tags: [Notifications]
       summary: Označiť všetky ako prečítané
       responses:
-        '204': { description: OK }
+        "204": { description: OK }
 
   # ===== Reports =====
   /reports/assets/export:
@@ -920,7 +920,7 @@ paths:
       parameters:
         - in: query
           name: status
-          schema: { $ref: '#/components/schemas/AssetStatus' }
+          schema: { $ref: "#/components/schemas/AssetStatus" }
         - in: query
           name: categoryId
           schema: { type: string }
@@ -928,7 +928,7 @@ paths:
           name: locationId
           schema: { type: string }
       responses:
-        '200':
+        "200":
           description: CSV export
           content:
             text/csv:
@@ -939,11 +939,11 @@ paths:
       tags: [Reports]
       summary: Zápožičky po splatnosti
       responses:
-        '200':
+        "200":
           description: Zoznam
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/LoanListResponse' }
+              schema: { $ref: "#/components/schemas/LoanListResponse" }
 
   /reports/asset-utilization:
     get:
@@ -960,11 +960,11 @@ paths:
           name: categoryId
           schema: { type: string }
       responses:
-        '200':
+        "200":
           description: Štatistiky
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/UtilizationReport' }
+              schema: { $ref: "#/components/schemas/UtilizationReport" }
 
 components:
   securitySchemes:
@@ -996,10 +996,10 @@ components:
       in: query
       name: sort
       schema: { type: string }
-      description: 'Čiarkou oddelený zoznam: field:asc|desc'
+      description: "Čiarkou oddelený zoznam: field:asc|desc"
       examples:
-        byDate: { value: 'createdAt:desc' }
-        byName: { value: 'name:asc' }
+        byDate: { value: "createdAt:desc" }
+        byName: { value: "name:asc" }
 
     UserId:
       in: path
@@ -1024,25 +1024,25 @@ components:
       description: Entita neexistuje
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/ProblemDetails' }
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
 
     Unauthorized:
       description: Chýbajúci alebo neplatný token
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/ProblemDetails' }
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
 
     Forbidden:
       description: Nedostatok oprávnení
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/ProblemDetails' }
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
 
     Conflict:
       description: Konflikt stavu
       content:
         application/problem+json:
-          schema: { $ref: '#/components/schemas/ProblemDetails' }
+          schema: { $ref: "#/components/schemas/ProblemDetails" }
 
   schemas:
     # ===== Common =====
@@ -1095,7 +1095,7 @@ components:
         refreshToken: { type: string }
         expiresIn: { type: integer, description: Sekundy do expirácie }
         tokenType: { type: string, default: Bearer }
-        user: { $ref: '#/components/schemas/User' }
+        user: { $ref: "#/components/schemas/User" }
 
     # ===== User =====
     UserRole:
@@ -1119,11 +1119,11 @@ components:
         displayName: { type: string }
         firstName: { type: string }
         lastName: { type: string }
-        type: { $ref: '#/components/schemas/UserType' }
+        type: { $ref: "#/components/schemas/UserType" }
         roles:
           type: array
-          items: { $ref: '#/components/schemas/UserRole' }
-        status: { $ref: '#/components/schemas/UserStatus' }
+          items: { $ref: "#/components/schemas/UserRole" }
+        status: { $ref: "#/components/schemas/UserStatus" }
         organization:
           type: object
           properties:
@@ -1157,8 +1157,8 @@ components:
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/User' }
-        pagination: { $ref: '#/components/schemas/Pagination' }
+          items: { $ref: "#/components/schemas/User" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
 
     CreateExternalUserRequest:
       type: object
@@ -1172,7 +1172,7 @@ components:
         expiresAt: { type: string, format: date-time }
         roles:
           type: array
-          items: { $ref: '#/components/schemas/UserRole' }
+          items: { $ref: "#/components/schemas/UserRole" }
           default: [external]
 
     UpdateUserRequest:
@@ -1182,8 +1182,8 @@ components:
         lastName: { type: string }
         roles:
           type: array
-          items: { $ref: '#/components/schemas/UserRole' }
-        status: { $ref: '#/components/schemas/UserStatus' }
+          items: { $ref: "#/components/schemas/UserRole" }
+        status: { $ref: "#/components/schemas/UserStatus" }
         preferences:
           type: object
 
@@ -1194,14 +1194,14 @@ components:
       properties:
         id: { type: string }
         code: { type: string }
-        name: { $ref: '#/components/schemas/LocalizedString' }
+        name: { $ref: "#/components/schemas/LocalizedString" }
         description: { type: string, nullable: true }
         parentCategoryId: { type: string, nullable: true }
         icon: { type: string, nullable: true }
         inventoryNumberPrefix: { type: string, nullable: true }
         customFieldsSchema:
           type: array
-          items: { $ref: '#/components/schemas/CustomFieldDefinition' }
+          items: { $ref: "#/components/schemas/CustomFieldDefinition" }
         active: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -1211,7 +1211,7 @@ components:
       required: [fieldName, label, type]
       properties:
         fieldName: { type: string }
-        label: { $ref: '#/components/schemas/LocalizedString' }
+        label: { $ref: "#/components/schemas/LocalizedString" }
         type: { type: string, enum: [text, number, boolean, date, select] }
         required: { type: boolean, default: false }
         defaultValue: {}
@@ -1230,26 +1230,26 @@ components:
       type: object
       required: [code, name]
       properties:
-        code: { type: string, pattern: '^[a-z0-9_]+$' }
-        name: { $ref: '#/components/schemas/LocalizedString' }
+        code: { type: string, pattern: "^[a-z0-9_]+$" }
+        name: { $ref: "#/components/schemas/LocalizedString" }
         description: { type: string }
         parentCategoryId: { type: string }
         icon: { type: string }
         inventoryNumberPrefix: { type: string }
         customFieldsSchema:
           type: array
-          items: { $ref: '#/components/schemas/CustomFieldDefinition' }
+          items: { $ref: "#/components/schemas/CustomFieldDefinition" }
 
     UpdateCategoryRequest:
       type: object
       properties:
-        name: { $ref: '#/components/schemas/LocalizedString' }
+        name: { $ref: "#/components/schemas/LocalizedString" }
         description: { type: string }
         icon: { type: string }
         active: { type: boolean }
         customFieldsSchema:
           type: array
-          items: { $ref: '#/components/schemas/CustomFieldDefinition' }
+          items: { $ref: "#/components/schemas/CustomFieldDefinition" }
 
     # ===== Location =====
     Location:
@@ -1314,7 +1314,7 @@ components:
         manufacturer: { type: string, nullable: true }
         model: { type: string, nullable: true }
         serialNumber: { type: string, nullable: true }
-        status: { $ref: '#/components/schemas/AssetStatus' }
+        status: { $ref: "#/components/schemas/AssetStatus" }
         locationId: { type: string }
         assignedToUserId: { type: string, nullable: true }
         responsibleUserId: { type: string, nullable: true }
@@ -1325,7 +1325,7 @@ components:
           type: object
           properties:
             date: { type: string, format: date, nullable: true }
-            price: { $ref: '#/components/schemas/Money' }
+            price: { $ref: "#/components/schemas/Money" }
             supplier: { type: string, nullable: true }
             purchaseOrderNumber: { type: string, nullable: true }
             warrantyUntil: { type: string, format: date, nullable: true }
@@ -1356,8 +1356,8 @@ components:
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/Asset' }
-        pagination: { $ref: '#/components/schemas/Pagination' }
+          items: { $ref: "#/components/schemas/Asset" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
 
     CreateAssetRequest:
       type: object
@@ -1421,8 +1421,8 @@ components:
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/AssetHistoryEntry' }
-        pagination: { $ref: '#/components/schemas/Pagination' }
+          items: { $ref: "#/components/schemas/AssetHistoryEntry" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
 
     BulkImportResult:
       type: object
@@ -1488,8 +1488,8 @@ components:
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/LoanRequest' }
-        pagination: { $ref: '#/components/schemas/Pagination' }
+          items: { $ref: "#/components/schemas/LoanRequest" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
 
     CreateLoanRequestRequest:
       type: object
@@ -1535,7 +1535,7 @@ components:
         issuedByUserId: { type: string }
         items:
           type: array
-          items: { $ref: '#/components/schemas/LoanItem' }
+          items: { $ref: "#/components/schemas/LoanItem" }
         borrowedAt: { type: string, format: date-time }
         dueAt: { type: string, format: date-time }
         returnedAt: { type: string, format: date-time, nullable: true }
@@ -1558,15 +1558,15 @@ components:
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/Loan' }
-        pagination: { $ref: '#/components/schemas/Pagination' }
+          items: { $ref: "#/components/schemas/Loan" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
 
     LoanWithProtocol:
       allOf:
-        - $ref: '#/components/schemas/Loan'
+        - $ref: "#/components/schemas/Loan"
         - type: object
           properties:
-            protocol: { $ref: '#/components/schemas/LoanProtocol' }
+            protocol: { $ref: "#/components/schemas/LoanProtocol" }
 
     CreateLoanRequest:
       oneOf:
@@ -1642,8 +1642,8 @@ components:
       properties:
         id: { type: string }
         type: { type: string }
-        title: { $ref: '#/components/schemas/LocalizedString' }
-        body: { $ref: '#/components/schemas/LocalizedString' }
+        title: { $ref: "#/components/schemas/LocalizedString" }
+        body: { $ref: "#/components/schemas/LocalizedString" }
         actionUrl: { type: string, nullable: true }
         priority: { type: string, enum: [low, normal, high, critical] }
         readAt: { type: string, format: date-time, nullable: true }
@@ -1654,8 +1654,8 @@ components:
       properties:
         data:
           type: array
-          items: { $ref: '#/components/schemas/Notification' }
-        pagination: { $ref: '#/components/schemas/Pagination' }
+          items: { $ref: "#/components/schemas/Notification" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
         unreadCount: { type: integer }
 
     # ===== Reports =====

@@ -4,14 +4,14 @@ Tento dokument obsahuje **úplný zoznam stavov**, v ktorých sa môže majetok 
 
 ## Stavy majetku (Asset Status)
 
-| Kód | Názov | Farba v UI | Význam |
-|-----|-------|------------|--------|
-| `AVAILABLE` | Dostupné | 🟢 Zelená | V sklade, pripravené na zápožičku |
-| `RESERVED` | Rezervované | 🟡 Žltá | Niekto požiadal o zápožičku, čaká na schválenie |
-| `BORROWED` | Zapožičané | 🔵 Modrá | Aktívne zapožičané používateľovi |
-| `IN_SERVICE` | V servise | 🟠 Oranžová | Na oprave alebo údržbe |
-| `DISPOSED` | Vyradené | ⚪ Sivá | Trvalo vyradené z evidencie (zastarané, predané) |
-| `LOST` | Stratené | 🔴 Červená | Nahlásené ako stratené počas zápožičky |
+| Kód          | Názov       | Farba v UI  | Význam                                           |
+| ------------ | ----------- | ----------- | ------------------------------------------------ |
+| `AVAILABLE`  | Dostupné    | 🟢 Zelená   | V sklade, pripravené na zápožičku                |
+| `RESERVED`   | Rezervované | 🟡 Žltá     | Niekto požiadal o zápožičku, čaká na schválenie  |
+| `BORROWED`   | Zapožičané  | 🔵 Modrá    | Aktívne zapožičané používateľovi                 |
+| `IN_SERVICE` | V servise   | 🟠 Oranžová | Na oprave alebo údržbe                           |
+| `DISPOSED`   | Vyradené    | ⚪ Sivá     | Trvalo vyradené z evidencie (zastarané, predané) |
+| `LOST`       | Stratené    | 🔴 Červená  | Nahlásené ako stratené počas zápožičky           |
 
 > 💡 **Tip:** Farby zodpovedajú SFZ design tokens. Vidíš ich konzistentne v celom UI — v zozname majetku, v detaile, vo filteroch aj v reportoch.
 
@@ -45,12 +45,12 @@ stateDiagram-v2
 
 ## Stavy žiadosti o zápožičku (Loan Request Status)
 
-| Kód | Názov | Farba v UI | Význam |
-|-----|-------|------------|--------|
-| `PENDING` | Čaká na schválenie | 🟡 Žltá | Žiadosť bola odoslaná, schvaľovateľ ešte nerozhodol |
-| `APPROVED` | Schválené | 🟢 Zelená | Schválené, môže byť prevzaté |
-| `REJECTED` | Zamietnuté | 🔴 Červená | Schvaľovateľ zamietol |
-| `CANCELLED` | Zrušené | ⚪ Sivá | Žiadateľ stiahol žiadosť pred schválením |
+| Kód         | Názov              | Farba v UI | Význam                                              |
+| ----------- | ------------------ | ---------- | --------------------------------------------------- |
+| `PENDING`   | Čaká na schválenie | 🟡 Žltá    | Žiadosť bola odoslaná, schvaľovateľ ešte nerozhodol |
+| `APPROVED`  | Schválené          | 🟢 Zelená  | Schválené, môže byť prevzaté                        |
+| `REJECTED`  | Zamietnuté         | 🔴 Červená | Schvaľovateľ zamietol                               |
+| `CANCELLED` | Zrušené            | ⚪ Sivá    | Žiadateľ stiahol žiadosť pred schválením            |
 
 ### Životný cyklus žiadosti
 
@@ -82,13 +82,13 @@ Ak žiadosť obsahuje položky z rôznych kategórií (napr. IT + šport), schva
 
 ## Stavy zápožičky (Loan Status)
 
-| Kód | Názov | Farba v UI | Význam |
-|-----|-------|------------|--------|
-| `ACTIVE` | Aktívna | 🔵 Modrá | Majetok je u používateľa, termín ešte neuplynul |
-| `OVERDUE` | Po termíne | 🔴 Červená | Termín vrátenia uplynul, ešte nevrátené |
-| `RETURNED` | Vrátené | 🟢 Zelená | Úspešne vrátené v poriadku |
-| `DAMAGED` | Vrátené poškodené | 🟠 Oranžová | Vrátené, ale niektoré položky vyžadujú servis |
-| `LOST` | Stratené | 🔴 Červená | Aspoň jedna položka nahlásená ako stratená |
+| Kód        | Názov             | Farba v UI  | Význam                                          |
+| ---------- | ----------------- | ----------- | ----------------------------------------------- |
+| `ACTIVE`   | Aktívna           | 🔵 Modrá    | Majetok je u používateľa, termín ešte neuplynul |
+| `OVERDUE`  | Po termíne        | 🔴 Červená  | Termín vrátenia uplynul, ešte nevrátené         |
+| `RETURNED` | Vrátené           | 🟢 Zelená   | Úspešne vrátené v poriadku                      |
+| `DAMAGED`  | Vrátené poškodené | 🟠 Oranžová | Vrátené, ale niektoré položky vyžadujú servis   |
+| `LOST`     | Stratené          | 🔴 Červená  | Aspoň jedna položka nahlásená ako stratená      |
 
 ### Životný cyklus zápožičky
 
@@ -121,14 +121,14 @@ Systém automaticky:
 
 Toto **NIE JE stav v životnom cykle**, ale **subjektívne hodnotenie** fyzickej kondície. Vyhodnocuje sa pri preberacích protokoloch.
 
-| Kód | Názov | Význam |
-|-----|-------|--------|
-| `NEW` | Nové | Nepoužité, originálny obal |
-| `EXCELLENT` | Výborný | Ako nové, bez známok používania |
-| `GOOD` | Dobrý | Bežné stopy používania, plne funkčné |
-| `FAIR` | Použiteľné | Viditeľné opotrebenie, ale funkčné |
-| `POOR` | Slabý | Výrazne opotrebované, vyžaduje pozornosť |
-| `UNUSABLE` | Nepoužiteľné | Pokazené alebo nefunkčné |
+| Kód         | Názov        | Význam                                   |
+| ----------- | ------------ | ---------------------------------------- |
+| `NEW`       | Nové         | Nepoužité, originálny obal               |
+| `EXCELLENT` | Výborný      | Ako nové, bez známok používania          |
+| `GOOD`      | Dobrý        | Bežné stopy používania, plne funkčné     |
+| `FAIR`      | Použiteľné   | Viditeľné opotrebenie, ale funkčné       |
+| `POOR`      | Slabý        | Výrazne opotrebované, vyžaduje pozornosť |
+| `UNUSABLE`  | Nepoužiteľné | Pokazené alebo nefunkčné                 |
 
 > 💡 **Tip:** Kondíciu **kontroluje obojstranný protokol** — pri prevzatí (správca + vypožičiavajúci) a pri vrátení. Rozdiel medzi „at pickup" a „at return" identifikuje, či sa zhoršila počas zápožičky.
 

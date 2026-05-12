@@ -18,13 +18,13 @@ Tieto assety sú **referenčné** – nepoužívajte ich priamo v kóde. Namiest
 
 Pre rýchlu referenciu – plné špecifikácie nájdeš v `tokens.json`.
 
-| Farba | HEX | PANTONE | Použitie |
-|-------|-----|---------|----------|
-| SFZ Blue | `#1450df` | 2935 C | Primárna brand farba |
-| SFZ Red | `#ec1c24` | Warm Red C | Alerty, dôležité |
-| SFZ Black | `#070504` | Black 6 C | Text na svetlom pozadí |
-| Cool Grey 6 | `#bbbdbf` | Cool Grey 6 C | Svetlá sivá |
-| Cool Grey 9 | `#808285` | Cool Grey 9 C | Stredná sivá |
+| Farba       | HEX       | PANTONE       | Použitie               |
+| ----------- | --------- | ------------- | ---------------------- |
+| SFZ Blue    | `#1450df` | 2935 C        | Primárna brand farba   |
+| SFZ Red     | `#ec1c24` | Warm Red C    | Alerty, dôležité       |
+| SFZ Black   | `#070504` | Black 6 C     | Text na svetlom pozadí |
+| Cool Grey 6 | `#bbbdbf` | Cool Grey 6 C | Svetlá sivá            |
+| Cool Grey 9 | `#808285` | Cool Grey 9 C | Stredná sivá           |
 
 ## Varianty loga
 

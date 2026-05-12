@@ -4,7 +4,7 @@ Tento adresár obsahuje záznamy o významných architektonických rozhodnutiach
 
 ## Čo je ADR?
 
-ADR je krátky dokument, ktorý zachytáva jedno významné technické rozhodnutie: **kontext, možnosti, voľbu a dôsledky**. Slúži ako pamäť projektu – aby budúci členovia tímu (aj my sami o pol roka) vedeli, *prečo* sme niečo urobili tak, ako sme to urobili.
+ADR je krátky dokument, ktorý zachytáva jedno významné technické rozhodnutie: **kontext, možnosti, voľbu a dôsledky**. Slúži ako pamäť projektu – aby budúci členovia tímu (aj my sami o pol roka) vedeli, _prečo_ sme niečo urobili tak, ako sme to urobili.
 
 ## Kedy vytvoriť nové ADR?
 
@@ -22,13 +22,13 @@ ADR je krátky dokument, ktorý zachytáva jedno významné technické rozhodnut
 
 ## Zoznam ADR
 
-| # | Názov | Status | Dátum |
-|---|-------|--------|-------|
-| 0001 | [Monorepo s pnpm + Turborepo](0001-monorepo-pnpm-turbo.md) | Accepted | máj 2026 |
-| 0002 | [NestJS ako backend framework](0002-backend-nestjs.md) | Accepted | máj 2026 |
-| 0003 | [MongoDB Atlas ako primárna databáza](0003-mongodb-atlas.md) | Accepted | máj 2026 |
-| 0004 | [Microsoft Entra ID ako identity provider](0004-auth-entra-id.md) | Accepted | máj 2026 |
+| #    | Názov                                                                                     | Status   | Dátum    |
+| ---- | ----------------------------------------------------------------------------------------- | -------- | -------- |
+| 0001 | [Monorepo s pnpm + Turborepo](0001-monorepo-pnpm-turbo.md)                                | Accepted | máj 2026 |
+| 0002 | [NestJS ako backend framework](0002-backend-nestjs.md)                                    | Accepted | máj 2026 |
+| 0003 | [MongoDB Atlas ako primárna databáza](0003-mongodb-atlas.md)                              | Accepted | máj 2026 |
+| 0004 | [Microsoft Entra ID ako identity provider](0004-auth-entra-id.md)                         | Accepted | máj 2026 |
 | 0005 | [Natívny MongoDB driver + Repository pattern (bez Mongoose)](0005-mongo-native-driver.md) | Accepted | máj 2026 |
-| 0006 | _(plánované)_ OpenAPI 3.1 ako kontrakt API | Proposed | – |
-| 0007 | _(plánované)_ MCP server pre AI integrácie | Proposed | – |
-| 0008 | _(plánované)_ Next.js + shadcn/ui pre frontend | Proposed | – |
+| 0006 | _(plánované)_ OpenAPI 3.1 ako kontrakt API                                                | Proposed | –        |
+| 0007 | _(plánované)_ MCP server pre AI integrácie                                                | Proposed | –        |
+| 0008 | _(plánované)_ Next.js + shadcn/ui pre frontend                                            | Proposed | –        |

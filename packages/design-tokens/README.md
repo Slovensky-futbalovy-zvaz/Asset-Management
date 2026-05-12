@@ -21,6 +21,7 @@ packages/design-tokens/
 ## Použitie
 
 ### V TypeScript / React
+
 ```typescript
 import { tokens } from '@sfz/design-tokens';
 
@@ -28,6 +29,7 @@ const primaryColor = tokens.color.brand.blue; // '#1450df'
 ```
 
 ### V CSS / Tailwind
+
 ```css
 @import '@sfz/design-tokens/tokens.css';
 
@@ -38,6 +40,7 @@ const primaryColor = tokens.color.brand.blue; // '#1450df'
 ```
 
 ### V Tailwind config
+
 ```js
 // tailwind.config.js
 import tokens from '@sfz/design-tokens/tokens.json';
@@ -49,10 +52,10 @@ export default {
         'sfz-blue': tokens.color.brand.blue.value,
         'sfz-red': tokens.color.brand.red.value,
         // ...
-      }
-    }
-  }
-}
+      },
+    },
+  },
+};
 ```
 
 ## Build
@@ -62,6 +65,7 @@ pnpm build
 ```
 
 Generuje:
+
 - `dist/index.js` – CommonJS export
 - `dist/index.esm.js` – ESM export
 - `dist/index.d.ts` – TypeScript typy
@@ -78,15 +82,18 @@ Generuje:
 ## Spätná kompatibilita
 
 Tokeny majú semver verziovanie. Major bump pri:
+
 - Odstránení existujúceho tokenu
 - Zmene hodnoty existujúceho brand tokenu
 - Zmene štruktúry kategórií
 
 Minor bump pri:
+
 - Pridaní nového tokenu
 - Pridaní nového variantu
 
 Patch bump pri:
+
 - Zmene popisov, metadata
 - Drobných úpravách sémantických tokenov
 

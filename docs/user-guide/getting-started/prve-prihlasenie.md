@@ -55,13 +55,13 @@ Po prihlásení sa ti otvorí **Domovská obrazovka**. Hore vidíš hlavné menu
 
 V hlavnom menu nájdeš tieto sekcie (presné položky závisia od tvojej roly):
 
-| Sekcia | Čo tam nájdeš |
-|--------|-----------------|
-| 🏠 **Domov** | Prehľad tvojich aktívnych zápožičiek a nedávnych aktivít |
-| 📦 **Majetok** | Katalóg dostupného majetku – môžeš si tu požičať notebook, mobil, výstroj a iné |
-| 📋 **Moje zápožičky** | Zoznam toho, čo aktuálne máš požičané + história |
-| 🔔 **Notifikácie** | Upozornenia – schválené žiadosti, blížiace sa termíny vrátenia, atď. |
-| 👤 **Môj profil** | Tvoje osobné údaje, nastavenia, jazyk, e-mail notifikácie |
+| Sekcia                | Čo tam nájdeš                                                                   |
+| --------------------- | ------------------------------------------------------------------------------- |
+| 🏠 **Domov**          | Prehľad tvojich aktívnych zápožičiek a nedávnych aktivít                        |
+| 📦 **Majetok**        | Katalóg dostupného majetku – môžeš si tu požičať notebook, mobil, výstroj a iné |
+| 📋 **Moje zápožičky** | Zoznam toho, čo aktuálne máš požičané + história                                |
+| 🔔 **Notifikácie**    | Upozornenia – schválené žiadosti, blížiace sa termíny vrátenia, atď.            |
+| 👤 **Môj profil**     | Tvoje osobné údaje, nastavenia, jazyk, e-mail notifikácie                       |
 
 > 💡 **Tip:** Ak nevidíš niektorú sekciu (napr. **Správa majetku** alebo **Používatelia**), znamená to, že tvoja rola na ňu nemá oprávnenia. Detailný rozpis nájdeš v [Role a oprávnenia](../reference/role-opravnenia.md).
 

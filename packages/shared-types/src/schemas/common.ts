@@ -57,7 +57,10 @@ export type BaseDocument = z.infer<typeof BaseDocumentSchema>;
  */
 export const SoftDeleteSchema = z.object({
   deletedAt: TimestampSchema.nullable().default(null),
-  deletedBy: z.union([ObjectIdSchema, z.literal('SYSTEM')]).nullable().default(null),
+  deletedBy: z
+    .union([ObjectIdSchema, z.literal('SYSTEM')])
+    .nullable()
+    .default(null),
 });
 
 export type SoftDelete = z.infer<typeof SoftDeleteSchema>;

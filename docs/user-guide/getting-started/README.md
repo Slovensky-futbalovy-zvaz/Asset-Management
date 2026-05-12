@@ -18,10 +18,10 @@ Bez ohľadu na to, akú máš rolu, začni tu:
 
 Po prvom prihlásení si vyber tutoriál podľa toho, čo budeš v systéme robiť:
 
-- 👤 [**Onboarding pre zamestnanca**](./onboarding-zamestnanec.md) – ak budeš systém používať na požičiavanie pre seba *(TODO)*
-- 👥 [**Onboarding pre trénera / manažéra tímu**](./onboarding-team-manager.md) – ak budeš zabezpečovať výstroj pre celý tím *(TODO)*
-- 📦 [**Onboarding pre správcu majetku**](./onboarding-spravca.md) – ak budeš evidovať majetok a schvaľovať zápožičky *(TODO)*
-- ⚙️ [**Onboarding pre administrátora**](./onboarding-admin.md) – ak budeš spravovať celý systém *(TODO)*
+- 👤 [**Onboarding pre zamestnanca**](./onboarding-zamestnanec.md) – ak budeš systém používať na požičiavanie pre seba _(TODO)_
+- 👥 [**Onboarding pre trénera / manažéra tímu**](./onboarding-team-manager.md) – ak budeš zabezpečovať výstroj pre celý tím _(TODO)_
+- 📦 [**Onboarding pre správcu majetku**](./onboarding-spravca.md) – ak budeš evidovať majetok a schvaľovať zápožičky _(TODO)_
+- ⚙️ [**Onboarding pre administrátora**](./onboarding-admin.md) – ak budeš spravovať celý systém _(TODO)_
 
 ## Čo je tutoriál?
 

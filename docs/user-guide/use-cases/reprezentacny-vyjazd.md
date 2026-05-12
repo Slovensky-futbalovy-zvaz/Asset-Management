@@ -99,18 +99,18 @@ Peter sa s Martinom vrátia do skladu. Pomocou rovnakého procesu, ale naopak:
 
 Položky majú teraz tieto výsledné stavy:
 
-| Položka | Stav po vrátení |
-|---------|-----------------|
-| 15× zápasové dresy U21 | ✅ Dostupné |
-| 30× tréningové dresy | ✅ Dostupné |
-| 19× lopty | ✅ Dostupné |
-| 1× lopta (prasknutý šev) | 🛠️ V servise |
-| 2× taktická tabuľa | ✅ Dostupné |
-| 1× Panasonic Lumix GH-6 | ✅ Dostupné |
-| 2× notebook | ✅ Dostupné |
-| 1× notebook (LT-2024-008) | 🛠️ V servise |
-| 2× tablet | ✅ Dostupné |
-| 5× rádiová stanica | ✅ Dostupné |
+| Položka                   | Stav po vrátení |
+| ------------------------- | --------------- |
+| 15× zápasové dresy U21    | ✅ Dostupné     |
+| 30× tréningové dresy      | ✅ Dostupné     |
+| 19× lopty                 | ✅ Dostupné     |
+| 1× lopta (prasknutý šev)  | 🛠️ V servise    |
+| 2× taktická tabuľa        | ✅ Dostupné     |
+| 1× Panasonic Lumix GH-6   | ✅ Dostupné     |
+| 2× notebook               | ✅ Dostupné     |
+| 1× notebook (LT-2024-008) | 🛠️ V servise    |
+| 2× tablet                 | ✅ Dostupné     |
+| 5× rádiová stanica        | ✅ Dostupné     |
 
 Po dokončení sa **automaticky vygeneruje záverečný protokol** so zoznamom vrátených položiek, ich stavom a podpisom oboch strán. PDF sa uloží k zápožičke v archíve a pošle e-mailom Petrovi aj Anne.
 

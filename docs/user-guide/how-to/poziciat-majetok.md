@@ -48,13 +48,13 @@ Otvorí sa formulár žiadosti.
 
 Vyplň minimálne tieto polia:
 
-| Pole | Čo do neho |
-|------|------------|
-| **Účel** | Krátky popis, prečo si zápožičku berieš (napr. „Domáca práca", „Reprezentačný výjazd U21") |
-| **Termín od** | Kedy chceš majetok prevziať |
-| **Termín do** | Kedy ho plánuješ vrátiť |
-| **Miesto prevzatia** | Sklad, odkiaľ si ho preberieš (väčšinou predvyplnené podľa lokality majetku) |
-| **Poznámka pre schvaľovateľa** | _Voliteľné._ Napíš tu, čo treba schvaľovateľovi vedieť |
+| Pole                           | Čo do neho                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| **Účel**                       | Krátky popis, prečo si zápožičku berieš (napr. „Domáca práca", „Reprezentačný výjazd U21") |
+| **Termín od**                  | Kedy chceš majetok prevziať                                                                |
+| **Termín do**                  | Kedy ho plánuješ vrátiť                                                                    |
+| **Miesto prevzatia**           | Sklad, odkiaľ si ho preberieš (väčšinou predvyplnené podľa lokality majetku)               |
+| **Poznámka pre schvaľovateľa** | _Voliteľné._ Napíš tu, čo treba schvaľovateľovi vedieť                                     |
 
 > ⚠️ **Pozor:** Niektoré kategórie majú nastavený **maximálny čas zápožičky** (napr. tréningová výstroj max. 14 dní). Ak prekročíš limit, formulár ťa upozorní.
 

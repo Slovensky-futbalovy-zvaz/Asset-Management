@@ -1,14 +1,9 @@
 import { z } from 'zod';
 
-import { AssetCondition, AssetType } from '../enums/asset-type.js';
 import { AssetStatus } from '../enums/asset-status.js';
+import { AssetCondition, AssetType } from '../enums/asset-type.js';
 
-import {
-  BaseDocumentSchema,
-  ObjectIdSchema,
-  SoftDeleteSchema,
-  TimestampSchema,
-} from './common.js';
+import { BaseDocumentSchema, ObjectIdSchema, SoftDeleteSchema, TimestampSchema } from './common.js';
 
 /**
  * Asset = jednotlivá fyzická položka majetku v evidencii.
@@ -41,17 +36,13 @@ export const AssetSchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend({
   description: z.string().max(2000).nullable().default(null),
 
   /** Top-level kategória — určuje, aké špecifické polia sú v `specs`. */
-  type: z.enum(
-    Object.values(AssetType) as [string, ...string[]],
-  ) as z.ZodType<AssetType>,
+  type: z.enum(Object.values(AssetType) as [string, ...string[]]) as z.ZodType<AssetType>,
 
   /** ID kategórie zo collection `categories` (hierarchická taxonómia). */
   categoryId: ObjectIdSchema,
 
   /** Aktuálny stav v životnom cykle. */
-  status: z.enum(
-    Object.values(AssetStatus) as [string, ...string[]],
-  ) as z.ZodType<AssetStatus>,
+  status: z.enum(Object.values(AssetStatus) as [string, ...string[]]) as z.ZodType<AssetStatus>,
 
   /** Aktuálna fyzická kondícia. */
   condition: z.enum(
@@ -152,7 +143,10 @@ export const ITSpecsSchema = z.object({
     .string()
     .regex(/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/, 'Neplatná MAC adresa.')
     .optional(),
-  imei: z.string().regex(/^\d{15}$/, 'IMEI musí byť 15 číslic.').optional(),
+  imei: z
+    .string()
+    .regex(/^\d{15}$/, 'IMEI musí byť 15 číslic.')
+    .optional(),
   hostname: z.string().max(100).optional(),
   os: z.string().max(100).optional(),
   cpu: z.string().max(200).optional(),

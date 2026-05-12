@@ -11,12 +11,12 @@ docker compose -f infra/docker-compose.yml up -d
 
 ## Čo sa spustí
 
-| Služba | Port | Web UI | Účel |
-|--------|------|--------|------|
-| **MongoDB** | 27017 | – | Hlavná databáza |
-| **Mongo Express** | 8081 | http://localhost:8081 | Web UI pre prehliadanie DB |
-| **MailHog** | 1025 (SMTP), 8025 | http://localhost:8025 | Fake SMTP server pre e-maily |
-| **MinIO** | 9000 (API), 9001 | http://localhost:9001 | S3-kompatibilný object storage |
+| Služba            | Port              | Web UI                | Účel                           |
+| ----------------- | ----------------- | --------------------- | ------------------------------ |
+| **MongoDB**       | 27017             | –                     | Hlavná databáza                |
+| **Mongo Express** | 8081              | http://localhost:8081 | Web UI pre prehliadanie DB     |
+| **MailHog**       | 1025 (SMTP), 8025 | http://localhost:8025 | Fake SMTP server pre e-maily   |
+| **MinIO**         | 9000 (API), 9001  | http://localhost:9001 | S3-kompatibilný object storage |
 
 ## Predvolené prihlasovacie údaje
 

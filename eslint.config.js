@@ -4,8 +4,9 @@
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
-import importPlugin from 'eslint-plugin-import';
 import prettierConfig from 'eslint-config-prettier';
+import importPlugin from 'eslint-plugin-import';
+import globals from 'globals';
 
 export default [
   // Base JS recommended
@@ -33,7 +34,14 @@ export default [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        project: true,
+        // No project/projectService — we don't use type-aware rules.
+        // TS itself runs in `pnpm typecheck` step. ESLint stays fast and
+        // covers all .ts files (including scripts/, tests/, configs)
+        // without needing per-package tsconfig.eslint.json.
+      },
+      globals: {
+        ...globals.node,
+        ...globals.browser, // mostly safe; web code can override per-file if needed
       },
     },
     plugins: {
@@ -42,6 +50,7 @@ export default [
     },
     rules: {
       // TypeScript
+      'no-redeclare': 'off', // TS handles this; allows const X + type X pattern
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
@@ -57,15 +66,7 @@ export default [
       'import/order': [
         'error',
         {
-          groups: [
-            'builtin',
-            'external',
-            'internal',
-            'parent',
-            'sibling',
-            'index',
-            'type',
-          ],
+          groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'type'],
           'newlines-between': 'always',
           alphabetize: { order: 'asc', caseInsensitive: true },
         },
@@ -86,6 +87,10 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+      },
     },
   },
 

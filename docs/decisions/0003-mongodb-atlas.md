@@ -1,10 +1,10 @@
 # 0003. MongoDB Atlas ako primárna databáza
 
-| | |
-|---|---|
-| **Status** | Accepted |
-| **Dátum** | máj 2026 |
-| **Autori** | tím SFZ Asset Management |
+|                   |                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| **Status**        | Accepted                                                                            |
+| **Dátum**         | máj 2026                                                                            |
+| **Autori**        | tím SFZ Asset Management                                                            |
 | **Súvisiace ADR** | [0001-monorepo](0001-monorepo-pnpm-turbo.md), [0002-nestjs](0002-backend-nestjs.md) |
 
 ## Kontext
@@ -70,6 +70,7 @@ Plne relačná schéma s Entity-Attribute-Value tabuľkami pre flexibilitu.
 Zvolili sme **MongoDB Atlas (Možnosť A)**.
 
 Hlavné dôvody:
+
 1. **Match s dátovým modelom** – zmiešaný majetok s kategóriovo špecifickými custom fields je presne use case, na ktorý MongoDB sedí lepšie ako relačné DB.
 2. **Atlas Search** zaheduje plnotextové vyhľadávanie bez extra infraštruktúry.
 3. **Managed service** – nemusíme spravovať DB infraštruktúru, čo je v open-source SFZ projekte s malým tímom dôležité.
@@ -79,17 +80,20 @@ Hlavné dôvody:
 ## Dôsledky
 
 ### Pozitívne
+
 - Schéma sa môže evolovať ľahko – pridanie custom field pre kategóriu neznamená migráciu.
 - Atlas backup/restore a point-in-time recovery sú zdarma v cluster cene.
 - Full-text search bez ďalšieho komponentu.
 
 ### Negatívne / kompromisy
+
 - **Integrita na úrovni aplikácie** – nemáme cudzie kľúče. Musíme striktne validovať referencie v aplikačnej vrstve (NestJS guards + service-level checks).
 - **Žiadne klasické JOIN-y** – musíme používať `$lookup` v aggregation pipelines alebo manuálne resolve. Pre náš dátový model je to OK.
 - **Atomicita len v rámci dokumentu** – pre cross-collection operácie (vytvorenie loan + update assetu) potrebujeme multi-document transactions (Mongo 4+ ich podporuje, Atlas tiež).
 - **Vendor exposure** – Atlas je MongoDB Inc. service. Mitigácia: MongoDB samotná je open-source, môžeme migrovať na self-hosted Mongo alebo iný hosting (DocumentDB, CosmosDB Mongo API).
 
 ### Riziká, ktoré treba sledovať
+
 - Náklady pri raste objemu dát (audit log môže narásť).
 - Pravidelne archivovať staré audit_log a history záznamy do S3/Blob storage.
 - Atlas má rate limits – sledovať Atlas Search query patterns.
@@ -104,11 +108,11 @@ Hlavné dôvody:
 
 ## Plán nákladov (orientačne)
 
-| Fáza | Cluster | Approx cena |
-|------|---------|-------------|
-| Vývoj | M0 (free) | $0 |
-| Staging | M10 | ~$60/mesiac |
-| Produkcia (rok 1) | M10 alebo M20 | $60–140/mesiac |
+| Fáza                      | Cluster       | Approx cena     |
+| ------------------------- | ------------- | --------------- |
+| Vývoj                     | M0 (free)     | $0              |
+| Staging                   | M10           | ~$60/mesiac     |
+| Produkcia (rok 1)         | M10 alebo M20 | $60–140/mesiac  |
 | Produkcia (po 2-3 rokoch) | M20 alebo M30 | $140–340/mesiac |
 
 ## Referencie

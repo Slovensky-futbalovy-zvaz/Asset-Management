@@ -1,11 +1,11 @@
 # Dátový model
 
-| | |
-|---|---|
-| **Verzia** | 0.1 (draft) |
-| **Status** | Návrh na pripomienkovanie |
-| **Posledná aktualizácia** | máj 2026 |
-| **Databáza** | MongoDB Atlas (Cloud) |
+|                           |                           |
+| ------------------------- | ------------------------- |
+| **Verzia**                | 0.1 (draft)               |
+| **Status**                | Návrh na pripomienkovanie |
+| **Posledná aktualizácia** | máj 2026                  |
+| **Databáza**              | MongoDB Atlas (Cloud)     |
 
 Tento dokument popisuje dátový model systému SFZ Asset Management. Všetky kolekcie sú v MongoDB; schémy sú definované pomocou **Zod** v `packages/shared-types/` a vynucované na úrovni aplikačnej vrstvy (NestJS).
 
@@ -29,7 +29,7 @@ Tento dokument popisuje dátový model systému SFZ Asset Management. Všetky ko
 - **JSON Schema validácia v Mongo** – pre všetky kolekcie nastavíme `$jsonSchema` validator na strane Mongo (vygenerovaný zo Zod cez `zod-to-json-schema`) ako defense in depth.
 - **Soft-delete namiesto hard-delete** – záznamy sa nemažú, len sa označia `deletedAt`. Audit log a história zostávajú.
 - **Append-only pre audit** – `audit_log` a `asset_history` sú write-once, nikdy sa neupravujú ani neodstraňujú.
-- **ObjectId pre _id** – štandardný MongoDB ObjectId pre primárne kľúče, plus business identifikátory (`inventoryNumber`, `qrCode`).
+- **ObjectId pre \_id** – štandardný MongoDB ObjectId pre primárne kľúče, plus business identifikátory (`inventoryNumber`, `qrCode`).
 - **Časové pečiatky všade** – každý dokument má `createdAt`, `updatedAt`, voliteľne `deletedAt`.
 - **Referencie cez ObjectId** – nepoužívame Mongo DBRef, len `ObjectId` + manuálne resolve.
 
@@ -37,20 +37,20 @@ Tento dokument popisuje dátový model systému SFZ Asset Management. Všetky ko
 
 ## 2. Prehľad kolekcií
 
-| Kolekcia | Účel | Veľkosť (odhad) | Rast |
-|----------|------|------------------|------|
-| `users` | Používatelia (interní + externí) | ~500 | nízky |
-| `assets` | Karty majetku | ~20 000 | stredný |
-| `categories` | Číselník kategórií + definícia custom fields | ~50 | nízky |
-| `locations` | Číselník lokalít | ~30 | nízky |
-| `loan_requests` | Žiadosti o vypožičanie | ~30 000/rok | vysoký |
-| `loans` | Aktívne a historické zápožičky | ~30 000/rok | vysoký |
-| `loan_protocols` | PDF protokoly + podpisy | ~60 000/rok | vysoký |
-| `asset_history` | Chronológia pohybov per asset | ~100 000/rok | vysoký |
-| `audit_log` | Systémový audit log (append-only) | ~500 000/rok | veľmi vysoký |
-| `notifications` | Fronta a história notifikácií | ~100 000/rok | vysoký |
-| `attachments` | Metadata pre prílohy (binárne dáta v S3) | ~50 000 | stredný |
-| `system_config` | Systémové nastavenia, feature flags | ~50 | nízky |
+| Kolekcia         | Účel                                         | Veľkosť (odhad) | Rast         |
+| ---------------- | -------------------------------------------- | --------------- | ------------ |
+| `users`          | Používatelia (interní + externí)             | ~500            | nízky        |
+| `assets`         | Karty majetku                                | ~20 000         | stredný      |
+| `categories`     | Číselník kategórií + definícia custom fields | ~50             | nízky        |
+| `locations`      | Číselník lokalít                             | ~30             | nízky        |
+| `loan_requests`  | Žiadosti o vypožičanie                       | ~30 000/rok     | vysoký       |
+| `loans`          | Aktívne a historické zápožičky               | ~30 000/rok     | vysoký       |
+| `loan_protocols` | PDF protokoly + podpisy                      | ~60 000/rok     | vysoký       |
+| `asset_history`  | Chronológia pohybov per asset                | ~100 000/rok    | vysoký       |
+| `audit_log`      | Systémový audit log (append-only)            | ~500 000/rok    | veľmi vysoký |
+| `notifications`  | Fronta a história notifikácií                | ~100 000/rok    | vysoký       |
+| `attachments`    | Metadata pre prílohy (binárne dáta v S3)     | ~50 000         | stredný      |
+| `system_config`  | Systémové nastavenia, feature flags          | ~50             | nízky        |
 
 ---
 
@@ -126,6 +126,7 @@ Používatelia systému. Interní (SFZ zamestnanci cez Entra ID) aj externí (tr
 ```
 
 **Pravidlá:**
+
 - Ak `type = "internal"`, `entraId` je povinné a `externalAccount` je `null`.
 - Ak `type = "external"`, `externalAccount` je povinné a `entraId` je `null`.
 - `email` musí byť unique naprieč všetkými používateľmi (internými aj externými).
@@ -210,12 +211,12 @@ Hlavná entita – karta majetku.
 
 ```typescript
 type AssetStatus =
-  | "available"      // K dispozícii
-  | "reserved"       // Rezervované (žiadosť schválená, nie prevzaté)
-  | "borrowed"       // Vypožičané
-  | "in_service"     // V servise / oprave
-  | "disposed"       // Vyradené (terminal)
-  | "lost"           // Stratené
+  | 'available' // K dispozícii
+  | 'reserved' // Rezervované (žiadosť schválená, nie prevzaté)
+  | 'borrowed' // Vypožičané
+  | 'in_service' // V servise / oprave
+  | 'disposed' // Vyradené (terminal)
+  | 'lost'; // Stratené
 ```
 
 ---
@@ -680,46 +681,46 @@ erDiagram
 
 ## 5. Indexy
 
-| Kolekcia | Index | Typ | Účel |
-|----------|-------|-----|------|
-| `users` | `email` | unique | login, vyhľadávanie |
-| `users` | `entraId.oid` | unique sparse | SSO mapping |
-| `users` | `roles + status` | compound | role-based queries |
-| `assets` | `inventoryNumber` | unique | identifikácia |
-| `assets` | `qrCode` | unique | sken |
-| `assets` | `status + locationId` | compound | filtrovanie katalógu |
-| `assets` | `assignedToUserId + status` | compound | „môj majetok" view |
-| `assets` | `categoryId` | single | filtre |
-| `assets` | text index na `name`, `description`, `serialNumber`, `tags` | text | full-text search |
-| `loan_requests` | `status + createdAt` | compound | dashboard pending |
-| `loan_requests` | `requesterId + status` | compound | „moje žiadosti" |
-| `loans` | `loanNumber` | unique | identifikácia |
-| `loans` | `borrowerId + status` | compound | „moje zápožičky" |
-| `loans` | `status + dueAt` | compound | overdue queries |
-| `loans` | `items.assetId` | multikey | „kde je tento majetok" |
-| `asset_history` | `assetId + timestamp` | compound | história položky (desc) |
-| `audit_log` | `timestamp` | single (desc) | recent activity |
-| `audit_log` | `userId + timestamp` | compound | „čo robil user X" |
-| `audit_log` | `entityType + entityId + timestamp` | compound | „kto menil asset X" |
-| `notifications` | `recipientUserId + channels.inApp.readAt` | compound | unread count |
-| `notifications` | `expiresAt` | TTL | automatický cleanup |
-| `attachments` | `attachedTo.entityType + attachedTo.entityId` | compound | „prílohy položky X" |
+| Kolekcia        | Index                                                       | Typ           | Účel                    |
+| --------------- | ----------------------------------------------------------- | ------------- | ----------------------- |
+| `users`         | `email`                                                     | unique        | login, vyhľadávanie     |
+| `users`         | `entraId.oid`                                               | unique sparse | SSO mapping             |
+| `users`         | `roles + status`                                            | compound      | role-based queries      |
+| `assets`        | `inventoryNumber`                                           | unique        | identifikácia           |
+| `assets`        | `qrCode`                                                    | unique        | sken                    |
+| `assets`        | `status + locationId`                                       | compound      | filtrovanie katalógu    |
+| `assets`        | `assignedToUserId + status`                                 | compound      | „môj majetok" view      |
+| `assets`        | `categoryId`                                                | single        | filtre                  |
+| `assets`        | text index na `name`, `description`, `serialNumber`, `tags` | text          | full-text search        |
+| `loan_requests` | `status + createdAt`                                        | compound      | dashboard pending       |
+| `loan_requests` | `requesterId + status`                                      | compound      | „moje žiadosti"         |
+| `loans`         | `loanNumber`                                                | unique        | identifikácia           |
+| `loans`         | `borrowerId + status`                                       | compound      | „moje zápožičky"        |
+| `loans`         | `status + dueAt`                                            | compound      | overdue queries         |
+| `loans`         | `items.assetId`                                             | multikey      | „kde je tento majetok"  |
+| `asset_history` | `assetId + timestamp`                                       | compound      | história položky (desc) |
+| `audit_log`     | `timestamp`                                                 | single (desc) | recent activity         |
+| `audit_log`     | `userId + timestamp`                                        | compound      | „čo robil user X"       |
+| `audit_log`     | `entityType + entityId + timestamp`                         | compound      | „kto menil asset X"     |
+| `notifications` | `recipientUserId + channels.inApp.readAt`                   | compound      | unread count            |
+| `notifications` | `expiresAt`                                                 | TTL           | automatický cleanup     |
+| `attachments`   | `attachedTo.entityType + attachedTo.entityId`               | compound      | „prílohy položky X"     |
 
 ---
 
 ## 6. Audit a retencia
 
-| Kolekcia | Retencia | Mechanizmus |
-|----------|----------|-------------|
-| `users` | Trvalo (deactivated stav, nie hard-delete) | Soft-delete cez `deletedAt` |
-| `assets` | Trvalo | Soft-delete pre chybné záznamy, vyradené ostávajú v stave `disposed` |
-| `loan_requests` | 5 rokov | Cron archive do S3, hard-delete z Mongo |
-| `loans` | 5 rokov od `returnedAt` | Cron archive do S3, hard-delete z Mongo |
-| `loan_protocols` | 10 rokov (právne dôvody) | Archive do S3 cold storage |
-| `asset_history` | 5 rokov | Cron archive do S3 |
-| `audit_log` | 5 rokov | Cron archive do S3 |
-| `notifications` | 90 dní (TTL index) | Mongo TTL automaticky |
-| `attachments` | Súlad s entitou, na ktorú odkazujú | Cascade pri archive |
+| Kolekcia         | Retencia                                   | Mechanizmus                                                          |
+| ---------------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| `users`          | Trvalo (deactivated stav, nie hard-delete) | Soft-delete cez `deletedAt`                                          |
+| `assets`         | Trvalo                                     | Soft-delete pre chybné záznamy, vyradené ostávajú v stave `disposed` |
+| `loan_requests`  | 5 rokov                                    | Cron archive do S3, hard-delete z Mongo                              |
+| `loans`          | 5 rokov od `returnedAt`                    | Cron archive do S3, hard-delete z Mongo                              |
+| `loan_protocols` | 10 rokov (právne dôvody)                   | Archive do S3 cold storage                                           |
+| `asset_history`  | 5 rokov                                    | Cron archive do S3                                                   |
+| `audit_log`      | 5 rokov                                    | Cron archive do S3                                                   |
+| `notifications`  | 90 dní (TTL index)                         | Mongo TTL automaticky                                                |
+| `attachments`    | Súlad s entitou, na ktorú odkazujú         | Cascade pri archive                                                  |
 
 **GDPR right-to-be-forgotten:** pri vyžiadanom výmaze sa osobné údaje (`email`, `firstName`, `lastName`, `phone`) nahradia placeholderom `[REDACTED-{userId}]`, ale ID a štatistiky zostanú pre audit. Toto je pseudonymizácia, nie úplný výmaz – odôvodnenie: oprávnený záujem na uchovaní auditovateľnosti (čl. 17 ods. 3 GDPR).
 

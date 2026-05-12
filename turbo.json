@@ -33,12 +33,6 @@
       "cache": false
     }
   },
-  "globalDependencies": [
-    ".env",
-    "tsconfig.base.json"
-  ],
-  "globalEnv": [
-    "CI",
-    "NODE_ENV"
-  ]
+  "globalDependencies": [".env", "tsconfig.base.json"],
+  "globalEnv": ["CI", "NODE_ENV"]
 }

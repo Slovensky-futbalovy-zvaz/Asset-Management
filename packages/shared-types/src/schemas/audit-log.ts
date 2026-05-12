@@ -84,7 +84,15 @@ export const AuditLogSchema = z.object({
   /** Cieľová entita akcie. */
   target: z
     .object({
-      entityType: z.enum(['User', 'Asset', 'Loan', 'LoanRequest', 'Category', 'Location', 'System']),
+      entityType: z.enum([
+        'User',
+        'Asset',
+        'Loan',
+        'LoanRequest',
+        'Category',
+        'Location',
+        'System',
+      ]),
       entityId: ObjectIdSchema.nullable(),
       snapshot: z.record(z.string(), z.unknown()).optional(), // snapshot kľúčových polí v čase
     })

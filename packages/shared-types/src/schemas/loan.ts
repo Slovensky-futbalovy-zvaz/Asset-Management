@@ -3,12 +3,7 @@ import { z } from 'zod';
 import { AssetCondition } from '../enums/asset-type.js';
 import { LoanRequestStatus, LoanStatus } from '../enums/loan-status.js';
 
-import {
-  BaseDocumentSchema,
-  ObjectIdSchema,
-  SoftDeleteSchema,
-  TimestampSchema,
-} from './common.js';
+import { BaseDocumentSchema, ObjectIdSchema, SoftDeleteSchema, TimestampSchema } from './common.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // Loan Request — žiadosť o zápožičku (PRED schválením)
@@ -187,9 +182,7 @@ export const LoanSchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend({
   items: z.array(LoanItemSchema).min(1),
 
   /** Aktuálny stav zápožičky. */
-  status: z.enum(
-    Object.values(LoanStatus) as [string, ...string[]],
-  ) as z.ZodType<LoanStatus>,
+  status: z.enum(Object.values(LoanStatus) as [string, ...string[]]) as z.ZodType<LoanStatus>,
 
   /** Počet predĺžení. */
   extensionCount: z.number().int().nonnegative().default(0),

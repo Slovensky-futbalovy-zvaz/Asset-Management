@@ -19,11 +19,11 @@ keď si nie si istý, čo daný stav znamená alebo aký prechod je možný." }}
 
 ## {{ Kategória 1 – napr. "Stavy majetku" }}
 
-| Kód | Názov | Význam | Farba v UI |
-|-----|-------|--------|------------|
-| {{ `AVAILABLE` }} | {{ Dostupné }} | {{ Majetok je v sklade a pripravený na zápožičku. }} | {{ 🟢 Zelená }} |
-| {{ `RESERVED` }} | {{ Rezervované }} | {{ Niekto požiadal o zápožičku, čaká sa na schválenie. }} | {{ 🟡 Žltá }} |
-| {{ ... }} | {{ ... }} | {{ ... }} | {{ ... }} |
+| Kód               | Názov             | Význam                                                    | Farba v UI      |
+| ----------------- | ----------------- | --------------------------------------------------------- | --------------- |
+| {{ `AVAILABLE` }} | {{ Dostupné }}    | {{ Majetok je v sklade a pripravený na zápožičku. }}      | {{ 🟢 Zelená }} |
+| {{ `RESERVED` }}  | {{ Rezervované }} | {{ Niekto požiadal o zápožičku, čaká sa na schválenie. }} | {{ 🟡 Žltá }}   |
+| {{ ... }}         | {{ ... }}         | {{ ... }}                                                 | {{ ... }}       |
 
 ### Možné prechody stavov
 
@@ -42,8 +42,8 @@ stateDiagram-v2
 
 ## {{ Kategória 2 – napr. "Stavy zápožičiek" }}
 
-| Kód | Názov | Význam |
-|-----|-------|--------|
+| Kód       | Názov     | Význam    |
+| --------- | --------- | --------- |
 | {{ ... }} | {{ ... }} | {{ ... }} |
 
 ## Často zamieňané pojmy

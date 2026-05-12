@@ -126,14 +126,14 @@ Sluchátka sa medzitým rozbili a sú v servise. Tomáš v žiadosti **navrhne n
 
 ## Z čoho tento scenár ťaží
 
-| Pred Asset Managementom | Po zavedení |
-|--------------------------|--------------|
-| Reťazec e-mailov medzi HR ↔ IT ↔ manažérom | Jedna žiadosť cez šablónu |
-| Notebook chodil 1–3 dni po nástupe | Pripravený deň pred nástupom |
-| Účet sa zakladal ručne | Automaticky cez Entra ID synchronizáciu |
-| Papierové protokoly | Digitálne PDF s podpismi |
-| „Kto má aktuálne čo?" — Excel, ktorý sa neaktualizoval | Real-time prehľad v systéme |
-| Pri odchode zamestnanca sa zabudlo vrátiť niečo | Automatický offboarding workflow |
+| Pred Asset Managementom                                | Po zavedení                             |
+| ------------------------------------------------------ | --------------------------------------- |
+| Reťazec e-mailov medzi HR ↔ IT ↔ manažérom             | Jedna žiadosť cez šablónu               |
+| Notebook chodil 1–3 dni po nástupe                     | Pripravený deň pred nástupom            |
+| Účet sa zakladal ručne                                 | Automaticky cez Entra ID synchronizáciu |
+| Papierové protokoly                                    | Digitálne PDF s podpismi                |
+| „Kto má aktuálne čo?" — Excel, ktorý sa neaktualizoval | Real-time prehľad v systéme             |
+| Pri odchode zamestnanca sa zabudlo vrátiť niečo        | Automatický offboarding workflow        |
 
 ## Súvisiace návody a tutoriály
 

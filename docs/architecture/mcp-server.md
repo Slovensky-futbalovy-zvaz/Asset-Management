@@ -1,11 +1,11 @@
 # MCP server – špecifikácia
 
-| | |
-|---|---|
-| **Verzia** | 0.1 (draft) |
-| **Status** | Návrh |
-| **Posledná aktualizácia** | máj 2026 |
-| **Implementácia** | `apps/mcp-server/` (Node.js + TypeScript) |
+|                           |                                           |
+| ------------------------- | ----------------------------------------- |
+| **Verzia**                | 0.1 (draft)                               |
+| **Status**                | Návrh                                     |
+| **Posledná aktualizácia** | máj 2026                                  |
+| **Implementácia**         | `apps/mcp-server/` (Node.js + TypeScript) |
 
 ## Obsah
 
@@ -29,11 +29,11 @@
 
 Umožniť zamestnancom SFZ a administrátorom interagovať so systémom asset managementu cez AI asistenta (Claude Desktop, Claude.ai, ChatGPT s MCP support, atď.) prirodzeným jazykom:
 
-- *„Ukáž mi, čo mám aktuálne vypožičané"*
-- *„Koľko notebookov starších ako 4 roky máme?"*
-- *„Kto má aktuálne dres s číslom 10 reprezentácie A?"*
-- *„Pripomeň mi všetkých, ktorých zápožičky končia tento týždeň"*
-- *„Aký majetok je momentálne v servise?"*
+- _„Ukáž mi, čo mám aktuálne vypožičané"_
+- _„Koľko notebookov starších ako 4 roky máme?"_
+- _„Kto má aktuálne dres s číslom 10 reprezentácie A?"_
+- _„Pripomeň mi všetkých, ktorých zápožičky končia tento týždeň"_
+- _„Aký majetok je momentálne v servise?"_
 
 ### Prečo nie iba REST API?
 
@@ -147,7 +147,14 @@ Vyhľadanie majetku.
       },
       "status": {
         "type": "string",
-        "enum": ["available", "reserved", "borrowed", "in_service", "disposed", "lost"]
+        "enum": [
+          "available",
+          "reserved",
+          "borrowed",
+          "in_service",
+          "disposed",
+          "lost"
+        ]
       },
       "category": {
         "type": "string",
@@ -398,12 +405,12 @@ Sumár zložiek inventára.
 
 MCP resources sú statické dáta, ktoré LLM môže čítať bez explicitného tool callu. Použijeme pre:
 
-| URI | Popis |
-|-----|-------|
-| `sfz-assets://categories` | Zoznam kategórií s definíciou custom fields |
-| `sfz-assets://locations` | Zoznam lokalít |
-| `sfz-assets://my-profile` | Profil aktuálneho používateľa (rola, oprávnenia) |
-| `sfz-assets://help/loan-workflow` | Markdown popis workflow vypožičania |
+| URI                               | Popis                                            |
+| --------------------------------- | ------------------------------------------------ |
+| `sfz-assets://categories`         | Zoznam kategórií s definíciou custom fields      |
+| `sfz-assets://locations`          | Zoznam lokalít                                   |
+| `sfz-assets://my-profile`         | Profil aktuálneho používateľa (rola, oprávnenia) |
+| `sfz-assets://help/loan-workflow` | Markdown popis workflow vypožičania              |
 
 ---
 
@@ -420,17 +427,17 @@ MCP resources sú statické dáta, ktoré LLM môže čítať bez explicitného 
 
 ### Permission matrix
 
-| Tool | employee | team_manager | asset_manager | admin |
-|------|:--------:|:------------:|:-------------:|:-----:|
-| `search_assets` | ✅ | ✅ | ✅ | ✅ |
-| `get_asset_details` | ✅ | ✅ | ✅ | ✅ |
-| `get_my_loans` | ✅ | ✅ | ✅ | ✅ |
-| `get_user_loans` | ❌ | ✅ (svoj tím) | ✅ | ✅ |
-| `get_overdue_loans` | ❌ | ✅ (svoj tím) | ✅ | ✅ |
-| `get_assets_by_age` | ❌ | ❌ | ✅ | ✅ |
-| `get_loan_statistics` | ❌ | ✅ (svoj tím) | ✅ | ✅ |
-| `get_inventory_summary` | ✅ (obmedzené) | ✅ | ✅ | ✅ |
-| `find_who_has` | ❌ | ✅ (vlastné assigns) | ✅ | ✅ |
+| Tool                    |    employee    |     team_manager     | asset_manager | admin |
+| ----------------------- | :------------: | :------------------: | :-----------: | :---: |
+| `search_assets`         |       ✅       |          ✅          |      ✅       |  ✅   |
+| `get_asset_details`     |       ✅       |          ✅          |      ✅       |  ✅   |
+| `get_my_loans`          |       ✅       |          ✅          |      ✅       |  ✅   |
+| `get_user_loans`        |       ❌       |    ✅ (svoj tím)     |      ✅       |  ✅   |
+| `get_overdue_loans`     |       ❌       |    ✅ (svoj tím)     |      ✅       |  ✅   |
+| `get_assets_by_age`     |       ❌       |          ❌          |      ✅       |  ✅   |
+| `get_loan_statistics`   |       ❌       |    ✅ (svoj tím)     |      ✅       |  ✅   |
+| `get_inventory_summary` | ✅ (obmedzené) |          ✅          |      ✅       |  ✅   |
+| `find_who_has`          |       ❌       | ✅ (vlastné assigns) |      ✅       |  ✅   |
 
 ### Citlivé dáta
 
@@ -558,13 +565,13 @@ apps/mcp-server/
 
 ## Otvorené otázky
 
-| ID | Otázka | Vlastník |
-|----|--------|----------|
-| MCP-01 | Hostovať OAuth proxy ako súčasť `apps/api` alebo separátne? | Tech lead |
-| MCP-02 | Aký formát PAT? `sfz_pat_*` alebo štandardný `glpat_*`-like? | Tech lead |
-| MCP-03 | Povoliť write operations vo fáze 2 alebo zostať read-only? | Product owner |
-| MCP-04 | Aktivovať MCP aj pre externých používateľov (klubov)? | Product owner |
-| MCP-05 | Pravidelné automatické notifikácie cez MCP (push)? | Tech lead |
+| ID     | Otázka                                                       | Vlastník      |
+| ------ | ------------------------------------------------------------ | ------------- |
+| MCP-01 | Hostovať OAuth proxy ako súčasť `apps/api` alebo separátne?  | Tech lead     |
+| MCP-02 | Aký formát PAT? `sfz_pat_*` alebo štandardný `glpat_*`-like? | Tech lead     |
+| MCP-03 | Povoliť write operations vo fáze 2 alebo zostať read-only?   | Product owner |
+| MCP-04 | Aktivovať MCP aj pre externých používateľov (klubov)?        | Product owner |
+| MCP-05 | Pravidelné automatické notifikácie cez MCP (push)?           | Tech lead     |
 
 ---
 

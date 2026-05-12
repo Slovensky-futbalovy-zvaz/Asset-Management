@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { EmailSchema, ObjectIdSchema, PhoneSchema, TimestampSchema } from '../../src/schemas/common.js';
+import {
+  EmailSchema,
+  ObjectIdSchema,
+  PhoneSchema,
+  TimestampSchema,
+} from '../../src/schemas/common.js';
 
 describe('ObjectIdSchema', () => {
   it('akceptuje validný 24-znakový hex ObjectId', () => {

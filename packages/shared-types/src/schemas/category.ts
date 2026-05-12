@@ -31,9 +31,7 @@ export const CategorySchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend(
   parentId: ObjectIdSchema.nullable().default(null),
 
   /** Top-level typ — určuje, aké `specs` polia patria do tejto kategórie. */
-  assetType: z.enum(
-    Object.values(AssetType) as [string, ...string[]],
-  ) as z.ZodType<AssetType>,
+  assetType: z.enum(Object.values(AssetType) as [string, ...string[]]) as z.ZodType<AssetType>,
 
   /** Voliteľný popis. */
   description: z.string().max(1000).nullable().default(null),

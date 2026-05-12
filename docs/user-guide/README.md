@@ -11,6 +11,7 @@ Vitaj v príručke pre **SFZ Asset Management** – internej aplikácii Slovensk
 Príručka má štyri sekcie, každú s iným účelom (postavené na [Diátaxis frameworku](https://diataxis.fr/)). Vyber si tú, ktorá zodpovedá tvojej aktuálnej potrebe:
 
 ### 🎓 [Getting Started](./getting-started/) – Učím sa
+
 Krátke onboarding tutoriály. Hodia sa, keď systém vidíš prvýkrát. Vedú ťa krok za krokom.
 
 - ✅ [Tvoje prvé prihlásenie](./getting-started/prve-prihlasenie.md) — univerzálny štart pre všetkých
@@ -20,6 +21,7 @@ Krátke onboarding tutoriály. Hodia sa, keď systém vidíš prvýkrát. Vedú 
 - 📅 [Onboarding pre administrátora](./getting-started/onboarding-admin.md) _(TODO)_
 
 ### 🛠️ [How-To](./how-to/) – Riešim konkrétny problém
+
 Návody na konkrétne úlohy. Predpokladajú, že už systém vieš používať.
 
 - ✅ [Ako si požičať majetok](./how-to/poziciat-majetok.md)
@@ -30,6 +32,7 @@ Návody na konkrétne úlohy. Predpokladajú, že už systém vieš používať.
 - 📅 [Vytlačiť QR kódy](./how-to/vytlacit-qr-kody.md) _(TODO)_
 
 ### 📖 [Use Cases](./use-cases/) – Pochopím, ako to funguje v praxi
+
 Reálne scenáre zo SFZ. Hodia sa, keď chceš vidieť, ako sa veci dejú „od začiatku do konca".
 
 - ✅ [Reprezentačný výjazd: tréner si berie kompletný set výstroja](./use-cases/reprezentacny-vyjazd.md)
@@ -38,6 +41,7 @@ Reálne scenáre zo SFZ. Hodia sa, keď chceš vidieť, ako sa veci dejú „od 
 - 📅 [Poškodené zariadenie: postup pri reklamácii a servise](./use-cases/poskodene-zariadenie.md) _(TODO)_
 
 ### 📚 [Reference](./reference/) – Hľadám konkrétny detail
+
 Slovník pojmov, prehľad rolí a oprávnení, stavy majetku, atď.
 
 - ✅ [Stavy majetku a zápožičiek](./reference/stavy.md)
@@ -59,13 +63,13 @@ Slovník pojmov, prehľad rolí a oprávnení, stavy majetku, atď.
 
 V SFZ Asset Management rozlišujeme niekoľko **rolí používateľov**. Každá rola má iné oprávnenia a iné typické úlohy:
 
-| Rola | Typický používateľ | Hlavné úlohy |
-|------|---------------------|---------------|
-| **Zamestnanec** | Sekretariát, ekonóm, marketér | Požičia si notebook, mobil, kanceláriu |
-| **Tréner / Team Manager** | Tréner reprezentácie, vedúci tímu | Vybavuje výstroj pre celý tím |
-| **Správca majetku** | IT správca, skladník | Eviduje majetok, schvaľuje zápožičky, tlačí QR kódy |
-| **Administrátor** | Šéf IT, prevádzkový riaditeľ | Nastavuje systém, spravuje používateľov |
-| **Externý používateľ** | Klubový tréner, dobrovoľník | Obmedzený prístup, len vlastné zápožičky |
+| Rola                      | Typický používateľ                | Hlavné úlohy                                        |
+| ------------------------- | --------------------------------- | --------------------------------------------------- |
+| **Zamestnanec**           | Sekretariát, ekonóm, marketér     | Požičia si notebook, mobil, kanceláriu              |
+| **Tréner / Team Manager** | Tréner reprezentácie, vedúci tímu | Vybavuje výstroj pre celý tím                       |
+| **Správca majetku**       | IT správca, skladník              | Eviduje majetok, schvaľuje zápožičky, tlačí QR kódy |
+| **Administrátor**         | Šéf IT, prevádzkový riaditeľ      | Nastavuje systém, spravuje používateľov             |
+| **Externý používateľ**    | Klubový tréner, dobrovoľník       | Obmedzený prístup, len vlastné zápožičky            |
 
 Detailný rozpis (po doplnení) nájdeš v [Role a oprávnenia](./reference/role-opravnenia.md).
 

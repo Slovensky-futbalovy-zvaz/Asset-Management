@@ -8,12 +8,12 @@
 
 > **Otvorený interný systém Slovenského futbalového zväzu na evidenciu a vypožičiavanie majetku.**
 
-| | |
-|---|---|
-| **Status** | 🟡 Plánovanie / Funkčná špecifikácia + foundation |
-| **Verzia** | 0.1 (draft) |
-| **Posledná aktualizácia** | máj 2026 |
-| **Licencia** | MIT |
+|                           |                                                   |
+| ------------------------- | ------------------------------------------------- |
+| **Status**                | 🟡 Plánovanie / Funkčná špecifikácia + foundation |
+| **Verzia**                | 0.1 (draft)                                       |
+| **Posledná aktualizácia** | máj 2026                                          |
+| **Licencia**              | MIT                                               |
 
 ---
 
@@ -36,6 +36,7 @@ Systém slúži na centrálnu evidenciu zmiešaného majetku SFZ (IT technika, �
 ### Prečo open-source?
 
 SFZ sa rozhodol publikovať tento systém ako open-source, aby:
+
 - ďalšie športové zväzy a organizácie mohli z neho ťažiť bez nákladov,
 - vývoj bol transparentný pre verejnosť,
 - komunita vývojárov mohla prispievať vylepšeniami,
@@ -45,17 +46,17 @@ SFZ sa rozhodol publikovať tento systém ako open-source, aby:
 
 ## Technologický stack
 
-| Vrstva | Technológia |
-|--------|-------------|
-| Backend | Node.js 20+, NestJS, TypeScript |
-| Frontend (web) | Next.js 14+ (App Router), React, TypeScript, Tailwind CSS, shadcn/ui |
-| Mobilná aplikácia | Flutter (plánované, fáza 3) |
-| Databáza | MongoDB Atlas + Native driver + Zod (žiadne ORM, viď [ADR-0005](docs/decisions/0005-mongo-native-driver.md)) |
-| Autentifikácia | Microsoft Entra ID (OIDC / SSO) |
-| MCP server | Node.js, `@modelcontextprotocol/sdk` |
-| Monorepo | pnpm workspaces + Turborepo |
-| CI/CD | GitHub Actions |
-| Hosting | Cloud (preferovane Azure) – TBD |
+| Vrstva            | Technológia                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| Backend           | Node.js 20+, NestJS, TypeScript                                                                              |
+| Frontend (web)    | Next.js 14+ (App Router), React, TypeScript, Tailwind CSS, shadcn/ui                                         |
+| Mobilná aplikácia | Flutter (plánované, fáza 3)                                                                                  |
+| Databáza          | MongoDB Atlas + Native driver + Zod (žiadne ORM, viď [ADR-0005](docs/decisions/0005-mongo-native-driver.md)) |
+| Autentifikácia    | Microsoft Entra ID (OIDC / SSO)                                                                              |
+| MCP server        | Node.js, `@modelcontextprotocol/sdk`                                                                         |
+| Monorepo          | pnpm workspaces + Turborepo                                                                                  |
+| CI/CD             | GitHub Actions                                                                                               |
+| Hosting           | Cloud (preferovane Azure) – TBD                                                                              |
 
 ---
 
@@ -100,16 +101,16 @@ Legenda: ✅ hotové · 🟡 v progrese · 📅 plánované
 
 ### Pre vývojárov a integrátorov
 
-| Dokument | Popis | Status |
-|----------|-------|--------|
-| [Funkčná špecifikácia](docs/functional-spec.md) | Čo systém robí (moduly, roly, user stories) | ✅ v0.1 draft |
-| [Architektúra](docs/architecture/README.md) | Architektonický prehľad, C4 diagramy | 🟡 čiastočne |
-| [Dátový model](docs/architecture/data-model.md) | MongoDB kolekcie a vzťahy | ✅ v0.1 draft |
-| [API špecifikácia](docs/api/openapi.yaml) | OpenAPI 3.1 (57 endpointov) | ✅ v0.1 draft |
-| [MCP server](docs/architecture/mcp-server.md) | Špecifikácia MCP integrácie | ✅ v0.1 draft |
-| [ADR](docs/decisions/README.md) | Architecture Decision Records | ✅ 5× ADR |
-| [shared-types README](packages/shared-types/README.md) | Single source of truth pre dátový model | ✅ |
-| [design-tokens README](packages/design-tokens/README.md) | SFZ brand farby a typografia | ✅ |
+| Dokument                                                 | Popis                                       | Status        |
+| -------------------------------------------------------- | ------------------------------------------- | ------------- |
+| [Funkčná špecifikácia](docs/functional-spec.md)          | Čo systém robí (moduly, roly, user stories) | ✅ v0.1 draft |
+| [Architektúra](docs/architecture/README.md)              | Architektonický prehľad, C4 diagramy        | 🟡 čiastočne  |
+| [Dátový model](docs/architecture/data-model.md)          | MongoDB kolekcie a vzťahy                   | ✅ v0.1 draft |
+| [API špecifikácia](docs/api/openapi.yaml)                | OpenAPI 3.1 (57 endpointov)                 | ✅ v0.1 draft |
+| [MCP server](docs/architecture/mcp-server.md)            | Špecifikácia MCP integrácie                 | ✅ v0.1 draft |
+| [ADR](docs/decisions/README.md)                          | Architecture Decision Records               | ✅ 5× ADR     |
+| [shared-types README](packages/shared-types/README.md)   | Single source of truth pre dátový model     | ✅            |
+| [design-tokens README](packages/design-tokens/README.md) | SFZ brand farby a typografia                | ✅            |
 
 ---
 
@@ -180,12 +181,12 @@ Tento projekt je licencovaný pod [MIT licenciou](LICENSE) – môžete ho voľn
 
 ## Kontakty
 
-| Rola | Osoba | Kontakt |
-|------|-------|---------|
-| Product owner | _doplniť_ | _doplniť_ |
-| Tech lead | _doplniť_ | _doplniť_ |
-| IT SFZ | _doplniť_ | _doplniť_ |
-| Bezpečnosť | _doplniť_ | `security@futbalsfz.sk` |
+| Rola          | Osoba     | Kontakt                 |
+| ------------- | --------- | ----------------------- |
+| Product owner | _doplniť_ | _doplniť_               |
+| Tech lead     | _doplniť_ | _doplniť_               |
+| IT SFZ        | _doplniť_ | _doplniť_               |
+| Bezpečnosť    | _doplniť_ | `security@futbalsfz.sk` |
 
 ---
 

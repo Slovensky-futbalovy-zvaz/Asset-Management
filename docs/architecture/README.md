@@ -51,20 +51,21 @@ Tento dokument popisuje technickú architektúru systému SFZ Asset Management.
 
 Podrobné odôvodnenia jednotlivých rozhodnutí sú v [ADR](../decisions/).
 
-| Vrstva | Voľba | Hlavný dôvod |
-|--------|-------|--------------|
-| Backend | NestJS + TypeScript | Modulárna architektúra, OpenAPI integrácia, ekosystém |
-| Frontend | Next.js 14+ App Router | SSR/RSC, dobré DX, kompatibilita s SFZ ekosystémom |
-| Databáza | MongoDB Atlas | Flexibilný dátový model pre zmiešaný majetok, managed |
-| Auth | Microsoft Entra ID | Existujúca IT infraštruktúra SFZ |
-| Mobil | Flutter | Jedna codebase pre iOS + Android |
-| MCP | `@modelcontextprotocol/sdk` | Štandard pre AI integrácie |
-| Monorepo | pnpm + Turborepo | Rýchlosť, zdieľanie kódu medzi appkami |
-| CI/CD | GitHub Actions | Štandard, dobre integrované |
+| Vrstva   | Voľba                       | Hlavný dôvod                                          |
+| -------- | --------------------------- | ----------------------------------------------------- |
+| Backend  | NestJS + TypeScript         | Modulárna architektúra, OpenAPI integrácia, ekosystém |
+| Frontend | Next.js 14+ App Router      | SSR/RSC, dobré DX, kompatibilita s SFZ ekosystémom    |
+| Databáza | MongoDB Atlas               | Flexibilný dátový model pre zmiešaný majetok, managed |
+| Auth     | Microsoft Entra ID          | Existujúca IT infraštruktúra SFZ                      |
+| Mobil    | Flutter                     | Jedna codebase pre iOS + Android                      |
+| MCP      | `@modelcontextprotocol/sdk` | Štandard pre AI integrácie                            |
+| Monorepo | pnpm + Turborepo            | Rýchlosť, zdieľanie kódu medzi appkami                |
+| CI/CD    | GitHub Actions              | Štandard, dobre integrované                           |
 
 ## Ďalšie kroky
 
 Po schválení funkčnej špecifikácie:
+
 1. Dopracovať detail dátového modelu (`data-model.md`)
 2. Pripraviť OpenAPI 3.1 spec (`../api/openapi.yaml`)
 3. Špecifikovať MCP server tools (`mcp-server.md`)

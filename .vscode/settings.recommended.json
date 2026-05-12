@@ -31,10 +31,7 @@
 
   // === ESLint ===
   "eslint.useFlatConfig": true,
-  "eslint.workingDirectories": [
-    { "pattern": "apps/*" },
-    { "pattern": "packages/*" }
-  ],
+  "eslint.workingDirectories": [{ "pattern": "apps/*" }, { "pattern": "packages/*" }],
 
   // === Prettier ===
   "prettier.requireConfig": true,

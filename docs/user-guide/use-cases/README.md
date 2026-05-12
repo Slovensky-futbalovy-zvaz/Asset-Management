@@ -16,26 +16,26 @@ Use cases sú **rozprávaním**, nie návodom. Ukazujú, ako sa SFZ Asset Manage
 
 ### Mládež a regióny
 
-- ⚽ [**Mládežnícky kemp: požičanie tréningovej výstroje pre 60 detí**](./mladeznicky-kemp.md) – veľkokapacitná zápožička, externí používatelia (klubové deti), dočasné účty *(TODO)*
+- ⚽ [**Mládežnícky kemp: požičanie tréningovej výstroje pre 60 detí**](./mladeznicky-kemp.md) – veľkokapacitná zápožička, externí používatelia (klubové deti), dočasné účty _(TODO)_
 
 ### Zamestnanci
 
-- 🆕 [**Nový zamestnanec dostáva pracovné vybavenie**](./novy-zamestnanec.md) – IT onboarding od prijatia po prevzatie notebooku, mobilu a prístupov *(TODO)*
-- 🛠️ [**Poškodené zariadenie: postup pri reklamácii a servise**](./poskodene-zariadenie.md) – čo sa deje, keď sa vrátený majetok nemôže okamžite znova použiť *(TODO)*
+- 🆕 [**Nový zamestnanec dostáva pracovné vybavenie**](./novy-zamestnanec.md) – IT onboarding od prijatia po prevzatie notebooku, mobilu a prístupov _(TODO)_
+- 🛠️ [**Poškodené zariadenie: postup pri reklamácii a servise**](./poskodene-zariadenie.md) – čo sa deje, keď sa vrátený majetok nemôže okamžite znova použiť _(TODO)_
 
 ### Akvizícia a inventarizácia
 
-- 📦 [**Nákup novej IT techniky: od objednávky po nasadenie**](./nakup-it-techniky.md) – ako vznikajú nové položky v evidencii *(TODO)*
-- 📊 [**Polročná inventúra**](./inventura.md) – masívna kontrola fyzickej zhody so záznamami *(TODO)*
+- 📦 [**Nákup novej IT techniky: od objednávky po nasadenie**](./nakup-it-techniky.md) – ako vznikajú nové položky v evidencii _(TODO)_
+- 📊 [**Polročná inventúra**](./inventura.md) – masívna kontrola fyzickej zhody so záznamami _(TODO)_
 
 ## Use case vs Tutorial vs How-To – aký je rozdiel?
 
-| | Use Case | Tutorial | How-To |
-|---|----------|----------|--------|
-| **Pre koho** | Niekto, kto chce pochopiť kontext | Začiatočník | Skúsený používateľ s konkrétnou úlohou |
-| **Štýl** | Rozprávanie príbehu | Vedené učenie | Recept |
-| **Príklad** | „Ako prebieha výjazd reprezentácie?" | „Tvoje prvé prihlásenie" | „Ako vrátiť majetok" |
-| **Optimalizované pre** | Pochopenie | Bezpečné učenie | Rýchle riešenie |
+|                        | Use Case                             | Tutorial                 | How-To                                 |
+| ---------------------- | ------------------------------------ | ------------------------ | -------------------------------------- |
+| **Pre koho**           | Niekto, kto chce pochopiť kontext    | Začiatočník              | Skúsený používateľ s konkrétnou úlohou |
+| **Štýl**               | Rozprávanie príbehu                  | Vedené učenie            | Recept                                 |
+| **Príklad**            | „Ako prebieha výjazd reprezentácie?" | „Tvoje prvé prihlásenie" | „Ako vrátiť majetok"                   |
+| **Optimalizované pre** | Pochopenie                           | Bezpečné učenie          | Rýchle riešenie                        |
 
 ## Pridať nový scenár?
 

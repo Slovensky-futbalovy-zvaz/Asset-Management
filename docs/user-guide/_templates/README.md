@@ -4,12 +4,12 @@ Tento adresár obsahuje **vzorové šablóny** pre 4 typy používateľskej doku
 
 ## Štyri typy dokumentov
 
-| Typ | Účel | Kedy ho použiť |
-|-----|------|------------------|
-| **Tutorial** | Učenie sa | Onboarding, prvé kroky, "som tu prvýkrát" |
-| **How-to Guide** | Riešenie problému | "Ako urobím X?" – konkrétna úloha |
-| **Use Case** | Pochopenie kontextu | "Ako to vyzerá od začiatku do konca?" |
-| **Reference** | Vyhľadanie detailu | "Aký je presný význam X?" |
+| Typ              | Účel                | Kedy ho použiť                            |
+| ---------------- | ------------------- | ----------------------------------------- |
+| **Tutorial**     | Učenie sa           | Onboarding, prvé kroky, "som tu prvýkrát" |
+| **How-to Guide** | Riešenie problému   | "Ako urobím X?" – konkrétna úloha         |
+| **Use Case**     | Pochopenie kontextu | "Ako to vyzerá od začiatku do konca?"     |
+| **Reference**    | Vyhľadanie detailu  | "Aký je presný význam X?"                 |
 
 ## Templates
 
@@ -36,7 +36,7 @@ Všetky dokumenty v user-guide dodržujú tieto pravidlá:
 
 ### Tón a oslovenie
 
-- **Tykáme** čitateľovi: *„klikneš na tlačidlo Pridať"* (nie *„kliknite na tlačidlo Pridať"*).
+- **Tykáme** čitateľovi: _„klikneš na tlačidlo Pridať"_ (nie _„kliknite na tlačidlo Pridať"_).
 - **Píšeme priamo a stručne.** Žiadne „pre úspešné dokončenie procesu je potrebné...".
 - **Predpokladáme priemerného používateľa,** nie programátora.
 
@@ -59,16 +59,16 @@ Všetky dokumenty v user-guide dodržujú tieto pravidlá:
 
 ### Code bloky a klávesy
 
-- Tlačidlá v UI: **tučné**, napr. *„Klikni na **Požičať**."*
+- Tlačidlá v UI: **tučné**, napr. _„Klikni na **Požičať**."_
 - Klávesové skratky: `` `Ctrl + S` `` alebo `` `Cmd + S` `` (Mac).
 - Cesty / URL: `` `/dashboard/assets` ``.
-- Vstupné polia: *„Do poľa **E-mail** napíš..."*.
+- Vstupné polia: _„Do poľa **E-mail** napíš..."_.
 
 ### Linky
 
 - **Interné linky** – relatívne cesty: `[Ako vrátiť majetok](../how-to/vratit-majetok.md)`.
 - **Externé linky** – plné URL: `[GitHub Issues](https://github.com/jletko/Asset-Management/issues)`.
-- **Linky na konkrétne miesta v aplikácii** – pseudo-cesty: *„Choď na **Menu → Môj majetok → Aktívne zápožičky**."*
+- **Linky na konkrétne miesta v aplikácii** – pseudo-cesty: _„Choď na **Menu → Môj majetok → Aktívne zápožičky**."_
 
 ### Príklady kódu
 
