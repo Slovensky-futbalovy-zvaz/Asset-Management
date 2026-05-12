@@ -1,0 +1,99 @@
+/**
+ * SFZ Design Tokens — CSS Custom Properties
+ *
+ * Zdroj: SFZ Design Manual 2024-01 (Codes Brand House)
+ *
+ * Použitie:
+ *   @import '@sfz/design-tokens/tokens.css';
+ *
+ *   .my-component {
+ *     color: var(--sfz-color-brand-blue);
+ *     padding: var(--sfz-spacing-4);
+ *   }
+ *
+ * Prefix `--sfz-` zabráni konfliktom s inými design systémami (Tailwind, shadcn).
+ */
+
+:root {
+  /* === Brand colors === */
+  --sfz-color-brand-blue: #1450df;
+  --sfz-color-brand-red: #ec1c24;
+  --sfz-color-brand-black: #070504;
+  --sfz-color-brand-white: #ffffff;
+
+  /* === Neutral / Grey scale === */
+  --sfz-color-neutral-grey-30: #bbbdbf;
+  --sfz-color-neutral-grey-60: #808285;
+
+  /* === Accent colors (z dcérskych SFZ identít) === */
+  --sfz-color-accent-blue-light: #008aff;
+  --sfz-color-accent-green: #29ba2e;
+  --sfz-color-accent-yellow: #ffda00;
+  --sfz-color-accent-yellow-warm: #f9b214;
+  --sfz-color-accent-teal: #27cbd5;
+  --sfz-color-accent-gold: #a9883c;
+
+  /* === Semantic colors === */
+  --sfz-color-semantic-success: var(--sfz-color-accent-green);
+  --sfz-color-semantic-warning: var(--sfz-color-accent-yellow-warm);
+  --sfz-color-semantic-danger: var(--sfz-color-brand-red);
+  --sfz-color-semantic-info: var(--sfz-color-brand-blue);
+
+  /* === Asset status colors === */
+  --sfz-color-asset-available: var(--sfz-color-accent-green);
+  --sfz-color-asset-reserved: var(--sfz-color-accent-yellow);
+  --sfz-color-asset-borrowed: var(--sfz-color-brand-blue);
+  --sfz-color-asset-in-service: var(--sfz-color-accent-yellow-warm);
+  --sfz-color-asset-disposed: var(--sfz-color-neutral-grey-60);
+  --sfz-color-asset-lost: var(--sfz-color-brand-red);
+
+  /* === Typography === */
+  --sfz-font-family-sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --sfz-font-family-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+
+  --sfz-font-weight-regular: 400;
+  --sfz-font-weight-medium: 500;
+  --sfz-font-weight-semibold: 600;
+  --sfz-font-weight-bold: 700;
+
+  /* === Spacing (4px grid) === */
+  --sfz-spacing-0: 0;
+  --sfz-spacing-1: 0.25rem;  /* 4px */
+  --sfz-spacing-2: 0.5rem;   /* 8px */
+  --sfz-spacing-3: 0.75rem;  /* 12px */
+  --sfz-spacing-4: 1rem;     /* 16px */
+  --sfz-spacing-5: 1.25rem;  /* 20px */
+  --sfz-spacing-6: 1.5rem;   /* 24px */
+  --sfz-spacing-8: 2rem;     /* 32px */
+  --sfz-spacing-10: 2.5rem;  /* 40px */
+  --sfz-spacing-12: 3rem;    /* 48px */
+  --sfz-spacing-16: 4rem;    /* 64px */
+
+  /* === Border radius === */
+  --sfz-radius-none: 0;
+  --sfz-radius-sm: 0.25rem;
+  --sfz-radius-md: 0.5rem;
+  --sfz-radius-lg: 0.75rem;
+  --sfz-radius-xl: 1rem;
+  --sfz-radius-full: 9999px;
+
+  /* === Shadows === */
+  --sfz-shadow-sm: 0 1px 2px 0 rgba(7, 5, 4, 0.05);
+  --sfz-shadow-md:
+    0 4px 6px -1px rgba(7, 5, 4, 0.1),
+    0 2px 4px -1px rgba(7, 5, 4, 0.06);
+  --sfz-shadow-lg:
+    0 10px 15px -3px rgba(7, 5, 4, 0.1),
+    0 4px 6px -2px rgba(7, 5, 4, 0.05);
+}
+
+/* === Dark mode (optional override) === */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* V dark mode použijeme inverzný variant loga a upravené pozadia.
+       Brand farby (#1450df, #ec1c24) zostávajú rovnaké,
+       len sa mení ich kontext (na tmavom pozadí). */
+
+    /* TODO: definovať dark surface tokeny po finalizácii dark mode dizajnu */
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "name": "@sfz/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Design tokens pre SFZ Asset Management — single source of truth pre brand farby, typografiu a spacing.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./tokens.json": "./tokens.json",
+    "./tokens.css": "./src/tokens.css"
+  },
+  "files": [
+    "dist",
+    "src/tokens.css",
+    "tokens.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo 'TODO: snapshot test of tokens.json schema'",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "keywords": [
+    "sfz",
+    "design-tokens",
+    "brand",
+    "design-system"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "restricted"
+  }
+}
