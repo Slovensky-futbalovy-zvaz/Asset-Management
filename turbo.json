@@ -34,5 +34,17 @@
     }
   },
   "globalDependencies": [".env", "tsconfig.base.json"],
-  "globalEnv": ["CI", "NODE_ENV"]
+  "globalEnv": [
+    "CI",
+    "NODE_ENV",
+    "MONGO_URI",
+    "MONGO_DB_NAME",
+    "CORS_ORIGINS",
+    "LOG_LEVEL",
+    "ENABLE_SWAGGER",
+    "PORT",
+    "ENTRA_TENANT_ID",
+    "ENTRA_CLIENT_ID",
+    "ENTRA_JWKS_URI"
+  ]
 }
