@@ -1,0 +1,58 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs.yml"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Job 1: Validate markdown — broken links, syntax, formatting
+  # ─────────────────────────────────────────────────────────────────
+  markdown:
+    name: Markdown
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: "yes"
+          use-verbose-mode: "yes"
+          config-file: ".github/markdown-link-check.json"
+          folder-path: "docs"
+          file-extension: ".md"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Job 2: Validate OpenAPI spec — schéma, sémantika
+  # ─────────────────────────────────────────────────────────────────
+  openapi:
+    name: OpenAPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.0"
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli@latest
+
+      - name: Lint OpenAPI spec
+        run: redocly lint docs/api/openapi.yaml
