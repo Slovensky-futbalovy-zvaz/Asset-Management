@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **Status** | 🟡 Plánovanie / Funkčná špecifikácia |
+| **Status** | 🟡 Plánovanie / Funkčná špecifikácia + foundation |
 | **Verzia** | 0.1 (draft) |
 | **Posledná aktualizácia** | máj 2026 |
 | **Licencia** | MIT |
@@ -50,7 +50,7 @@ SFZ sa rozhodol publikovať tento systém ako open-source, aby:
 | Backend | Node.js 20+, NestJS, TypeScript |
 | Frontend (web) | Next.js 14+ (App Router), React, TypeScript, Tailwind CSS, shadcn/ui |
 | Mobilná aplikácia | Flutter (plánované, fáza 3) |
-| Databáza | MongoDB Atlas |
+| Databáza | MongoDB Atlas + Native driver + Zod (žiadne ORM, viď [ADR-0005](docs/decisions/0005-mongo-native-driver.md)) |
 | Autentifikácia | Microsoft Entra ID (OIDC / SSO) |
 | MCP server | Node.js, `@modelcontextprotocol/sdk` |
 | Monorepo | pnpm workspaces + Turborepo |
@@ -63,62 +63,94 @@ SFZ sa rozhodol publikovať tento systém ako open-source, aby:
 
 ```
 Asset-Management/
-├── apps/
-│   ├── api/                # NestJS backend (REST API + OpenAPI)
-│   ├── web/                # Next.js webový frontend
-│   ├── mcp-server/         # MCP server pre AI asistentov
-│   └── mobile/             # Flutter aplikácia (fáza 3)
+├── apps/                     # (TBD)
+│   ├── api/                  # NestJS backend (REST API + OpenAPI)
+│   ├── web/                  # Next.js webový frontend
+│   ├── mcp-server/           # MCP server pre AI asistentov
+│   └── mobile/               # Flutter aplikácia (fáza 3)
 ├── packages/
-│   ├── shared-types/       # Zdieľané TS typy a Zod schémy
-│   ├── api-client/         # Vygenerovaný TS klient z OpenAPI
-│   ├── ui/                 # Zdieľané React komponenty
-│   └── config/             # ESLint, TSConfig, Prettier presety
+│   ├── shared-types/         # ✅ Zod schémy + TS typy + JSON Schema generátor
+│   ├── design-tokens/        # ✅ SFZ brand farby, typografia, spacing
+│   ├── api-client/           # 📅 Vygenerovaný TS klient z OpenAPI (TBD)
+│   ├── ui/                   # 📅 Zdieľané React komponenty (TBD)
+│   └── config/               # 📅 ESLint, TSConfig, Prettier presety (TBD)
 ├── docs/
-│   ├── functional-spec.md  # Funkčná špecifikácia
-│   ├── architecture/       # Architektonické dokumenty (C4, dátový model)
-│   ├── api/                # API špecifikácia (OpenAPI 3.1)
-│   ├── workflows/          # Diagramy workflow-ov
-│   └── decisions/          # ADR (Architecture Decision Records)
+│   ├── functional-spec.md    # ✅ Funkčná špecifikácia
+│   ├── architecture/         # ✅ Dátový model, MCP server spec
+│   ├── api/                  # ✅ OpenAPI 3.1
+│   ├── decisions/            # ✅ 5× ADR
+│   ├── user-guide/           # ✅ Diátaxis dokumentácia (4 sekcie)
+│   ├── assets/brand/         # ✅ SFZ Design Manual 2024-01
+│   └── workflows/            # 📅 Workflow diagramy (TBD)
 ├── infra/
-│   ├── docker/             # Dockerfile pre každú appku
-│   ├── docker-compose.yml  # Lokálny dev (Mongo, Redis, MailHog)
-│   └── terraform/          # IaC pre cloudovú infraštruktúru
-└── .github/                # CI/CD, issue/PR templates, CODEOWNERS
+│   ├── docker-compose.yml    # ✅ Mongo + Mongo Express + MailHog + MinIO
+│   └── terraform/            # 📅 IaC pre cloudovú infraštruktúru (TBD)
+└── .github/                  # ✅ CI/CD, issue/PR templates, CODEOWNERS
 ```
+
+Legenda: ✅ hotové · 🟡 v progrese · 📅 plánované
 
 ---
 
 ## Dokumentácia
+
+### Pre používateľov
+
+📖 **[Používateľská príručka](docs/user-guide/)** — onboarding tutoriály, how-to návody, reálne scenáre, slovník pojmov. Tykáme čitateľovi, písané prirodzene v slovenčine.
+
+### Pre vývojárov a integrátorov
 
 | Dokument | Popis | Status |
 |----------|-------|--------|
 | [Funkčná špecifikácia](docs/functional-spec.md) | Čo systém robí (moduly, roly, user stories) | ✅ v0.1 draft |
 | [Architektúra](docs/architecture/README.md) | Architektonický prehľad, C4 diagramy | 🟡 čiastočne |
 | [Dátový model](docs/architecture/data-model.md) | MongoDB kolekcie a vzťahy | ✅ v0.1 draft |
-| [API špecifikácia](docs/api/openapi.yaml) | OpenAPI 3.1 | ✅ v0.1 draft |
+| [API špecifikácia](docs/api/openapi.yaml) | OpenAPI 3.1 (57 endpointov) | ✅ v0.1 draft |
 | [MCP server](docs/architecture/mcp-server.md) | Špecifikácia MCP integrácie | ✅ v0.1 draft |
-| [Workflows](docs/workflows/README.md) | Diagramy a popis kľúčových workflow-ov | 📅 v príprave |
-| [ADR](docs/decisions/README.md) | Architecture Decision Records | ✅ ADR-0001 až ADR-0004 |
+| [ADR](docs/decisions/README.md) | Architecture Decision Records | ✅ 5× ADR |
+| [shared-types README](packages/shared-types/README.md) | Single source of truth pre dátový model | ✅ |
+| [design-tokens README](packages/design-tokens/README.md) | SFZ brand farby a typografia | ✅ |
 
 ---
 
 ## Lokálny vývoj
 
-> ⚠️ Repo je momentálne v plánovacej fáze. Kód aplikácií bude doplnený po schválení funkčnej špecifikácie.
+> ⚠️ Repo je momentálne v plánovacej fáze. Kód aplikácií (`apps/`) bude doplnený po dokončení foundation v packages/.
 
 ### Predpoklady
 
-- Node.js 20+
-- pnpm 9+
-- Docker + Docker Compose
-- MongoDB Atlas účet (alebo lokálny Mongo cez Docker)
+- **Node.js** `20.11.0` (riadi `.nvmrc`)
+- **pnpm** `9.12.0+`
+- **Docker + Docker Compose** (pre lokálnu Mongo, MinIO, MailHog)
+- **VS Code** (odporúčané — automaticky ti ponúkne potrebné rozšírenia)
 
-### Spustenie (po doplnení kódu)
+### Spustenie
 
 ```bash
+# 1. Klonuj repo a nainštaluj závislosti
+git clone https://github.com/jletko/Asset-Management.git
+cd Asset-Management
 pnpm install
-pnpm dev          # spustí všetky aplikácie paralelne (Turborepo)
+
+# 2. Nakopíruj environment template
+cp .env.example .env
+# (uprav podľa potreby — predvolené hodnoty sú pre lokálny dev OK)
+
+# 3. Spusti lokálnu infraštruktúru
+docker compose -f infra/docker-compose.yml up -d
+#   → MongoDB na :27017
+#   → Mongo Express UI na http://localhost:8081
+#   → MailHog UI na http://localhost:8025
+#   → MinIO Console na http://localhost:9001
+
+# 4. Build packages (zatiaľ len shared-types a design-tokens)
+pnpm build
+
+# 5. Spustenie testov
+pnpm test
 ```
+
+Detaily o lokálnej infraštruktúre v [`infra/README.md`](infra/README.md).
 
 ---
 
@@ -142,6 +174,8 @@ Hľadáte spôsob ako začať? Pozrite si [issues s label `good first issue`](..
 
 Tento projekt je licencovaný pod [MIT licenciou](LICENSE) – môžete ho voľne používať, upravovať a distribuovať.
 
+**Pozor:** Logá a brand prvky SFZ ([`docs/assets/brand/`](docs/assets/brand/)) **nie sú súčasťou MIT licencie**. Ak forkneš tento repozitár pre vlastnú organizáciu, musíš ich nahradiť vlastnými.
+
 ---
 
 ## Kontakty
@@ -158,3 +192,5 @@ Tento projekt je licencovaný pod [MIT licenciou](LICENSE) – môžete ho voľn
 ## Poďakovanie
 
 Tento projekt by nevznikol bez Slovenského futbalového zväzu, ktorý sa rozhodol prispieť späť do komunity tým, že interný nástroj sprístupní pod otvorenou licenciou. Ďakujeme tiež všetkým prispievateľom a komunite okolo NestJS, Next.js, MongoDB a Model Context Protocol.
+
+Brand a vizuál: **Codes Brand House** (autori SFZ Design Manual 2024-01).
