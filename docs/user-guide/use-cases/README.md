@@ -1,0 +1,50 @@
+# Use Cases – Reálne scenáre zo SFZ
+
+Use cases sú **rozprávaním**, nie návodom. Ukazujú, ako sa SFZ Asset Management používa v reálnych situáciách – od začiatku až do konca, s konkrétnymi ľuďmi v konkrétnych roliach.
+
+## Pre koho je táto sekcia
+
+- 🆕 Si nový v SFZ a chceš pochopiť, **ako veci fungujú v praxi**
+- 💼 Si v rozhodovacej pozícii a chceš vidieť, **kde systém prináša hodnotu**
+- 🎓 Učíš sa systém a tutoriály alebo how-to ti nestačia – chceš **kontext**
+
+## Dostupné scenáre
+
+### Reprezentácia a národné tímy
+
+- 🏆 [**Reprezentačný výjazd: tréner si berie kompletný set výstroja**](./reprezentacny-vyjazd.md) – hromadná zápožička naprieč kategóriami, dvaja schvaľovatelia, prevzatie + vrátenie + servis poškodených položiek
+
+### Mládež a regióny
+
+- ⚽ [**Mládežnícky kemp: požičanie tréningovej výstroje pre 60 detí**](./mladeznicky-kemp.md) – veľkokapacitná zápožička, externí používatelia (klubové deti), dočasné účty *(TODO)*
+
+### Zamestnanci
+
+- 🆕 [**Nový zamestnanec dostáva pracovné vybavenie**](./novy-zamestnanec.md) – IT onboarding od prijatia po prevzatie notebooku, mobilu a prístupov *(TODO)*
+- 🛠️ [**Poškodené zariadenie: postup pri reklamácii a servise**](./poskodene-zariadenie.md) – čo sa deje, keď sa vrátený majetok nemôže okamžite znova použiť *(TODO)*
+
+### Akvizícia a inventarizácia
+
+- 📦 [**Nákup novej IT techniky: od objednávky po nasadenie**](./nakup-it-techniky.md) – ako vznikajú nové položky v evidencii *(TODO)*
+- 📊 [**Polročná inventúra**](./inventura.md) – masívna kontrola fyzickej zhody so záznamami *(TODO)*
+
+## Use case vs Tutorial vs How-To – aký je rozdiel?
+
+| | Use Case | Tutorial | How-To |
+|---|----------|----------|--------|
+| **Pre koho** | Niekto, kto chce pochopiť kontext | Začiatočník | Skúsený používateľ s konkrétnou úlohou |
+| **Štýl** | Rozprávanie príbehu | Vedené učenie | Recept |
+| **Príklad** | „Ako prebieha výjazd reprezentácie?" | „Tvoje prvé prihlásenie" | „Ako vrátiť majetok" |
+| **Optimalizované pre** | Pochopenie | Bezpečné učenie | Rýchle riešenie |
+
+## Pridať nový scenár?
+
+Ak v SFZ existuje typický scenár, ktorý tu chýba, použi [`_templates/use-case.template.md`](../_templates/use-case.template.md) a pošli pull request. Najviac sú vítané:
+
+- Scenáre, ktoré sa **opakujú** (sezónne, štandardné procesy)
+- Scenáre, ktoré sú **logisticky náročné** (veľa ľudí, kategórií, krokov)
+- Scenáre, kde **digitalizácia priniesla jasnú zmenu** oproti predchádzajúcemu Excelu
+
+---
+
+<sub>Posledná aktualizácia: 2025-01</sub>
