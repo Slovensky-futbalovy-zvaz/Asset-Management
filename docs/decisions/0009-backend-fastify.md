@@ -179,10 +179,114 @@ apps/api/
 | `@nestjs/bullmq`                         | `bullmq` priamo (žiadny wrapper)                     |
 | `@nestjs/throttler`                      | `@fastify/rate-limit`                                |
 
+## Deployment: Vercel Serverless Functions
+
+**Cieľová platforma:** Vercel (oba `apps/web` aj `apps/api` v jednom Vercel projekte).
+
+### Prečo Vercel pre Fastify backend
+
+Pôvodne sme zvažovali Railway (long-running proces) ako lepší fit pre Node.js backend. Po prechode z NestJS na Fastify však Vercel sa stáva praktickou voľbou:
+
+1. **Fastify cold start je 50-150 ms** (vs NestJS 500-1500 ms) — pri Vercel serverless invoke je to prijateľné.
+2. **Plugin pattern je stateless-friendly** — Fastify inštancia sa dá vytvoriť per-request alebo zdieľať medzi invocations cez modul-level cache.
+3. **Jeden vendor** pre celý stack (web + api) — jeden dashboard, jeden billing, jeden Git deploy hook.
+4. **Free tier (Vercel Hobby) stačí na dev a skôr-produkčnú fázu.**
+5. **Vercel rozumie pnpm monorepo + turbo** natívne.
+
+### Architektúra na Verceli
+
+```
+Vercel project: sfz-asset-management
+├── apps/web   → Next.js (Edge + Node functions)
+│   │
+│   └── deploy: https://sfz-asset-management.vercel.app
+│
+└── apps/api   → Fastify (Vercel Node Functions)
+    │
+    └── deploy: https://api.sfz-asset-management.vercel.app
+            (alebo subdomain custom: api.sfz.sk)
+```
+
+### Implementačné detaily Vercel deploymentu
+
+Fastify aplikácia sa zabalí do Vercel Serverless Function pomocou wrappera:
+
+```typescript
+// apps/api/api/index.ts — Vercel entry point
+import { buildServer } from '../src/server.js';
+
+const server = await buildServer();
+await server.ready();
+
+export default async function handler(req, res) {
+  server.server.emit('request', req, res);
+}
+```
+
+`vercel.json` v `apps/api/`:
+
+```json
+{
+  "version": 2,
+  "builds": [{ "src": "api/index.ts", "use": "@vercel/node" }],
+  "routes": [{ "src": "/(.*)", "dest": "/api/index.ts" }]
+}
+```
+
+### Vercel-specifické ohraničenia a mitigácie
+
+| Ohraničenie                                   | Dopad                                 | Mitigácia                                                                                                      |
+| --------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Execution timeout** 10s (Hobby) / 60s (Pro) | Bulk import 10k assets neprežije      | Bulk operations cez separátny endpoint s chunkovaním po 500 položkách                                          |
+| **No long-running processes**                 | BullMQ neexistuje kvôli scale-to-zero | Pre queue: Upstash QStash, Inngest, alebo Trigger.dev (HTTP-driven queues)                                     |
+| **No SSE/WebSocket** (cez Vercel functions)   | MCP server cez SSE nefunguje          | MCP server presunieme na Railway/Fly v neštartovanej fáze 3 (má inú architektúru)                              |
+| **Cold start na každý invoke**                | +100ms latencia občas                 | Vercel Edge Functions (ne pre Mongo) alebo Vercel Functions s `maxDuration` + Atlas connection cache           |
+| **Mongo connection per invoke**               | Atlas connection limit (500 na M0)    | Mongo connection cache pattern: modul-level pripojenie, `maxPoolSize: 1`, lazy connect; alebo MongoDB Data API |
+| **Stateless filesystem**                      | Žiadne lokálne súbory medzi requestmi | Pre attachments: Cloudflare R2 / S3 (per ADR-0003 navrhnuté)                                                   |
+
+### MongoDB connection v serverless prostredí
+
+Klasický Mongo connection pool nepasuje na serverless model. Používame **module-level cache pattern**:
+
+```typescript
+// apps/api/src/plugins/mongo.ts
+import { MongoClient } from 'mongodb';
+
+let cachedClient: MongoClient | null = null;
+
+export async function getMongoClient() {
+  if (cachedClient) return cachedClient;
+
+  cachedClient = new MongoClient(process.env.MONGO_URI!, {
+    maxPoolSize: 1, // serverless: jedno pripojenie per invoke
+    minPoolSize: 0,
+    maxIdleTimeMS: 10000, // close po nedostupnosti
+  });
+  await cachedClient.connect();
+  return cachedClient;
+}
+```
+
+Vercel zachováva modul-level state medzi warm invocations (~5-15 minút), takže `cachedClient` sa zdieľa. Pri cold start sa znova vytvorí.
+
+### Migrácia na inú platformu (Railway, Fly)
+
+Fastify kód je platform-agnostic. Ak v budúcnosti narazne na Vercel limity (typicky pri pridávaní BullMQ alebo MCP servera), migrácia spočíva v:
+
+1. Vytvoriť nový Railway/Fly projekt napojený na rovnaký GitHub repo
+2. Konfigurovať build command (`pnpm --filter @sfz/api build`) a start command (`node apps/api/dist/index.js`)
+3. Skopírovať env premenné z Vercel do Railway
+4. Prepísať DNS pre `api.sfz.sk` na nový hosting
+5. (Voliteľné) zvýšiť `maxPoolSize` na 10-20 pre long-running proces
+
+**Žiadny code change v aplikácii** — len `apps/api/api/index.ts` (Vercel entry) sa odstráni a `apps/api/src/index.ts` sa stane hlavným entry pointom.
+
 ## Referencie
 
 - [Fastify dokumentácia](https://fastify.dev/)
 - [fastify-type-provider-zod](https://github.com/turkerdev/fastify-type-provider-zod)
 - [Fastify ecosystem](https://fastify.dev/ecosystem/)
 - [Benchmark: Fastify vs NestJS](https://github.com/fastify/benchmarks)
+- [Vercel Node.js runtime](https://vercel.com/docs/functions/runtimes/node-js)
+- [MongoDB best practices for serverless](https://www.mongodb.com/developer/products/atlas/serverless-mongodb-vercel/)
 - [ADR-0002 (Superseded)](0002-backend-nestjs.md)
