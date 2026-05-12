@@ -8,6 +8,7 @@ build/
 .next/
 out/
 .turbo/
+*.tsbuildinfo
 
 # Environment
 .env
@@ -36,6 +37,8 @@ yarn-debug.log*
 # Test coverage
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 
 # Flutter
 apps/mobile/.dart_tool/
@@ -55,3 +58,8 @@ infra/data/
 *.key
 *.p12
 secrets/
+
+# Misc
+.cache/
+.eslintcache
+.parcel-cache/

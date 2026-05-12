@@ -1,0 +1,66 @@
+{
+  // === Editor ===
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "editor.rulers": [100],
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+
+  // === Files ===
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.exclude": {
+    "**/.turbo": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.next": true
+  },
+
+  // === TypeScript ===
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+
+  // === ESLint ===
+  "eslint.useFlatConfig": true,
+  "eslint.workingDirectories": [
+    { "pattern": "apps/*" },
+    { "pattern": "packages/*" }
+  ],
+
+  // === Prettier ===
+  "prettier.requireConfig": true,
+
+  // === Spell check ===
+  "cSpell.language": "en,sk",
+  "cSpell.words": [
+    "futbalsfz",
+    "tykanie",
+    "zápožička",
+    "zápožičky",
+    "majetok",
+    "vyžiadanie",
+    "Asset",
+    "shadcn",
+    "nestjs",
+    "pnpm",
+    "turborepo",
+    "monorepo",
+    "Diátaxis",
+    "OpenAPI",
+    "Mermaid",
+    "MongoDB",
+    "Entra",
+    "OIDC",
+    "shadcn",
+    "lucide"
+  ]
+}

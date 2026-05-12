@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+    "redocly.openapi-vs-code",
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+    "bierner.markdown-mermaid",
+    "mongodb.mongodb-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "streetsidesoftware.code-spell-checker",
+    "streetsidesoftware.code-spell-checker-slovak"
+  ]
+}
