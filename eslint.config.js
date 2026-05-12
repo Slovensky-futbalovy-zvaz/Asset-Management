@@ -51,6 +51,9 @@ export default [
     rules: {
       // TypeScript
       'no-redeclare': 'off', // TS handles this; allows const X + type X pattern
+      'no-unused-vars': 'off', // Disabled in favor of @typescript-eslint/no-unused-vars
+      // which understands parameter properties (public readonly), type
+      // signatures, and other TS-specific patterns.
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
