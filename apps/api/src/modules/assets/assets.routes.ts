@@ -250,7 +250,7 @@ const assetsRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       await service.delete(request.params.id, request.currentUser, request);
-      return reply.status(204).send();
+      return reply.status(204).send(null);
     },
   );
 };
