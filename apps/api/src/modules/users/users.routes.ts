@@ -12,6 +12,7 @@
  *   - `POST /v1/users/invite` (admin) — invite external users with LOCAL accounts
  */
 
+import fp from 'fastify-plugin';
 import { z } from 'zod';
 
 import { UsersRepository } from './users.repository.js';
@@ -50,6 +51,15 @@ const MeResponseSchema = z.object({
 // ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
+//
+// NOTE: We wrap the plugin with `fastify-plugin` (`fp`) so the decorator
+// `usersService` is registered on the ROOT Fastify instance, not just on
+// this plugin's encapsulated scope. Without the wrap, `fastify.usersService`
+// would be undefined from any other plugin (e.g. `loadCurrentUser` in
+// auth.ts), even though it works from inside this file.
+//
+// Routes themselves don't care which scope they're in — but the decorator
+// must be globally visible.
 
 const usersRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -116,4 +126,7 @@ declare module 'fastify' {
   }
 }
 
-export default usersRoutes;
+export default fp(usersRoutes, {
+  name: 'users-routes',
+  dependencies: ['mongo', 'auth'],
+});

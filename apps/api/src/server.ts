@@ -27,6 +27,7 @@ import {
 } from 'fastify-type-provider-zod';
 
 import assetsRoutes from './modules/assets/assets.routes.js';
+import auditPlugin from './modules/audit/audit.plugin.js';
 import healthRoutes from './modules/health/health.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
 import authPlugin from './plugins/auth.js';
@@ -101,6 +102,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // --- Infrastructure ------------------------------------------------------
   await app.register(mongoPlugin);
+  await app.register(auditPlugin);
   await app.register(authPlugin);
 
   // --- API documentation ---------------------------------------------------

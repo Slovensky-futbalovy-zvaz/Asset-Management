@@ -210,5 +210,218 @@ else
   echo "❌ _id mismatch! Call 1: ${ID_1:-<none>} / Call 2: ${ID_2:-<none>}"
 fi
 
+# ============================================================================
+# 7. CRUD SMOKE TESTS — slice #2b (POST/PATCH/DELETE on /v1/assets)
+# ============================================================================
+#
+# Exercises the full write path: RBAC → transaction → audit log.
+#
+# Uses dummy 24-char hex ObjectIds for categoryId/locationId because those
+# collections aren't seeded yet (slice #3+ will introduce categories and
+# locations endpoints). MongoDB doesn't enforce foreign keys, so dummy IDs
+# pass schema validation and insert successfully.
+#
+# Cleanup: every successful run soft-deletes the assets it created, so the
+# collection doesn't grow unbounded across reruns. Inventory sequence numbers
+# still increase — that's by design (deleted numbers must not be reused).
+# ============================================================================
+
+echo ""
+echo "════════════════════════════════════════"
+echo "🧪 CRUD SMOKE TESTS (slice #2b)"
+echo "════════════════════════════════════════"
+
+# Dummy ObjectIds (24 hex chars each) for fields that reference unseeded collections.
+DUMMY_CATEGORY_ID="000000000000000000000001"
+DUMMY_LOCATION_ID="000000000000000000000002"
+
+# Helper: print a colored status line.
+pass() { echo "✅ $1"; }
+fail() { echo "❌ $1"; }
+step() { echo ""; echo "── $1"; }
+
+# Track failures for exit code at the end.
+FAILURES=0
+
+# ----- 7.1 POST /v1/assets (first — expect inventoryNumber sequence +1) -----
+step "POST /v1/assets (asset #1)"
+POST_BODY_1='{
+  "inventoryNumberPrefix": "TEST",
+  "name": "Test laptop #1",
+  "type": "IT",
+  "categoryId": "'"$DUMMY_CATEGORY_ID"'",
+  "condition": "NEW",
+  "locationId": "'"$DUMMY_LOCATION_ID"'",
+  "acquiredAt": "2026-01-15T00:00:00.000Z"
+}'
+
+POST_1_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/v1/assets" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "$POST_BODY_1")
+POST_1_STATUS=$(echo "$POST_1_RESPONSE" | tail -n 1)
+POST_1_BODY=$(echo "$POST_1_RESPONSE" | sed '$d')
+
+if [ "$POST_1_STATUS" = "201" ]; then
+  ASSET_1_ID=$(echo "$POST_1_BODY" | jq -r '._id')
+  ASSET_1_INV=$(echo "$POST_1_BODY" | jq -r '.inventoryNumber')
+  pass "Created asset #1: $ASSET_1_INV (_id: ${ASSET_1_ID:0:8}…)"
+else
+  fail "POST #1 failed with HTTP $POST_1_STATUS"
+  echo "$POST_1_BODY" | jq '.' 2>/dev/null || echo "$POST_1_BODY"
+  FAILURES=$((FAILURES + 1))
+fi
+
+# ----- 7.2 POST /v1/assets (second — expect sequence +2) -----
+step "POST /v1/assets (asset #2 — verifies inventory auto-increment)"
+POST_BODY_2='{
+  "inventoryNumberPrefix": "TEST",
+  "name": "Test camera #2",
+  "type": "MEDIA",
+  "categoryId": "'"$DUMMY_CATEGORY_ID"'",
+  "condition": "GOOD",
+  "locationId": "'"$DUMMY_LOCATION_ID"'",
+  "acquiredAt": "2026-02-20T00:00:00.000Z"
+}'
+
+POST_2_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE/v1/assets" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "$POST_BODY_2")
+POST_2_STATUS=$(echo "$POST_2_RESPONSE" | tail -n 1)
+POST_2_BODY=$(echo "$POST_2_RESPONSE" | sed '$d')
+
+if [ "$POST_2_STATUS" = "201" ]; then
+  ASSET_2_ID=$(echo "$POST_2_BODY" | jq -r '._id')
+  ASSET_2_INV=$(echo "$POST_2_BODY" | jq -r '.inventoryNumber')
+  pass "Created asset #2: $ASSET_2_INV (_id: ${ASSET_2_ID:0:8}…)"
+
+  # Verify the sequence number is asset_1's + 1
+  SEQ_1=$(echo "$ASSET_1_INV" | awk -F- '{print $3}' | sed 's/^0*//')
+  SEQ_2=$(echo "$ASSET_2_INV" | awk -F- '{print $3}' | sed 's/^0*//')
+  EXPECTED_SEQ_2=$((SEQ_1 + 1))
+
+  if [ "$SEQ_2" = "$EXPECTED_SEQ_2" ]; then
+    pass "Inventory sequence is contiguous: $SEQ_1 → $SEQ_2"
+  else
+    fail "Inventory sequence broken: $SEQ_1 then $SEQ_2 (expected $EXPECTED_SEQ_2)"
+    FAILURES=$((FAILURES + 1))
+  fi
+else
+  fail "POST #2 failed with HTTP $POST_2_STATUS"
+  echo "$POST_2_BODY" | jq '.' 2>/dev/null || echo "$POST_2_BODY"
+  FAILURES=$((FAILURES + 1))
+fi
+
+# ----- 7.3 GET /v1/assets/:id (single asset lookup) -----
+step "GET /v1/assets/:id (single asset lookup)"
+if [ -n "${ASSET_1_ID:-}" ]; then
+  GET_ONE_RESPONSE=$(curl -s -w "\n%{http_code}" "$API_BASE/v1/assets/$ASSET_1_ID" \
+    -H "Authorization: Bearer ${TOKEN}")
+  GET_ONE_STATUS=$(echo "$GET_ONE_RESPONSE" | tail -n 1)
+  GET_ONE_BODY=$(echo "$GET_ONE_RESPONSE" | sed '$d')
+
+  if [ "$GET_ONE_STATUS" = "200" ]; then
+    GET_ONE_NAME=$(echo "$GET_ONE_BODY" | jq -r '.name')
+    pass "Retrieved asset #1: \"$GET_ONE_NAME\""
+  else
+    fail "GET /:id failed with HTTP $GET_ONE_STATUS"
+    FAILURES=$((FAILURES + 1))
+  fi
+else
+  echo "(skipping — asset #1 was never created)"
+fi
+
+# ----- 7.4 PATCH /v1/assets/:id (update name, verify in response) -----
+step "PATCH /v1/assets/:id (rename asset #1)"
+if [ -n "${ASSET_1_ID:-}" ]; then
+  NEW_NAME="Test laptop #1 (renamed at $(date +%H:%M:%S))"
+  PATCH_BODY='{"name": "'"$NEW_NAME"'"}'
+
+  PATCH_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH "$API_BASE/v1/assets/$ASSET_1_ID" \
+    -H "Authorization: Bearer ${TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "$PATCH_BODY")
+  PATCH_STATUS=$(echo "$PATCH_RESPONSE" | tail -n 1)
+  PATCH_BODY_RESP=$(echo "$PATCH_RESPONSE" | sed '$d')
+
+  if [ "$PATCH_STATUS" = "200" ]; then
+    PATCH_NAME=$(echo "$PATCH_BODY_RESP" | jq -r '.name')
+    if [ "$PATCH_NAME" = "$NEW_NAME" ]; then
+      pass "Renamed asset #1 — new name reflected in response"
+    else
+      fail "PATCH returned 200 but name didn't update (got: $PATCH_NAME)"
+      FAILURES=$((FAILURES + 1))
+    fi
+  else
+    fail "PATCH failed with HTTP $PATCH_STATUS"
+    echo "$PATCH_BODY_RESP" | jq '.' 2>/dev/null || echo "$PATCH_BODY_RESP"
+    FAILURES=$((FAILURES + 1))
+  fi
+else
+  echo "(skipping — asset #1 was never created)"
+fi
+
+# ----- 7.5 GET /v1/assets (list — verify both test assets present) -----
+step "GET /v1/assets (list)"
+LIST_RESPONSE=$(curl -s "$API_BASE/v1/assets?limit=100" -H "Authorization: Bearer ${TOKEN}")
+LIST_TOTAL=$(echo "$LIST_RESPONSE" | jq -r '.pagination.total')
+pass "List endpoint returned total=$LIST_TOTAL asset(s)"
+
+# ----- 7.6 DELETE /v1/assets/:id (soft delete asset #2, verify 404 after) -----
+step "DELETE /v1/assets/:id (asset #2)"
+if [ -n "${ASSET_2_ID:-}" ]; then
+  DEL_RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$API_BASE/v1/assets/$ASSET_2_ID" \
+    -H "Authorization: Bearer ${TOKEN}")
+  DEL_STATUS=$(echo "$DEL_RESPONSE" | tail -n 1)
+
+  if [ "$DEL_STATUS" = "204" ]; then
+    pass "DELETE returned 204 for asset #2"
+
+    # Verify it's now gone: GET should return 404
+    GET_DEL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+      "$API_BASE/v1/assets/$ASSET_2_ID" \
+      -H "Authorization: Bearer ${TOKEN}")
+    if [ "$GET_DEL_STATUS" = "404" ]; then
+      pass "GET on deleted asset returns 404 (soft-delete works)"
+    else
+      fail "Expected 404 after delete, got HTTP $GET_DEL_STATUS"
+      FAILURES=$((FAILURES + 1))
+    fi
+  else
+    fail "DELETE failed with HTTP $DEL_STATUS"
+    FAILURES=$((FAILURES + 1))
+  fi
+else
+  echo "(skipping — asset #2 was never created)"
+fi
+
+# ----- 7.7 Cleanup: delete asset #1 too (keep DB tidy across reruns) -----
+step "Cleanup: DELETE asset #1"
+if [ -n "${ASSET_1_ID:-}" ]; then
+  CLEANUP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X DELETE "$API_BASE/v1/assets/$ASSET_1_ID" \
+    -H "Authorization: Bearer ${TOKEN}")
+  if [ "$CLEANUP_STATUS" = "204" ]; then
+    pass "Cleanup OK"
+  else
+    fail "Cleanup DELETE got HTTP $CLEANUP_STATUS"
+    FAILURES=$((FAILURES + 1))
+  fi
+else
+  echo "(skipping — asset #1 was never created)"
+fi
+
+# ----- 7.8 Summary -----
+echo ""
+echo "════════════════════════════════════════"
+if [ "$FAILURES" = "0" ]; then
+  echo "✅ ALL CRUD TESTS PASSED — slice #2b smoke tests green"
+else
+  echo "❌ $FAILURES test(s) failed — see output above"
+fi
+echo "════════════════════════════════════════"
+
 echo ""
 echo "🎉 Done."
+exit "$FAILURES"

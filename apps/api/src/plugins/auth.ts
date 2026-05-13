@@ -36,9 +36,11 @@ import {
   type JWTPayload,
 } from 'jose';
 
-import { UnauthorizedError } from './error-handler.js';
+import { ForbiddenError, UnauthorizedError } from './error-handler.js';
 
-import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import type { User, UserRole } from '@sfz/shared-types';
+import type { FastifyPluginAsync, FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
+import type { WithId } from 'mongodb';
 
 // ---------------------------------------------------------------------------
 // Claim shape
@@ -92,6 +94,20 @@ declare module 'fastify' {
      * to defensively check for `undefined`).
      */
     entraClaims: EntraClaims;
+
+    /**
+     * Current user document from the `users` collection.
+     *
+     * Only populated on routes that include `loadCurrentUser` in the
+     * preHandler chain (which itself requires `requireAuth` to have run
+     * first). The user has been verified as active; deactivated users
+     * are rejected with 401 before this field is set.
+     *
+     * Roles in this object are the authoritative source — JWT roles are
+     * NOT used for authorization because role changes need to take effect
+     * immediately, not wait for token refresh (~1 hour).
+     */
+    currentUser: WithId<User>;
   }
 
   interface FastifyInstance {
@@ -105,6 +121,43 @@ declare module 'fastify' {
      *   });
      */
     requireAuth: (request: FastifyRequest) => Promise<void>;
+
+    /**
+     * Pre-handler that loads `request.currentUser` from the database,
+     * via JIT-provisioning if needed.
+     *
+     * Depends on `requireAuth` having run first (uses `request.entraClaims.oid`).
+     * Rejects deactivated users (`isActive: false`) with 401.
+     *
+     * Usage:
+     *   app.post('/v1/assets', {
+     *     preHandler: [app.requireAuth, app.loadCurrentUser],
+     *   }, async (req) => {
+     *     const userId = req.currentUser._id;
+     *     // ...
+     *   });
+     */
+    loadCurrentUser: (request: FastifyRequest) => Promise<void>;
+
+    /**
+     * Factory: creates a pre-handler that requires the current user to have
+     * at least one of the listed roles. Throws 403 otherwise.
+     *
+     * Depends on `loadCurrentUser` having run first (uses `request.currentUser`).
+     *
+     * Usage:
+     *   app.post('/v1/assets', {
+     *     preHandler: [
+     *       app.requireAuth,
+     *       app.loadCurrentUser,
+     *       app.requireRole(['ASSET_MANAGER', 'ADMIN']),
+     *     ],
+     *   }, async (req) => { ... });
+     *
+     * The role list is OR-semantics (any-of). For AND-semantics across
+     * multiple roles, chain multiple `requireRole` calls.
+     */
+    requireRole: (allowed: readonly UserRole[]) => preHandlerAsyncHookHandler;
   }
 }
 
@@ -298,6 +351,80 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
     request.entraClaims = claims;
     request.log.debug({ oid: claims.oid, sub: claims.sub }, 'JWT verified');
+  });
+
+  // -------------------------------------------------------------------------
+  // loadCurrentUser preHandler
+  // -------------------------------------------------------------------------
+  //
+  // Loads the User document from the database (JIT-provisioning if first time).
+  // Must run AFTER requireAuth (depends on request.entraClaims).
+  //
+  // Lazy lookup of fastify.usersService: this plugin is registered BEFORE the
+  // users routes plugin (which decorates usersService onto the instance). At
+  // registration time the decorator does not exist; at request time it does.
+  fastify.decorate('loadCurrentUser', async (request: FastifyRequest) => {
+    if (!request.entraClaims) {
+      // Programmer error: route forgot to chain requireAuth before this.
+      throw new Error(
+        'loadCurrentUser called without prior requireAuth — fix the preHandler chain.',
+      );
+    }
+
+    const user = await fastify.usersService.findOrProvision(request.entraClaims);
+
+    if (!user.isActive) {
+      // Deactivated users still have valid Entra tokens (we cannot revoke
+      // those), so we enforce activeness ourselves. 401 (not 403) because
+      // their identity is no longer recognized as a valid session.
+      throw new UnauthorizedError('User account is deactivated');
+    }
+
+    request.currentUser = user;
+    request.log.debug({ userId: String(user._id), roles: user.roles }, 'Current user loaded');
+  });
+
+  // -------------------------------------------------------------------------
+  // requireRole factory
+  // -------------------------------------------------------------------------
+  //
+  // Returns a preHandler that checks `request.currentUser.roles` against the
+  // allowed list. OR-semantics: any role in the list grants access.
+  //
+  // Must run AFTER loadCurrentUser (depends on request.currentUser).
+  fastify.decorate('requireRole', (allowed: readonly UserRole[]) => {
+    if (allowed.length === 0) {
+      // Programmer error caught at plugin-load time, not request time.
+      throw new Error('requireRole called with empty role list — would deny everyone.');
+    }
+
+    const allowedSet = new Set(allowed);
+
+    const handler: preHandlerAsyncHookHandler = async (request) => {
+      if (!request.currentUser) {
+        throw new Error(
+          'requireRole called without prior loadCurrentUser — fix the preHandler chain.',
+        );
+      }
+
+      const userRoles = request.currentUser.roles;
+      const hasAnyAllowedRole = userRoles.some((role) => allowedSet.has(role));
+
+      if (!hasAnyAllowedRole) {
+        request.log.warn(
+          {
+            userId: String(request.currentUser._id),
+            userRoles,
+            requiredRoles: Array.from(allowedSet),
+            path: request.url,
+          },
+          'RBAC: insufficient role',
+        );
+        throw new ForbiddenError(`Action requires one of: ${Array.from(allowedSet).join(', ')}`);
+      }
+    };
+
+    return handler;
   });
 };
 
