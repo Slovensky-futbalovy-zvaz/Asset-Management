@@ -169,9 +169,22 @@ echo ""
 echo "🎟️  Access token acquired."
 
 # ----- 3. PEEK INSIDE TOKEN -----
+#
+# JWT payload is base64url-encoded (uses '-' and '_' instead of '+' and '/',
+# and omits '=' padding). macOS `base64 -d` is strict and chokes on this
+# — it occasionally truncates output silently, leaving jq with malformed
+# JSON ("Unfinished JSON term at EOF"). Python's `base64.urlsafe_b64decode`
+# handles it cleanly once we restore the missing padding.
 echo ""
 echo "📋 Token claims (redacted):"
-echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq '{
+TOKEN_PAYLOAD=$(echo "$TOKEN" | cut -d. -f2)
+DECODED_PAYLOAD=$(python3 -c "
+import base64, sys
+raw = sys.argv[1]
+raw += '=' * (-len(raw) % 4)  # restore base64 padding
+sys.stdout.write(base64.urlsafe_b64decode(raw).decode('utf-8'))
+" "$TOKEN_PAYLOAD")
+echo "$DECODED_PAYLOAD" | jq '{
   iss,
   aud,
   ver,
@@ -185,19 +198,23 @@ echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq '{
 # ----- 4. CALL API: /v1/me (FIRST CALL = JIT PROVISIONING) -----
 echo ""
 echo "🚀 GET /v1/me (first call — should JIT-provision)…"
-ME_BODY=$(curl -s "$API_BASE/v1/me" -H "Authorization: Bearer ${TOKEN}")
-echo "$ME_BODY" | jq '. + {
-  _id: ((._id // "") | .[0:4] + "…"),
-  email: ((.email // "") | .[0:4] + "…")
-}'
+ME_RESPONSE=$(curl -s -w "\n%{http_code}" "$API_BASE/v1/me" \
+  -H "Authorization: Bearer ${TOKEN}")
+ME_STATUS=$(echo "$ME_RESPONSE" | tail -n 1)
+ME_BODY=$(echo "$ME_RESPONSE" | sed '$d')
 
-# ----- 5. CALL API: /v1/assets -----
-echo ""
-echo "🚀 GET /v1/assets…"
-curl -s -w "\nHTTP %{http_code}\n" "$API_BASE/v1/assets" \
-  -H "Authorization: Bearer ${TOKEN}" | jq '.' 2>/dev/null || true
+if [ "$ME_STATUS" = "200" ]; then
+  echo "$ME_BODY" | jq '. + {
+    _id: ((._id // "") | .[0:4] + "…"),
+    email: ((.email // "") | .[0:4] + "…")
+  }'
+else
+  echo "❌ GET /v1/me failed with HTTP $ME_STATUS"
+  echo "$ME_BODY" | jq '.' 2>/dev/null || echo "$ME_BODY"
+  exit 1
+fi
 
-# ----- 6. IDEMPOTENCY CHECK -----
+# ----- 5. IDEMPOTENCY CHECK -----
 echo ""
 echo "🔁 GET /v1/me again (idempotency check)…"
 ME_BODY_2=$(curl -s "$API_BASE/v1/me" -H "Authorization: Bearer ${TOKEN}")
@@ -211,7 +228,7 @@ else
 fi
 
 # ============================================================================
-# 7. CRUD SMOKE TESTS — slice #2b (POST/PATCH/DELETE on /v1/assets)
+# 6. CRUD SMOKE TESTS — slice #2b (POST/PATCH/DELETE on /v1/assets)
 # ============================================================================
 #
 # Exercises the full write path: RBAC → transaction → audit log.
@@ -243,7 +260,7 @@ step() { echo ""; echo "── $1"; }
 # Track failures for exit code at the end.
 FAILURES=0
 
-# ----- 7.1 POST /v1/assets (first — expect inventoryNumber sequence +1) -----
+# ----- 6.1 POST /v1/assets (first — expect inventoryNumber sequence +1) -----
 step "POST /v1/assets (asset #1)"
 POST_BODY_1='{
   "inventoryNumberPrefix": "TEST",
@@ -272,7 +289,7 @@ else
   FAILURES=$((FAILURES + 1))
 fi
 
-# ----- 7.2 POST /v1/assets (second — expect sequence +2) -----
+# ----- 6.2 POST /v1/assets (second — expect sequence +2) -----
 step "POST /v1/assets (asset #2 — verifies inventory auto-increment)"
 POST_BODY_2='{
   "inventoryNumberPrefix": "TEST",
@@ -313,7 +330,7 @@ else
   FAILURES=$((FAILURES + 1))
 fi
 
-# ----- 7.3 GET /v1/assets/:id (single asset lookup) -----
+# ----- 6.3 GET /v1/assets/:id (single asset lookup) -----
 step "GET /v1/assets/:id (single asset lookup)"
 if [ -n "${ASSET_1_ID:-}" ]; then
   GET_ONE_RESPONSE=$(curl -s -w "\n%{http_code}" "$API_BASE/v1/assets/$ASSET_1_ID" \
@@ -332,7 +349,7 @@ else
   echo "(skipping — asset #1 was never created)"
 fi
 
-# ----- 7.4 PATCH /v1/assets/:id (update name, verify in response) -----
+# ----- 6.4 PATCH /v1/assets/:id (update name, verify in response) -----
 step "PATCH /v1/assets/:id (rename asset #1)"
 if [ -n "${ASSET_1_ID:-}" ]; then
   NEW_NAME="Test laptop #1 (renamed at $(date +%H:%M:%S))"
@@ -362,26 +379,38 @@ else
   echo "(skipping — asset #1 was never created)"
 fi
 
-# ----- 7.5 GET /v1/assets (list — verify both test assets present) -----
+# ----- 6.5 GET /v1/assets (list — verify both test assets present) -----
 step "GET /v1/assets (list)"
-LIST_RESPONSE=$(curl -s "$API_BASE/v1/assets?limit=100" -H "Authorization: Bearer ${TOKEN}")
-LIST_TOTAL=$(echo "$LIST_RESPONSE" | jq -r '.pagination.total')
-pass "List endpoint returned total=$LIST_TOTAL asset(s)"
+LIST_RESPONSE=$(curl -s -w "\n%{http_code}" "$API_BASE/v1/assets?limit=100" \
+  -H "Authorization: Bearer ${TOKEN}")
+LIST_STATUS=$(echo "$LIST_RESPONSE" | tail -n 1)
+LIST_BODY=$(echo "$LIST_RESPONSE" | sed '$d')
 
-# ----- 7.6 DELETE /v1/assets/:id (soft delete asset #2, verify 404 after) -----
+if [ "$LIST_STATUS" = "200" ]; then
+  LIST_TOTAL=$(echo "$LIST_BODY" | jq -r '.pagination.total')
+  pass "List endpoint returned total=$LIST_TOTAL asset(s)"
+else
+  fail "GET /v1/assets failed with HTTP $LIST_STATUS"
+  echo "$LIST_BODY" | jq '.' 2>/dev/null || echo "$LIST_BODY"
+  FAILURES=$((FAILURES + 1))
+fi
+
+# ----- 6.6 DELETE /v1/assets/:id (soft delete asset #2, verify 404 after) -----
 step "DELETE /v1/assets/:id (asset #2)"
 if [ -n "${ASSET_2_ID:-}" ]; then
   DEL_RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$API_BASE/v1/assets/$ASSET_2_ID" \
     -H "Authorization: Bearer ${TOKEN}")
   DEL_STATUS=$(echo "$DEL_RESPONSE" | tail -n 1)
+  DEL_BODY=$(echo "$DEL_RESPONSE" | sed '$d')
 
   if [ "$DEL_STATUS" = "204" ]; then
     pass "DELETE returned 204 for asset #2"
 
     # Verify it's now gone: GET should return 404
-    GET_DEL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    GET_DEL_RESPONSE=$(curl -s -w "\n%{http_code}" \
       "$API_BASE/v1/assets/$ASSET_2_ID" \
       -H "Authorization: Bearer ${TOKEN}")
+    GET_DEL_STATUS=$(echo "$GET_DEL_RESPONSE" | tail -n 1)
     if [ "$GET_DEL_STATUS" = "404" ]; then
       pass "GET on deleted asset returns 404 (soft-delete works)"
     else
@@ -390,29 +419,34 @@ if [ -n "${ASSET_2_ID:-}" ]; then
     fi
   else
     fail "DELETE failed with HTTP $DEL_STATUS"
+    echo "$DEL_BODY" | jq '.' 2>/dev/null || echo "$DEL_BODY"
     FAILURES=$((FAILURES + 1))
   fi
 else
   echo "(skipping — asset #2 was never created)"
 fi
 
-# ----- 7.7 Cleanup: delete asset #1 too (keep DB tidy across reruns) -----
+# ----- 6.7 Cleanup: delete asset #1 too (keep DB tidy across reruns) -----
 step "Cleanup: DELETE asset #1"
 if [ -n "${ASSET_1_ID:-}" ]; then
-  CLEANUP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  CLEANUP_RESPONSE=$(curl -s -w "\n%{http_code}" \
     -X DELETE "$API_BASE/v1/assets/$ASSET_1_ID" \
     -H "Authorization: Bearer ${TOKEN}")
+  CLEANUP_STATUS=$(echo "$CLEANUP_RESPONSE" | tail -n 1)
+  CLEANUP_BODY=$(echo "$CLEANUP_RESPONSE" | sed '$d')
+
   if [ "$CLEANUP_STATUS" = "204" ]; then
     pass "Cleanup OK"
   else
     fail "Cleanup DELETE got HTTP $CLEANUP_STATUS"
+    echo "$CLEANUP_BODY" | jq '.' 2>/dev/null || echo "$CLEANUP_BODY"
     FAILURES=$((FAILURES + 1))
   fi
 else
   echo "(skipping — asset #1 was never created)"
 fi
 
-# ----- 7.8 Summary -----
+# ----- 6.8 Summary -----
 echo ""
 echo "════════════════════════════════════════"
 if [ "$FAILURES" = "0" ]; then
