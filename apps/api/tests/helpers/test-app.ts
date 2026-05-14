@@ -93,23 +93,24 @@ export async function buildTestApp(): Promise<FastifyInstance> {
 // ---------------------------------------------------------------------------
 
 /**
- * Drop ALL collections in the test database, giving the next test a
- * clean slate. Call from `beforeAll` in each test file.
+ * Remove all documents from every collection in the test database,
+ * giving the next test a clean slate. Call from `beforeAll` or
+ * `afterEach` in each test file.
  *
- * Why not `db.dropDatabase()`?
- *   `dropDatabase` also wipes indexes and any non-default DB settings.
- *   Calling it would force every test to wait for index re-creation
- *   on first write. Dropping just the collection contents (or the
- *   collections themselves and letting `ensureIndexes` recreate) is
- *   the lighter touch.
+ * Why `deleteMany({})` per collection instead of `dropDatabase()`?
+ *   `dropDatabase` requires the `dropDatabase` action privilege, which
+ *   the typical `readWrite@<db>` Atlas role does NOT grant for databases
+ *   outside the role's scope. Our Atlas user has `readWrite` on
+ *   `sfz_asset_management` only; calling `dropDatabase()` on the test
+ *   DB fails with "user is not allowed to do action [dropDatabase]".
  *
- *   We choose `dropDatabase()` here because:
- *     - Integration tests run sequentially (vitest singleFork)
- *     - Index re-creation on small collections is ~5ms
- *     - Full drop is the most defensive against weird state
+ *   Per-collection `deleteMany({})` requires only the `remove` action
+ *   (part of standard `readWrite`), so it works everywhere. Indexes
+ *   stay in place between test runs which is fine — they were created
+ *   on first insert via the repository's `ensureIndexes()` calls.
  */
 export async function cleanTestDatabase(app: FastifyInstance): Promise<void> {
-  // Sanity check: refuse to drop anything that isn't the test DB.
+  // Sanity check: refuse to wipe anything that isn't the test DB.
   const dbName = app.mongo.db.databaseName;
   if (dbName !== TEST_DB_NAME) {
     throw new Error(
@@ -118,5 +119,7 @@ export async function cleanTestDatabase(app: FastifyInstance): Promise<void> {
     );
   }
 
-  await app.mongo.db.dropDatabase();
+  const collections = await app.mongo.db.listCollections({}, { nameOnly: true }).toArray();
+
+  await Promise.all(collections.map(({ name }) => app.mongo.db.collection(name).deleteMany({})));
 }

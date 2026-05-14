@@ -320,9 +320,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     try {
       const payloadBase64 = token.split('.')[1];
       if (!payloadBase64) throw new Error('Token has no payload segment');
-      // base64url decode
-      const padded = payloadBase64 + '='.repeat((-payloadBase64.length + 4) % 4);
-      const json = Buffer.from(padded, 'base64url').toString('utf-8');
+      // Node's Buffer base64url decoder accepts unpadded input directly
+      // (the standard form for JWT payloads). No manual padding needed.
+      const json = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
       unverifiedPayload = JSON.parse(json) as { iss?: unknown };
     } catch {
       throw new UnauthorizedError('Malformed JWT (cannot decode payload)');
