@@ -30,6 +30,7 @@ import assetsRoutes from './modules/assets/assets.routes.js';
 import auditPlugin from './modules/audit/audit.plugin.js';
 import categoriesRoutes from './modules/categories/categories.routes.js';
 import healthRoutes from './modules/health/health.routes.js';
+import locationsRoutes from './modules/locations/locations.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
 import authPlugin from './plugins/auth.js';
 import configPlugin from './plugins/config.js';
@@ -121,6 +122,7 @@ export async function buildServer(
   await app.register(usersRoutes);
   await app.register(assetsRoutes);
   await app.register(categoriesRoutes);
+  await app.register(locationsRoutes);
 
   // --- Root redirect to /docs ----------------------------------------------
   app.get('/', async (_request, reply) => {

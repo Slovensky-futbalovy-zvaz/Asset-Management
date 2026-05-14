@@ -14,6 +14,15 @@ export const LocationSchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend(
   /** Názov lokality. */
   name: z.string().min(1).max(200).trim(),
 
+  /**
+   * Slug pre URL (auto-generated z name pri POST, ak nie je dodaný).
+   * Príklad: "Centrála Bratislava" → "centrala-bratislava".
+   */
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug musí byť lowercase s pomlčkami.')
+    .max(200),
+
   /** Typ lokality. */
   type: z.enum([
     'WAREHOUSE', // Hlavný sklad
