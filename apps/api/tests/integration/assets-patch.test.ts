@@ -26,6 +26,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
   insertTestAsset,
+  insertTestCategory,
+  insertTestLocation,
   provisionUserAsAndSignToken,
   UserRole,
 } from '../helpers/test-fixtures.js';
@@ -269,6 +271,90 @@ describe('PATCH /v1/assets/:id', () => {
       // empty, so no audit log entry is created. Endpoint returns 200.
       expect(res.statusCode).toBe(200);
       expect(res.json<{ name: string }>().name).toBe('Original');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // FK validation on PATCH (slice #3 K7)
+  // -------------------------------------------------------------------------
+
+  describe('FK validation', () => {
+    it('rejects PATCH that changes categoryId to a non-existent category (400)', async () => {
+      const asset = await insertTestAsset(app);
+      const fakeCategoryId = '0123456789abcdef01234567';
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/assets/${asset._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { categoryId: fakeCategoryId },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<{ message: string }>().message).toMatch(/category.*does not exist/i);
+    });
+
+    it('rejects PATCH that changes locationId to a non-existent location (400)', async () => {
+      const asset = await insertTestAsset(app);
+      const fakeLocationId = '0123456789abcdef01234567';
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/assets/${asset._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { locationId: fakeLocationId },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<{ message: string }>().message).toMatch(/location.*does not exist/i);
+    });
+
+    it('accepts PATCH that changes categoryId to a real category', async () => {
+      const asset = await insertTestAsset(app);
+      const newCategory = await insertTestCategory(app, { slug: 'patch-target-cat' });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/assets/${asset._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { categoryId: newCategory._id },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json<{ categoryId: string }>().categoryId).toBe(newCategory._id);
+    });
+
+    it('accepts PATCH that changes locationId to a real location', async () => {
+      const asset = await insertTestAsset(app);
+      const newLocation = await insertTestLocation(app, { slug: 'patch-target-loc' });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/assets/${asset._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { locationId: newLocation._id },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json<{ locationId: string }>().locationId).toBe(newLocation._id);
+    });
+
+    it('skips FK check when categoryId is unchanged (no-op)', async () => {
+      // Insert asset using a real category — the FK check on PATCH only
+      // fires when patch.categoryId !== before.categoryId. Sending the
+      // same value back should succeed even though we don't supply real
+      // FKs anywhere else.
+      const category = await insertTestCategory(app, { slug: 'noop-fk-cat' });
+      const asset = await insertTestAsset(app, { categoryId: category._id });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/assets/${asset._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { categoryId: category._id }, // same value — should not re-check
+      });
+
+      expect(res.statusCode).toBe(200);
     });
   });
 

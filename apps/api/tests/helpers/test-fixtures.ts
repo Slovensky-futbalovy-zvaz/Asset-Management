@@ -229,6 +229,39 @@ export function validCreateAssetBody(
 export { UserRole, AccountType };
 
 // ---------------------------------------------------------------------------
+// Asset FK reference seeding
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed one category and one location so a test can POST/PATCH an asset
+ * that references real FK targets. Returns their _ids ready to drop into
+ * `validCreateAssetBody({ categoryId, locationId })`.
+ *
+ * Why: after slice #3 K7, the assets service validates that categoryId
+ * and locationId point at non-deleted documents. The old sentinel IDs
+ * (`000000000000000000000001`, etc) now fail with 400. Tests that need
+ * to create an asset have to seed real references first.
+ *
+ * Use this in `beforeEach` of any asset-creating test:
+ *   const fk = await seedAssetFkRefs(app);
+ *   ... validCreateAssetBody({ categoryId: fk.categoryId, locationId: fk.locationId })
+ */
+export async function seedAssetFkRefs(
+  app: FastifyInstance,
+): Promise<{ categoryId: string; locationId: string }> {
+  const stamp = Date.now().toString().slice(-6);
+  const category = await insertTestCategory(app, {
+    slug: `fk-category-${stamp}`,
+    name: `FK Category ${stamp}`,
+  });
+  const location = await insertTestLocation(app, {
+    slug: `fk-location-${stamp}`,
+    name: `FK Location ${stamp}`,
+  });
+  return { categoryId: category._id, locationId: location._id };
+}
+
+// ---------------------------------------------------------------------------
 // Category fixtures
 // ---------------------------------------------------------------------------
 

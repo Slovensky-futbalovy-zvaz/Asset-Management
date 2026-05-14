@@ -31,6 +31,8 @@ import { computeShallowDiff } from './assets-diff.js';
 
 import type { AssetsRepository, AssetUpdatePatch, ListAssetsParams } from './assets.repository.js';
 import type { AuditLogService } from '../audit/audit.service.js';
+import type { CategoriesRepository } from '../categories/categories.repository.js';
+import type { LocationsRepository } from '../locations/locations.repository.js';
 import type { Asset, CreateAssetInput, UpdateAssetInput, User } from '@sfz/shared-types';
 import type { FastifyRequest } from 'fastify';
 import type { ClientSession, MongoClient, WithId } from 'mongodb';
@@ -72,6 +74,8 @@ export class AssetsService {
     private readonly repo: AssetsRepository,
     private readonly auditLog: AuditLogService,
     private readonly mongoClient: MongoClient,
+    private readonly categoriesRepo: CategoriesRepository,
+    private readonly locationsRepo: LocationsRepository,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -123,6 +127,16 @@ export class AssetsService {
     const userId = String(user._id);
 
     const inserted = await this.runInTransaction(async (session) => {
+      // ----- Step 0: FK validation (category + location must exist) -----
+      //
+      // Defense in depth: route schemas enforce 24-hex format, but the IDs
+      // could still point to non-existent or soft-deleted documents. We
+      // verify both before doing anything else so the user gets a clear
+      // "category X does not exist" instead of a successful insert that
+      // leaves the asset pointing at a phantom reference.
+      await this.assertFkExists('category', input.categoryId, session);
+      await this.assertFkExists('location', input.locationId, session);
+
       // ----- Step 1: generate the next inventoryNumber -----
       //
       // Inside the transaction so any concurrent insert that committed
@@ -212,6 +226,19 @@ export class AssetsService {
       const before = await this.repo.findById(id, session);
       if (!before) {
         throw new NotFoundError('Asset', id);
+      }
+
+      // ----- Step 1b: FK validation (only when changing the FK fields) -----
+      //
+      // Same rationale as in create: catch dangling references early. We
+      // only check fields the patch actually changes, so a patch that
+      // doesn't touch categoryId/locationId pays no extra DB cost.
+      const typedPatch = patch as Partial<{ categoryId: string; locationId: string }>;
+      if (typedPatch.categoryId !== undefined && typedPatch.categoryId !== before.categoryId) {
+        await this.assertFkExists('category', typedPatch.categoryId, session);
+      }
+      if (typedPatch.locationId !== undefined && typedPatch.locationId !== before.locationId) {
+        await this.assertFkExists('location', typedPatch.locationId, session);
       }
 
       // ----- Step 2: prepare the patch with audit fields -----
@@ -317,6 +344,36 @@ export class AssetsService {
         session,
       );
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // FK validation helper
+  // -------------------------------------------------------------------------
+
+  /**
+   * Verify that a referenced category or location exists (and is not
+   * soft-deleted) inside the current transaction.
+   *
+   * The kind discriminator selects which repository to query. Throwing
+   * BadRequestError with a clear message is preferable to letting Mongo
+   * accept the write and end up with a dangling reference — catching it
+   * here keeps the assets table in a clean state and surfaces the bug
+   * to the caller immediately.
+   *
+   * Both lookups skip soft-deleted records (the underlying repos do that
+   * already), so an asset cannot reference a category/location that's
+   * been deleted, even if the deletion just happened.
+   */
+  private async assertFkExists(
+    kind: 'category' | 'location',
+    id: string,
+    session: ClientSession,
+  ): Promise<void> {
+    const repo = kind === 'category' ? this.categoriesRepo : this.locationsRepo;
+    const doc = await repo.findById(id, session);
+    if (!doc) {
+      throw new BadRequestError(`Referenced ${kind} ${id} does not exist.`);
+    }
   }
 
   // -------------------------------------------------------------------------

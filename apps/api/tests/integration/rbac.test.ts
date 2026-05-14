@@ -41,6 +41,7 @@ import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
   insertTestAsset,
   provisionUserAsAndSignToken,
+  seedAssetFkRefs,
   UserRole,
   validCreateAssetBody,
 } from '../helpers/test-fixtures.js';
@@ -52,6 +53,8 @@ import type { FastifyInstance } from 'fastify';
 describe('RBAC on /v1/assets', () => {
   let app: FastifyInstance;
   let signToken: (input: SignTestTokenInput) => Promise<string>;
+  let fkCategoryId: string;
+  let fkLocationId: string;
 
   beforeAll(async () => {
     app = await buildTestApp();
@@ -64,11 +67,30 @@ describe('RBAC on /v1/assets', () => {
 
   beforeEach(async () => {
     await cleanTestDatabase(app);
+    const fk = await seedAssetFkRefs(app);
+    fkCategoryId = fk.categoryId;
+    fkLocationId = fk.locationId;
   });
 
   afterEach(async () => {
     await cleanTestDatabase(app);
   });
+
+  /**
+   * Build a valid POST body with FK refs already populated.
+   * Slice #3 K7: the assets service rejects refs to non-existent
+   * categories/locations, so RBAC tests that expect a 201 (or care
+   * that the body would be accepted if RBAC permitted) need real FKs.
+   * For tests that expect a 403, FK validity is irrelevant — RBAC
+   * fires before FK validation — but using real FKs everywhere keeps
+   * the test bodies uniform.
+   */
+  const bodyWithFk = (overrides: Record<string, unknown> = {}) =>
+    validCreateAssetBody({
+      categoryId: fkCategoryId,
+      locationId: fkLocationId,
+      ...overrides,
+    });
 
   // -------------------------------------------------------------------------
   // Read access — EMPLOYEE (lowest read-capable role)
@@ -140,7 +162,7 @@ describe('RBAC on /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${token}` },
-        payload: validCreateAssetBody({ inventoryNumberPrefix: 'AM' }),
+        payload: bodyWithFk({ inventoryNumberPrefix: 'AM' }),
       });
 
       expect(res.statusCode).toBe(201);
@@ -223,7 +245,7 @@ describe('RBAC on /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${token}` },
-        payload: validCreateAssetBody({ inventoryNumberPrefix: 'EMP' }),
+        payload: bodyWithFk({ inventoryNumberPrefix: 'EMP' }),
       });
 
       expect(res.statusCode).toBe(403);
@@ -274,7 +296,7 @@ describe('RBAC on /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${token}` },
-        payload: validCreateAssetBody({ inventoryNumberPrefix: 'TM' }),
+        payload: bodyWithFk({ inventoryNumberPrefix: 'TM' }),
       });
 
       expect(res.statusCode).toBe(403);
@@ -309,7 +331,7 @@ describe('RBAC on /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${token}` },
-        payload: validCreateAssetBody({ inventoryNumberPrefix: 'EXT' }),
+        payload: bodyWithFk({ inventoryNumberPrefix: 'EXT' }),
       });
 
       expect(res.statusCode).toBe(403);

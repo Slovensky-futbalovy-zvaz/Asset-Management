@@ -23,6 +23,9 @@
 import { UpdateAssetSchema } from '@sfz/shared-types';
 import { z } from 'zod';
 
+import { CategoriesRepository } from '../categories/categories.repository.js';
+import { LocationsRepository } from '../locations/locations.repository.js';
+
 import { AssetsRepository } from './assets.repository.js';
 import { AssetsService } from './assets.service.js';
 
@@ -106,7 +109,21 @@ const assetsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Wire up dependencies.
   const repo = new AssetsRepository(fastify.mongo.db);
-  const service = new AssetsService(repo, fastify.auditLog, fastify.mongo.client);
+  // FK validation in the service needs to look up categories + locations,
+  // so we instantiate read-only repository handles here. These repos are
+  // also constructed independently inside categories.routes.ts and
+  // locations.routes.ts — each module manages its own indexes — so
+  // having an extra constructor call here just for cross-module reads is
+  // a deliberate lightweight choice over a shared singleton.
+  const categoriesRepo = new CategoriesRepository(fastify.mongo.db);
+  const locationsRepo = new LocationsRepository(fastify.mongo.db);
+  const service = new AssetsService(
+    repo,
+    fastify.auditLog,
+    fastify.mongo.client,
+    categoriesRepo,
+    locationsRepo,
+  );
 
   // Ensure indexes exist at startup. Idempotent.
   await repo.ensureIndexes();

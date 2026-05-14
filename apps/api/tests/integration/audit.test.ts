@@ -30,6 +30,7 @@ import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
   insertTestAsset,
   provisionUserAsAndSignToken,
+  seedAssetFkRefs,
   UserRole,
   validCreateAssetBody,
 } from '../helpers/test-fixtures.js';
@@ -67,6 +68,8 @@ describe('Audit log on /v1/assets operations', () => {
   let adminToken: string;
   let adminId: string;
   let adminDisplayName: string;
+  let fkCategoryId: string;
+  let fkLocationId: string;
 
   beforeAll(async () => {
     app = await buildTestApp();
@@ -86,11 +89,25 @@ describe('Audit log on /v1/assets operations', () => {
     adminToken = token;
     adminId = String(user._id);
     adminDisplayName = user.displayName;
+    const fk = await seedAssetFkRefs(app);
+    fkCategoryId = fk.categoryId;
+    fkLocationId = fk.locationId;
   });
 
   afterEach(async () => {
     await cleanTestDatabase(app);
   });
+
+  /**
+   * Local convenience: build a valid POST body with the per-test FK refs.
+   * See assets-post.test.ts for full rationale (slice #3 K7).
+   */
+  const bodyWithFk = (overrides: Record<string, unknown> = {}) =>
+    validCreateAssetBody({
+      categoryId: fkCategoryId,
+      locationId: fkLocationId,
+      ...overrides,
+    });
 
   // -------------------------------------------------------------------------
   // Helper: read audit logs filtered by entityId
@@ -116,7 +133,7 @@ describe('Audit log on /v1/assets operations', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody({ name: 'Audited asset', inventoryNumberPrefix: 'AUD' }),
+        payload: bodyWithFk({ name: 'Audited asset', inventoryNumberPrefix: 'AUD' }),
       });
       expect(create.statusCode).toBe(201);
       const assetId = create.json<{ _id: string }>()._id;
@@ -346,7 +363,7 @@ describe('Audit log on /v1/assets operations', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody({ name: 'Lifecycle test', inventoryNumberPrefix: 'LIFE' }),
+        payload: bodyWithFk({ name: 'Lifecycle test', inventoryNumberPrefix: 'LIFE' }),
       });
       expect(create.statusCode).toBe(201);
       const assetId = create.json<{ _id: string }>()._id;

@@ -24,6 +24,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
   provisionUserAsAndSignToken,
+  seedAssetFkRefs,
   UserRole,
   validCreateAssetBody,
 } from '../helpers/test-fixtures.js';
@@ -36,6 +37,8 @@ describe('POST /v1/assets', () => {
   let app: FastifyInstance;
   let signToken: (input: SignTestTokenInput) => Promise<string>;
   let adminToken: string;
+  let fkCategoryId: string;
+  let fkLocationId: string;
 
   beforeAll(async () => {
     app = await buildTestApp();
@@ -47,7 +50,8 @@ describe('POST /v1/assets', () => {
   });
 
   // Fresh DB + admin user before each test, so inventory sequence and
-  // user state don't leak between tests.
+  // user state don't leak between tests. Also seed FK references
+  // (category + location) so asset creation passes FK validation.
   beforeEach(async () => {
     await cleanTestDatabase(app);
     const { token } = await provisionUserAsAndSignToken(app, signToken, {
@@ -55,11 +59,27 @@ describe('POST /v1/assets', () => {
       role: UserRole.ADMIN,
     });
     adminToken = token;
+    const fk = await seedAssetFkRefs(app);
+    fkCategoryId = fk.categoryId;
+    fkLocationId = fk.locationId;
   });
 
   afterEach(async () => {
     await cleanTestDatabase(app);
   });
+
+  /**
+   * Local convenience: build a valid POST body with the per-test FK refs
+   * already populated. Tests that want to override anything else pass
+   * additional overrides; tests that want to BREAK the FK pass their own
+   * categoryId/locationId in overrides (the spread wins).
+   */
+  const bodyWithFk = (overrides: Record<string, unknown> = {}) =>
+    validCreateAssetBody({
+      categoryId: fkCategoryId,
+      locationId: fkLocationId,
+      ...overrides,
+    });
 
   // -------------------------------------------------------------------------
   // Happy path
@@ -71,7 +91,7 @@ describe('POST /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody({ name: 'My laptop', inventoryNumberPrefix: 'LT' }),
+        payload: bodyWithFk({ name: 'My laptop', inventoryNumberPrefix: 'LT' }),
       });
 
       expect(res.statusCode).toBe(201);
@@ -102,7 +122,7 @@ describe('POST /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody({ inventoryNumberPrefix: 'SEQ' }),
+        payload: bodyWithFk({ inventoryNumberPrefix: 'SEQ' }),
       });
       expect(first.statusCode).toBe(201);
       const year = new Date().getFullYear();
@@ -113,7 +133,7 @@ describe('POST /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody({ inventoryNumberPrefix: 'SEQ' }),
+        payload: bodyWithFk({ inventoryNumberPrefix: 'SEQ' }),
       });
       expect(second.statusCode).toBe(201);
       expect(second.json<{ inventoryNumber: string }>().inventoryNumber).toBe(`SEQ-${year}-002`);
@@ -123,7 +143,7 @@ describe('POST /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody({ inventoryNumberPrefix: 'OTHER' }),
+        payload: bodyWithFk({ inventoryNumberPrefix: 'OTHER' }),
       });
       expect(third.statusCode).toBe(201);
       expect(third.json<{ inventoryNumber: string }>().inventoryNumber).toBe(`OTHER-${year}-001`);
@@ -134,7 +154,7 @@ describe('POST /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody({ name: 'Persisted asset', inventoryNumberPrefix: 'PERS' }),
+        payload: bodyWithFk({ name: 'Persisted asset', inventoryNumberPrefix: 'PERS' }),
       });
       expect(create.statusCode).toBe(201);
       const id = create.json<{ _id: string }>()._id;
@@ -223,6 +243,62 @@ describe('POST /v1/assets', () => {
   });
 
   // -------------------------------------------------------------------------
+  // FK validation (slice #3 K7)
+  // -------------------------------------------------------------------------
+
+  describe('FK validation', () => {
+    it('rejects POST with categoryId pointing to a non-existent category (400)', async () => {
+      const fakeCategoryId = '0123456789abcdef01234567';
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/assets',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: bodyWithFk({ categoryId: fakeCategoryId, inventoryNumberPrefix: 'FKA' }),
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = res.json<{ message: string }>();
+      expect(body.message).toMatch(/category.*does not exist/i);
+    });
+
+    it('rejects POST with locationId pointing to a non-existent location (400)', async () => {
+      const fakeLocationId = '0123456789abcdef01234567';
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/assets',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: bodyWithFk({ locationId: fakeLocationId, inventoryNumberPrefix: 'FKB' }),
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = res.json<{ message: string }>();
+      expect(body.message).toMatch(/location.*does not exist/i);
+    });
+
+    it('rejects POST when category is soft-deleted (400)', async () => {
+      // Soft-delete the seeded category, then try to use it.
+      const { ObjectId } = await import('mongodb');
+      await app.mongo.db
+        .collection('categories')
+        .updateOne(
+          { _id: new ObjectId(fkCategoryId) },
+          { $set: { deletedAt: new Date().toISOString(), deletedBy: 'test' } },
+        );
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/assets',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: bodyWithFk({ inventoryNumberPrefix: 'FKC' }),
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Audit fields
   // -------------------------------------------------------------------------
 
@@ -238,7 +314,7 @@ describe('POST /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody(),
+        payload: bodyWithFk(),
       });
 
       expect(res.statusCode).toBe(201);
@@ -252,7 +328,7 @@ describe('POST /v1/assets', () => {
         method: 'POST',
         url: '/v1/assets',
         headers: { authorization: `Bearer ${adminToken}` },
-        payload: validCreateAssetBody(),
+        payload: bodyWithFk(),
       });
 
       expect(res.statusCode).toBe(201);
