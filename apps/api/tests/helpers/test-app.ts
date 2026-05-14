@@ -74,7 +74,11 @@ export async function buildTestApp(): Promise<FastifyInstance> {
   process.env['MONGO_DB_NAME'] = TEST_DB_NAME;
 
   try {
-    const app = await buildServer();
+    // 30s pluginTimeout (vs Fastify's 10s default) handles the case where
+    // each test file rebuilds the app + opens a fresh Atlas connection.
+    // Atlas cold TLS handshake from a residential network can spike to
+    // 15-20s on the 4th or 5th rebuild; 30s is comfortable headroom.
+    const app = await buildServer({ pluginTimeout: 30_000 });
     await app.ready();
     return app;
   } finally {

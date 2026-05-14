@@ -40,7 +40,9 @@ import swaggerPlugin from './plugins/swagger.js';
 // in swagger.ts but TypeScript's verbatimModuleSyntax wants explicit use.
 void jsonSchemaTransform;
 
-export async function buildServer(): Promise<FastifyInstance> {
+export async function buildServer(
+  options: { pluginTimeout?: number } = {},
+): Promise<FastifyInstance> {
   const isProd = process.env['NODE_ENV'] === 'production';
 
   const app = fastify({
@@ -67,6 +69,11 @@ export async function buildServer(): Promise<FastifyInstance> {
     },
     // Trust X-Forwarded-* headers (Vercel sets these)
     trustProxy: true,
+    // Plugin load timeout. Defaults to Fastify's 10s, which is fine for
+    // production (warm Atlas pool). Tests override to 30s because each
+    // test file rebuilds the app and pays the full Atlas TLS handshake
+    // cost on a cold module-level cache.
+    ...(options.pluginTimeout !== undefined && { pluginTimeout: options.pluginTimeout }),
   }).withTypeProvider<ZodTypeProvider>();
 
   // Hook Zod into Fastify's validation pipeline
