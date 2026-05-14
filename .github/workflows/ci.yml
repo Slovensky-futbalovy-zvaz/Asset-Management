@@ -102,18 +102,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Debug secrets (lengths only, no values exposed)
-        run: |
-          echo "MONGO_URI length: ${#MONGO_URI}"
-          echo "ENTRA_API_CLIENT_ID length: ${#ENTRA_API_CLIENT_ID}"
-          echo "ENTRA_TENANT_ID length: ${#ENTRA_TENANT_ID}"
-          echo "NODE_ENV: $NODE_ENV"
-        env:
-          NODE_ENV: test
-          MONGO_URI: ${{ secrets.MONGO_URI_TEST }}
-          ENTRA_API_CLIENT_ID: ${{ secrets.ENTRA_API_CLIENT_ID_TEST }}
-          ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID_TEST }}
-
       - name: Run tests
         run: pnpm test
         env:
