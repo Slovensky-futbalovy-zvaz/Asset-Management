@@ -227,3 +227,115 @@ export function validCreateAssetBody(
 
 // Re-export UserRole so tests can use it without importing shared-types.
 export { UserRole, AccountType };
+
+// ---------------------------------------------------------------------------
+// Category fixtures
+// ---------------------------------------------------------------------------
+
+export interface InsertTestCategoryOptions {
+  /** Display name. Defaults to a unique name based on millisecond timestamp. */
+  name?: string;
+  /** Slug. Defaults to a millisecond-timestamped variant to avoid collisions. */
+  slug?: string;
+  /** Parent category ID. Defaults to null (root). */
+  parentId?: string | null;
+  /** Asset type bucket. Defaults to IT. */
+  assetType?:
+    | 'IT'
+    | 'SPORTS_GEAR'
+    | 'TRAINING_EQUIPMENT'
+    | 'OFFICE_EQUIPMENT'
+    | 'MEDIA'
+    | 'COMMUNICATION'
+    | 'OTHER';
+  /** Active flag. Defaults to true. */
+  isActive?: boolean;
+  /** Sort order. Defaults to 0. */
+  sortOrder?: number;
+  /** Optional description. */
+  description?: string | null;
+  /** Optional icon name. */
+  icon?: string | null;
+  /** Optional hex color. */
+  color?: string | null;
+  /** Approver user IDs. Defaults to empty array. */
+  approverIds?: string[];
+  /** Whether loans need approval by default. Defaults to true. */
+  requiresApprovalByDefault?: boolean;
+  /** Max loan days. Defaults to null (no limit). */
+  maxLoanDays?: number | null;
+  /** ID of the user who "created" this category. Defaults to "test-creator". */
+  createdBy?: string;
+}
+
+/**
+ * Insert a category directly into the `categories` collection, bypassing
+ * the service. Returns the inserted document's _id, name, and slug.
+ *
+ * Use this in PATCH/DELETE tests to set up an existing category. For
+ * POST tests, exercise the endpoint directly.
+ */
+export async function insertTestCategory(
+  app: FastifyInstance,
+  options: InsertTestCategoryOptions = {},
+): Promise<{ _id: string; name: string; slug: string }> {
+  const now = new Date().toISOString();
+  const stamp = Date.now().toString().slice(-6);
+
+  const doc = {
+    name: options.name ?? `Test Category ${stamp}`,
+    slug: options.slug ?? `test-category-${stamp}`,
+    parentId: options.parentId ?? null,
+    assetType: options.assetType ?? 'IT',
+    description: options.description ?? null,
+    icon: options.icon ?? null,
+    color: options.color ?? null,
+    approverIds: options.approverIds ?? [],
+    requiresApprovalByDefault: options.requiresApprovalByDefault ?? true,
+    maxLoanDays: options.maxLoanDays ?? null,
+    isActive: options.isActive ?? true,
+    sortOrder: options.sortOrder ?? 0,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: options.createdBy ?? 'test-creator',
+    updatedBy: options.createdBy ?? 'test-creator',
+    deletedAt: null,
+    deletedBy: null,
+  };
+
+  const insertResult = await app.mongo.db.collection('categories').insertOne(doc);
+
+  return {
+    _id: String(insertResult.insertedId),
+    name: doc.name,
+    slug: doc.slug,
+  };
+}
+
+/**
+ * Returns a minimal valid request body for `POST /v1/categories`.
+ *
+ * Note: caller must supply a unique slug per test if testing slug-related
+ * behaviour. The default uses a millisecond stamp to avoid same-second
+ * collisions between consecutive tests in one file.
+ */
+export function validCreateCategoryBody(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const stamp = Date.now().toString().slice(-6);
+  return {
+    name: `Test Category ${stamp}`,
+    slug: `test-category-${stamp}`,
+    parentId: null,
+    assetType: 'IT',
+    description: null,
+    icon: null,
+    color: null,
+    approverIds: [],
+    requiresApprovalByDefault: true,
+    maxLoanDays: null,
+    isActive: true,
+    sortOrder: 0,
+    ...overrides,
+  };
+}
