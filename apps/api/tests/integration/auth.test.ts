@@ -17,11 +17,6 @@
  *      every other authenticated endpoint will work too
  *   3. The response shape is well-defined and includes everything we
  *      need to assert on (oid → _id mapping, role defaults, etc.)
- *
- * CI skip:
- *   These tests require Atlas connectivity via .env.local. CI runners
- *   don't have that secret yet, so the whole suite is skipped on CI.
- *   See tests/setup.ts for details.
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -32,9 +27,7 @@ import { createTokenSigner } from '../helpers/test-jwt-loader.js';
 import type { SignTestTokenInput } from '../helpers/test-jwt.js';
 import type { FastifyInstance } from 'fastify';
 
-const isCI = process.env['CI'] === 'true';
-
-describe.skipIf(isCI)('Auth gate (GET /v1/me)', () => {
+describe('Auth gate (GET /v1/me)', () => {
   let app: FastifyInstance;
   let signToken: (input: SignTestTokenInput) => Promise<string>;
 

@@ -32,9 +32,7 @@ import { createTokenSigner } from '../helpers/test-jwt-loader.js';
 import type { SignTestTokenInput } from '../helpers/test-jwt.js';
 import type { FastifyInstance } from 'fastify';
 
-const isCI = process.env['CI'] === 'true';
-
-describe.skipIf(isCI)('POST /v1/assets', () => {
+describe('POST /v1/assets', () => {
   let app: FastifyInstance;
   let signToken: (input: SignTestTokenInput) => Promise<string>;
   let adminToken: string;

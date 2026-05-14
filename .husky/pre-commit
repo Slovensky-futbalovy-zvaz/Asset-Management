@@ -1,1 +1,18 @@
+#!/usr/bin/env sh
+# Pre-commit hook: runs in the order:
+#   1. lint-staged: eslint + prettier on staged files only (fast)
+#   2. typecheck:   full TypeScript check across the monorepo (turbo-cached)
+#
+# Why typecheck in pre-commit:
+#   ESLint catches a subset of type errors but not all. CI runs the
+#   full typecheck (`tsc -p tsconfig.eslint.json --noEmit`) and rejects
+#   broken pushes. Catching the same break locally is faster and
+#   prevents a red CI badge.
+#
+# Performance:
+#   turbo caches typecheck results keyed on file contents + tsconfig.
+#   A no-op typecheck is ~200ms. A real typecheck of all packages is
+#   ~3-5s on a cold cache. Acceptable for the safety it provides.
+
 pnpm exec lint-staged
+pnpm typecheck

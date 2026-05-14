@@ -34,9 +34,7 @@ import { createTokenSigner } from '../helpers/test-jwt-loader.js';
 import type { SignTestTokenInput } from '../helpers/test-jwt.js';
 import type { FastifyInstance } from 'fastify';
 
-const isCI = process.env['CI'] === 'true';
-
-describe.skipIf(isCI)('DELETE /v1/assets/:id', () => {
+describe('DELETE /v1/assets/:id', () => {
   let app: FastifyInstance;
   let signToken: (input: SignTestTokenInput) => Promise<string>;
   let adminToken: string;

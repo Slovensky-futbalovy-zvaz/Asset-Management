@@ -106,6 +106,14 @@ jobs:
         run: pnpm test
         env:
           NODE_ENV: test
+          # Integration tests need an Atlas connection and Entra app
+          # registration metadata. Stored as repo secrets and pointed
+          # at the dev cluster (sfz-asset-mgmt-dev) whose Network Access
+          # allows 0.0.0.0/0 for CI reachability. Unit tests don't read
+          # these env vars, so leaving them set has no effect there.
+          MONGO_URI: ${{ secrets.MONGO_URI_TEST }}
+          ENTRA_API_CLIENT_ID: ${{ secrets.ENTRA_API_CLIENT_ID_TEST }}
+          ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID_TEST }}
 
       - name: Upload coverage to artifacts
         if: always()

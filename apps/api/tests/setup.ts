@@ -17,19 +17,14 @@
  *   want a structured handoff so tests can pull both the PEM and the
  *   expected audience cleanly.
  *
- * Why .env.local for MONGO_URI?
- *   vitest does NOT auto-load .env.local (unlike `tsx --env-file=...`).
- *   We load it manually here so tests can connect to the same Atlas
- *   cluster the dev app uses.
+ * Env var sources:
+ *   - Locally: `.env.local` (Atlas dev cluster, Entra dev app reg)
+ *   - CI: GitHub Actions repo secrets injected into process.env by the
+ *     `Run tests` step in .github/workflows/ci.yml (slice #2c-beta, K9)
  *
- * CI behaviour:
- *   When running on CI, `.env.local` does not exist and Entra env vars
- *   are not set. We detect this and gracefully skip keypair generation,
- *   letting unit tests run normally. Integration tests must skip
- *   themselves via `describe.skipIf(process.env.CI === 'true')` since
- *   they cannot run without Atlas connectivity. Once we either add a
- *   CI Atlas secret or switch to mongodb-memory-server with replica
- *   set, this CI bypass can be removed.
+ *   We load .env.local if present (no-op on CI). Either path must end
+ *   up with `MONGO_URI` and `ENTRA_API_CLIENT_ID` in process.env, or
+ *   setup fails with a clear error.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -56,20 +51,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const TEST_KEYS_FILE = join(tmpdir(), 'sfz-test-keys.json');
 
 // ---------------------------------------------------------------------------
-// Load .env.local into process.env (vitest doesn't do this automatically)
+// Load .env.local into process.env if present (no-op on CI)
 // ---------------------------------------------------------------------------
 
-/**
- * Returns `true` if `.env.local` was found and loaded, `false` otherwise.
- * The boolean lets the caller decide whether to proceed with operations
- * that depend on env vars from the file (e.g. test JWT setup).
- */
-function loadEnvLocal(): boolean {
+function loadEnvLocal(): void {
   // Find .env.local relative to this file (tests/setup.ts → ../.env.local)
   const envPath = join(__dirname, '..', '.env.local');
 
   if (!existsSync(envPath)) {
-    return false;
+    // Expected on CI — env vars come from GitHub Actions secrets instead.
+    return;
   }
 
   const content = readFileSync(envPath, 'utf-8');
@@ -88,8 +79,6 @@ function loadEnvLocal(): boolean {
       process.env[key] = value;
     }
   }
-
-  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -100,29 +89,26 @@ export default async function setup(): Promise<void> {
   // -- Ensure NODE_ENV is "test" so the auth plugin enables test JWT path
   process.env['NODE_ENV'] = 'test';
 
-  // -- Detect CI early -------------------------------------------------------
-  //
-  // On CI we don't have `.env.local` and don't run integration tests, so
-  // we skip the entire test JWT setup. Unit tests don't need any of this.
-  const isCI = process.env['CI'] === 'true';
+  // -- Load .env.local if present (no-op on CI where secrets are injected)
+  loadEnvLocal();
 
-  // -- Load .env.local first so we have MONGO_URI, ENTRA_* etc. -------------
-  const envLoaded = loadEnvLocal();
-
-  if (!envLoaded) {
-    if (isCI) {
-      // Expected on CI — skip JWT setup, unit tests will still run.
-      console.log(
-        '\nℹ️  tests/setup.ts: running on CI without .env.local — skipping test JWT setup. Integration tests will be skipped via describe.skipIf().\n',
-      );
-      return;
-    }
-
-    // Locally, missing .env.local is unusual but not fatal. Warn loudly.
-    console.warn(
-      '\n⚠️  tests/setup.ts: .env.local not found — tests requiring MONGO_URI or Entra env vars will fail.\n',
+  // -- Verify required env vars are present (either from .env.local or CI)
+  const apiClientId = process.env['ENTRA_API_CLIENT_ID'];
+  if (!apiClientId) {
+    throw new Error(
+      'tests/setup.ts: ENTRA_API_CLIENT_ID is not set. ' +
+        'Locally: add it to apps/api/.env.local. ' +
+        'On CI: configure ENTRA_API_CLIENT_ID_TEST as a repo secret and ' +
+        'inject it via the workflow env block.',
     );
-    return;
+  }
+
+  if (!process.env['MONGO_URI']) {
+    throw new Error(
+      'tests/setup.ts: MONGO_URI is not set. ' +
+        'Locally: add it to apps/api/.env.local. ' +
+        'On CI: configure MONGO_URI_TEST as a repo secret and inject it via the workflow env block.',
+    );
   }
 
   // -- Generate keypair --------------------------------------------------
@@ -131,19 +117,10 @@ export default async function setup(): Promise<void> {
   // -- Export public key via env var so config plugin picks it up --------
   process.env['TEST_JWT_PUBLIC_KEY'] = publicKeyPem;
 
-  // -- Pre-compute the audience tests should use ------------------------
+  // -- Write private key + metadata to temp file for test files ---------
   //
   // Auth plugin accepts tokens whose `aud` is either the raw client ID
   // GUID or `api://<client-id>`. Tests use the raw GUID for simplicity.
-  const apiClientId = process.env['ENTRA_API_CLIENT_ID'];
-  if (!apiClientId) {
-    throw new Error(
-      'tests/setup.ts: ENTRA_API_CLIENT_ID is not set after loading .env.local. ' +
-        'Cannot determine the audience for test JWTs.',
-    );
-  }
-
-  // -- Write private key + metadata to temp file for test files ---------
   const payload = {
     privateKeyPem,
     audience: apiClientId,

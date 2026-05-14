@@ -9,13 +9,6 @@
  *
  * If this test fails, every other integration test will too. Treat it
  * as a canary for the whole test infrastructure.
- *
- * CI skip:
- *   Integration tests require Atlas connectivity (MONGO_URI in .env.local).
- *   CI runners don't have that secret yet, so we skip integration tests
- *   on CI for now. Slice #2c-beta will introduce a proper solution (either
- *   GitHub secret + dev cluster IP allowlist, or mongodb-memory-server
- *   replica set). Locally these tests run normally.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -24,9 +17,7 @@ import { buildTestApp } from '../helpers/test-app.js';
 
 import type { FastifyInstance } from 'fastify';
 
-const isCI = process.env['CI'] === 'true';
-
-describe.skipIf(isCI)('GET /health/ready', () => {
+describe('GET /health/ready', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
