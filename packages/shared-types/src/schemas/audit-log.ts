@@ -58,6 +58,16 @@ export const AuditLogSchema = z.object({
     'ASSET_LOCATION_CHANGED',
     'ASSET_DISPOSED',
 
+    // Category (slice #3)
+    'CATEGORY_CREATED',
+    'CATEGORY_UPDATED',
+    'CATEGORY_DELETED',
+
+    // Location (slice #3)
+    'LOCATION_CREATED',
+    'LOCATION_UPDATED',
+    'LOCATION_DELETED',
+
     // Loan
     'LOAN_REQUEST_CREATED',
     'LOAN_REQUEST_APPROVED',

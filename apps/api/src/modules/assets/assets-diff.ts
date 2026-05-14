@@ -20,7 +20,7 @@
  *     can use it directly without further transformation.
  */
 
-import type { Asset, AuditLog } from '@sfz/shared-types';
+import type { AuditLog } from '@sfz/shared-types';
 import type { WithId } from 'mongodb';
 
 /**
@@ -35,10 +35,14 @@ import type { WithId } from 'mongodb';
  *
  * Nested object changes are detected via shallow inequality but reported
  * as a single field change \u2014 deep diff is a future enhancement.
+ *
+ * Generic over the document type so it can be reused across modules
+ * (assets, categories, locations, users, etc.). The audit log change
+ * shape is the same regardless of which entity we're diffing.
  */
-export function computeShallowDiff(
-  before: WithId<Asset>,
-  after: WithId<Asset>,
+export function computeShallowDiff<T extends { _id: unknown }>(
+  before: WithId<T>,
+  after: WithId<T>,
   skip: readonly string[],
 ): NonNullable<AuditLog['changes']> {
   const skipSet = new Set(skip);
@@ -48,7 +52,7 @@ export function computeShallowDiff(
   // Deletes (a field in `before` not in `after`) won't be caught by this,
   // but Mongo `$set` semantics don't unset fields anyway, so this is
   // accurate for our update path.
-  for (const key of Object.keys(after) as (keyof WithId<Asset>)[]) {
+  for (const key of Object.keys(after) as (keyof WithId<T>)[]) {
     if (skipSet.has(key as string)) continue;
     if (key === '_id') continue;
 
