@@ -339,3 +339,109 @@ export function validCreateCategoryBody(
     ...overrides,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Location fixtures
+// ---------------------------------------------------------------------------
+
+export type LocationType =
+  | 'WAREHOUSE'
+  | 'OFFICE'
+  | 'STADIUM'
+  | 'TRAINING_CENTER'
+  | 'EXTERNAL'
+  | 'IN_TRANSIT';
+
+export interface InsertTestLocationOptions {
+  /** Display name. Defaults to a unique name based on millisecond timestamp. */
+  name?: string;
+  /** Slug. Defaults to a millisecond-timestamped variant to avoid collisions. */
+  slug?: string;
+  /** Parent location ID. Defaults to null (root). */
+  parentId?: string | null;
+  /** Location type. Defaults to WAREHOUSE. */
+  type?: LocationType;
+  /** Active flag. Defaults to true. */
+  isActive?: boolean;
+  /** Optional description. */
+  description?: string | null;
+  /** Optional address. */
+  address?: {
+    street?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
+  } | null;
+  /** Optional GPS coordinates. */
+  coordinates?: { lat: number; lng: number } | null;
+  /** Optional manager user ID. */
+  managerId?: string | null;
+  /** ID of the user who "created" this location. Defaults to "test-creator". */
+  createdBy?: string;
+}
+
+/**
+ * Insert a location directly into the `locations` collection, bypassing
+ * the service. Returns the inserted document's _id, name, and slug.
+ *
+ * Use this in PATCH/DELETE tests to set up an existing location. For
+ * POST tests, exercise the endpoint directly.
+ */
+export async function insertTestLocation(
+  app: FastifyInstance,
+  options: InsertTestLocationOptions = {},
+): Promise<{ _id: string; name: string; slug: string }> {
+  const now = new Date().toISOString();
+  const stamp = Date.now().toString().slice(-6);
+
+  const doc = {
+    name: options.name ?? `Test Location ${stamp}`,
+    slug: options.slug ?? `test-location-${stamp}`,
+    type: options.type ?? 'WAREHOUSE',
+    address: options.address ?? null,
+    coordinates: options.coordinates ?? null,
+    parentId: options.parentId ?? null,
+    description: options.description ?? null,
+    managerId: options.managerId ?? null,
+    isActive: options.isActive ?? true,
+    createdAt: now,
+    updatedAt: now,
+    createdBy: options.createdBy ?? 'test-creator',
+    updatedBy: options.createdBy ?? 'test-creator',
+    deletedAt: null,
+    deletedBy: null,
+  };
+
+  const insertResult = await app.mongo.db.collection('locations').insertOne(doc);
+
+  return {
+    _id: String(insertResult.insertedId),
+    name: doc.name,
+    slug: doc.slug,
+  };
+}
+
+/**
+ * Returns a minimal valid request body for `POST /v1/locations`.
+ *
+ * Note: caller must supply a unique slug per test if testing slug-related
+ * behaviour. The default uses a millisecond stamp to avoid same-second
+ * collisions between consecutive tests in one file.
+ */
+export function validCreateLocationBody(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const stamp = Date.now().toString().slice(-6);
+  return {
+    name: `Test Location ${stamp}`,
+    slug: `test-location-${stamp}`,
+    type: 'WAREHOUSE',
+    address: null,
+    coordinates: null,
+    parentId: null,
+    description: null,
+    managerId: null,
+    isActive: true,
+    ...overrides,
+  };
+}
