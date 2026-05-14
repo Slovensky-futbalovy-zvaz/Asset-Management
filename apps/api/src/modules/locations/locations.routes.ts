@@ -24,6 +24,8 @@
 
 import { z } from 'zod';
 
+import { AssetsRepository } from '../assets/assets.repository.js';
+
 import { LocationsRepository } from './locations.repository.js';
 import { LocationsService } from './locations.service.js';
 
@@ -159,7 +161,10 @@ const locationsRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   const repo = new LocationsRepository(fastify.mongo.db);
-  const service = new LocationsService(repo, fastify.auditLog, fastify.mongo.client);
+  // Asset repo handle so the service can count assets referencing a
+  // location before allowing delete (slice #3 K9 FK protection).
+  const assetsRepo = new AssetsRepository(fastify.mongo.db);
+  const service = new LocationsService(repo, fastify.auditLog, fastify.mongo.client, assetsRepo);
 
   await repo.ensureIndexes();
 
@@ -297,8 +302,8 @@ const locationsRoutes: FastifyPluginAsync = async (fastify) => {
         summary: 'Soft-delete a location',
         description:
           'Marks a location as deleted. Refuses deletion if the location has ' +
-          'any non-deleted child locations (would orphan them). Asset FK ' +
-          'protection lands in slice #3 K9. Requires ADMIN role.',
+          'any non-deleted child locations (would orphan them), or if any ' +
+          'non-deleted assets reference it. Requires ADMIN role.',
         security: [{ bearerAuth: [] }],
         params: LocationIdParamsSchema,
         response: {

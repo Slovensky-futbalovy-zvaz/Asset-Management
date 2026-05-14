@@ -263,4 +263,34 @@ export class AssetsRepository {
 
     return result ?? null;
   }
+
+  /**
+   * Count non-deleted assets that reference a particular category id.
+   * Used by CategoriesService.delete to refuse a delete that would
+   * orphan referencing assets (slice #3 K9 FK protection).
+   *
+   * Soft-deleted assets are excluded because a deleted asset is no
+   * longer a real reference — if you delete an asset, the category it
+   * pointed at becomes safe to delete.
+   *
+   * Pass `session` to make this part of a transaction.
+   */
+  async countByCategory(categoryId: string, session?: ClientSession): Promise<number> {
+    return this.collection.countDocuments(
+      { categoryId, deletedAt: null } as Filter<Asset>,
+      session ? { session } : undefined,
+    );
+  }
+
+  /**
+   * Count non-deleted assets that reference a particular location id.
+   * Used by LocationsService.delete to refuse a delete that would
+   * orphan referencing assets (slice #3 K9 FK protection).
+   */
+  async countByLocation(locationId: string, session?: ClientSession): Promise<number> {
+    return this.collection.countDocuments(
+      { locationId, deletedAt: null } as Filter<Asset>,
+      session ? { session } : undefined,
+    );
+  }
 }

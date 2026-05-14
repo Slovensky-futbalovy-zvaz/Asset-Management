@@ -25,6 +25,8 @@
 import { ASSET_TYPE_VALUES, type AssetType } from '@sfz/shared-types';
 import { z } from 'zod';
 
+import { AssetsRepository } from '../assets/assets.repository.js';
+
 import { CategoriesRepository } from './categories.repository.js';
 import { CategoriesService } from './categories.service.js';
 
@@ -154,7 +156,10 @@ const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   const repo = new CategoriesRepository(fastify.mongo.db);
-  const service = new CategoriesService(repo, fastify.auditLog, fastify.mongo.client);
+  // Asset repo handle so the service can count assets referencing a
+  // category before allowing delete (slice #3 K9 FK protection).
+  const assetsRepo = new AssetsRepository(fastify.mongo.db);
+  const service = new CategoriesService(repo, fastify.auditLog, fastify.mongo.client, assetsRepo);
 
   await repo.ensureIndexes();
 
@@ -296,8 +301,8 @@ const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
         summary: 'Soft-delete a category',
         description:
           'Marks a category as deleted. Refuses deletion if the category has ' +
-          'any non-deleted child categories (would orphan them). Asset FK ' +
-          'protection lands in slice #3 K9. Requires ADMIN role.',
+          'any non-deleted child categories (would orphan them), or if any ' +
+          'non-deleted assets reference it. Requires ADMIN role.',
         security: [{ bearerAuth: [] }],
         params: CategoryIdParamsSchema,
         response: {

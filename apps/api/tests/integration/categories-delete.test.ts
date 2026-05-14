@@ -12,19 +12,16 @@
  *   - 404 when category doesn't exist
  *   - 404 when category is already soft-deleted (idempotency boundary)
  *   - 400 when category has direct children (orphan protection)
+ *   - 400 when assets reference the category (slice #3 K9 FK protection)
  *   - 400 for malformed _id
  *   - deletedBy is set to the calling user _id
- *
- * What's tested elsewhere:
- *   - RBAC, audit content → other files
- *   - Asset FK protection — slice #3 K9 (assets referencing the category
- *     will block deletion). Not enforced yet in K1.
  */
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
+  insertTestAsset,
   insertTestCategory,
   provisionUserAsAndSignToken,
   UserRole,
@@ -257,6 +254,66 @@ describe('DELETE /v1/categories/:id', () => {
       const res = await app.inject({
         method: 'DELETE',
         url: `/v1/categories/${parent._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(204);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Asset FK protection (slice #3 K9)
+  // -------------------------------------------------------------------------
+
+  describe('asset FK protection', () => {
+    it('returns 400 when deleting a category referenced by one asset', async () => {
+      const cat = await insertTestCategory(app, { slug: 'cat-with-asset' });
+      await insertTestAsset(app, { categoryId: cat._id });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/v1/categories/${cat._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = res.json<{ message: string }>();
+      expect(body.message).toMatch(/cannot delete/i);
+      expect(body.message).toMatch(/asset.*reference/i);
+    });
+
+    it('returns 400 with the correct count when multiple assets reference the category', async () => {
+      const cat = await insertTestCategory(app, { slug: 'cat-many-assets' });
+      await insertTestAsset(app, { categoryId: cat._id, inventoryNumber: 'FK-2026-001' });
+      await insertTestAsset(app, { categoryId: cat._id, inventoryNumber: 'FK-2026-002' });
+      await insertTestAsset(app, { categoryId: cat._id, inventoryNumber: 'FK-2026-003' });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/v1/categories/${cat._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<{ message: string }>().message).toContain('3');
+    });
+
+    it('allows deletion of a category whose only asset was soft-deleted', async () => {
+      const cat = await insertTestCategory(app, { slug: 'cat-asset-deleted' });
+      const asset = await insertTestAsset(app, { categoryId: cat._id });
+
+      // Soft-delete the asset first
+      const { ObjectId } = await import('mongodb');
+      await app.mongo.db
+        .collection('assets')
+        .updateOne(
+          { _id: new ObjectId(asset._id) },
+          { $set: { deletedAt: new Date().toISOString(), deletedBy: adminId } },
+        );
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/v1/categories/${cat._id}`,
         headers: { authorization: `Bearer ${adminToken}` },
       });
 

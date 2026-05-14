@@ -20,6 +20,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
+  insertTestAsset,
   insertTestLocation,
   provisionUserAsAndSignToken,
   UserRole,
@@ -249,6 +250,65 @@ describe('DELETE /v1/locations/:id', () => {
       const res = await app.inject({
         method: 'DELETE',
         url: `/v1/locations/${parent._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(204);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Asset FK protection (slice #3 K9)
+  // -------------------------------------------------------------------------
+
+  describe('asset FK protection', () => {
+    it('returns 400 when deleting a location referenced by one asset', async () => {
+      const loc = await insertTestLocation(app, { slug: 'loc-with-asset' });
+      await insertTestAsset(app, { locationId: loc._id });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/v1/locations/${loc._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = res.json<{ message: string }>();
+      expect(body.message).toMatch(/cannot delete/i);
+      expect(body.message).toMatch(/asset.*reference/i);
+    });
+
+    it('returns 400 with the correct count when multiple assets reference the location', async () => {
+      const loc = await insertTestLocation(app, { slug: 'loc-many-assets' });
+      await insertTestAsset(app, { locationId: loc._id, inventoryNumber: 'FKL-2026-001' });
+      await insertTestAsset(app, { locationId: loc._id, inventoryNumber: 'FKL-2026-002' });
+      await insertTestAsset(app, { locationId: loc._id, inventoryNumber: 'FKL-2026-003' });
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/v1/locations/${loc._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<{ message: string }>().message).toContain('3');
+    });
+
+    it('allows deletion of a location whose only asset was soft-deleted', async () => {
+      const loc = await insertTestLocation(app, { slug: 'loc-asset-deleted' });
+      const asset = await insertTestAsset(app, { locationId: loc._id });
+
+      const { ObjectId } = await import('mongodb');
+      await app.mongo.db
+        .collection('assets')
+        .updateOne(
+          { _id: new ObjectId(asset._id) },
+          { $set: { deletedAt: new Date().toISOString(), deletedBy: adminId } },
+        );
+
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/v1/locations/${loc._id}`,
         headers: { authorization: `Bearer ${adminToken}` },
       });
 

@@ -57,6 +57,7 @@ import type {
   CategoryUpdatePatch,
   ListCategoriesParams,
 } from './categories.repository.js';
+import type { AssetsRepository } from '../assets/assets.repository.js';
 import type { AuditLogService } from '../audit/audit.service.js';
 import type { Category, CreateCategoryInput, User } from '@sfz/shared-types';
 import type { FastifyRequest } from 'fastify';
@@ -115,6 +116,7 @@ export class CategoriesService {
     private readonly repo: CategoriesRepository,
     private readonly auditLog: AuditLogService,
     private readonly mongoClient: MongoClient,
+    private readonly assetsRepo: AssetsRepository,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -423,6 +425,19 @@ export class CategoriesService {
       if (childCount > 0) {
         throw new BadRequestError(
           `Cannot delete category "${existing.name}": ${childCount} child categor${childCount === 1 ? 'y' : 'ies'} would be orphaned. Reparent or delete children first.`,
+        );
+      }
+
+      // ----- Step 2b: FK integrity — refuse if assets reference this category -----
+      //
+      // Slice #3 K9: assets carry categoryId. Removing the category here
+      // would leave those assets pointing at a deleted document. We block
+      // the delete with a count surfaced in the message so admins can find
+      // and reassign the affected assets first.
+      const assetCount = await this.assetsRepo.countByCategory(id, session);
+      if (assetCount > 0) {
+        throw new BadRequestError(
+          `Cannot delete category "${existing.name}": ${assetCount} asset${assetCount === 1 ? '' : 's'} reference${assetCount === 1 ? 's' : ''} it. Reassign or delete those assets first.`,
         );
       }
 

@@ -42,6 +42,7 @@ import type {
   LocationsRepository,
   LocationUpdatePatch,
 } from './locations.repository.js';
+import type { AssetsRepository } from '../assets/assets.repository.js';
 import type { AuditLogService } from '../audit/audit.service.js';
 import type { CreateLocationInput, Location, User } from '@sfz/shared-types';
 import type { FastifyRequest } from 'fastify';
@@ -91,6 +92,7 @@ export class LocationsService {
     private readonly repo: LocationsRepository,
     private readonly auditLog: AuditLogService,
     private readonly mongoClient: MongoClient,
+    private readonly assetsRepo: AssetsRepository,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -342,6 +344,18 @@ export class LocationsService {
       if (childCount > 0) {
         throw new BadRequestError(
           `Cannot delete location "${existing.name}": ${childCount} child location${childCount === 1 ? '' : 's'} would be orphaned. Reparent or delete children first.`,
+        );
+      }
+
+      // ----- Step 2b: FK integrity — refuse if assets reference this location -----
+      //
+      // Slice #3 K9: assets carry locationId. Removing the location here
+      // would leave those assets pointing at a deleted document. Block
+      // the delete with a count surfaced in the message.
+      const assetCount = await this.assetsRepo.countByLocation(id, session);
+      if (assetCount > 0) {
+        throw new BadRequestError(
+          `Cannot delete location "${existing.name}": ${assetCount} asset${assetCount === 1 ? '' : 's'} reference${assetCount === 1 ? 's' : ''} it. Reassign or delete those assets first.`,
         );
       }
 
