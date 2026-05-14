@@ -264,6 +264,113 @@ describe('POST /v1/categories', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Slug auto-generation (K3)
+  // -------------------------------------------------------------------------
+
+  describe('slug auto-generation', () => {
+    it('derives slug from name when slug is omitted from the body', async () => {
+      const body = validCreateCategoryBody({ name: 'Pracovné notebooky' });
+      delete body['slug'];
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: body,
+      });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.json<{ slug: string }>().slug).toBe('pracovne-notebooky');
+    });
+
+    it('strips Slovak diacritics when deriving slug', async () => {
+      const body = validCreateCategoryBody({ name: 'Tréningové pomôcky' });
+      delete body['slug'];
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: body,
+      });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.json<{ slug: string }>().slug).toBe('treningove-pomocky');
+    });
+
+    it('appends -2 suffix when the derived slug already exists', async () => {
+      // First POST takes the base slug.
+      await insertTestCategory(app, { name: 'Notebooky', slug: 'notebooky' });
+
+      const body = validCreateCategoryBody({ name: 'Notebooky' });
+      delete body['slug'];
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: body,
+      });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.json<{ slug: string }>().slug).toBe('notebooky-2');
+    });
+
+    it('appends -3 when base and -2 are both taken', async () => {
+      await insertTestCategory(app, { name: 'Dresy', slug: 'dresy' });
+      await insertTestCategory(app, { name: 'Dresy 2', slug: 'dresy-2' });
+
+      const body = validCreateCategoryBody({ name: 'Dresy' });
+      delete body['slug'];
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: body,
+      });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.json<{ slug: string }>().slug).toBe('dresy-3');
+    });
+
+    it('returns 400 if name slugifies to an empty string (e.g. only specials)', async () => {
+      const body = validCreateCategoryBody({ name: '!@#$%' });
+      delete body['slug'];
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: body,
+      });
+
+      // Zod min(1) on name passes for "!@#$%", but slugify() returns ""
+      // so the service throws 400 with a clear message.
+      expect(res.statusCode).toBe(400);
+      const responseBody = res.json<{ message: string }>();
+      expect(responseBody.message).toMatch(/cannot derive a slug/i);
+    });
+
+    it('client-supplied slug bypasses auto-derivation', async () => {
+      const body = validCreateCategoryBody({
+        name: 'Renamed thing',
+        slug: 'totally-different-slug',
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: body,
+      });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.json<{ slug: string }>().slug).toBe('totally-different-slug');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Audit fields
   // -------------------------------------------------------------------------
 

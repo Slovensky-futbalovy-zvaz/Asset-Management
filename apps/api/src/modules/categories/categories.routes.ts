@@ -11,16 +11,18 @@
  *   - DELETE /v1/categories/:id   ADMIN only
  *
  * Body schemas:
- *   - POST uses `CreateCategorySchema` from shared-types (slug supplied by client)
- *   - PATCH uses an inline partial schema (UpdateCategorySchema is not yet in shared-types)
+ *   - POST uses a local `ApiCreateCategoryBodySchema` that mirrors
+ *     `CreateCategorySchema` from shared-types except `slug` is OPTIONAL.
+ *     When omitted, the service derives it from `name` (K3 slug auto-gen).
+ *   - PATCH uses an inline partial schema (UpdateCategorySchema is not yet
+ *     in shared-types).
  *
- * Future K3/K4 hooks:
- *   When slug auto-generation lands, the POST body will accept `slug` as
- *   optional and derive it from `name`. When cycle detection lands, the
- *   PATCH service-level parentId check will gain a tree traversal.
+ * Future K4 hook:
+ *   When cycle detection lands, the PATCH service-level parentId check
+ *   will gain a tree traversal up to a max-depth limit.
  */
 
-import { ASSET_TYPE_VALUES, CreateCategorySchema, type AssetType } from '@sfz/shared-types';
+import { ASSET_TYPE_VALUES, type AssetType } from '@sfz/shared-types';
 import { z } from 'zod';
 
 import { CategoriesRepository } from './categories.repository.js';
@@ -50,6 +52,50 @@ const ListCategoriesQuerySchema = z.object({
 const CategoryIdParamsSchema = z.object({
   id: z.string().regex(/^[a-f\d]{24}$/i, 'Neplatný formát ID (očakáva sa 24 hex znakov).'),
 });
+
+/**
+ * POST body schema. Mirrors `CreateCategorySchema` from shared-types but
+ * makes `slug` optional — the service derives it from `name` if absent.
+ *
+ * All other fields keep their canonical validation (regex on color, hex on
+ * ObjectId-like fields, enum membership for assetType, etc.) so that
+ * malformed payloads still surface at the Zod layer rather than the service.
+ */
+const ApiCreateCategoryBodySchema = z
+  .object({
+    name: z.string().min(1).max(200).trim(),
+    /**
+     * Optional slug. Lowercase letters, digits, hyphens. If omitted, the
+     * server derives one from `name` and resolves collisions silently with
+     * numeric suffixes.
+     */
+    slug: z
+      .string()
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug musí byť lowercase s pomlckami.')
+      .max(200)
+      .optional(),
+    parentId: z
+      .string()
+      .regex(/^[a-f\d]{24}$/i, 'parentId musí byť 24 hex znakov.')
+      .nullable()
+      .default(null),
+    assetType: z.enum(
+      ASSET_TYPE_VALUES as unknown as [string, ...string[]],
+    ) as z.ZodType<AssetType>,
+    description: z.string().max(1000).nullable().default(null),
+    icon: z.string().max(50).nullable().default(null),
+    color: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, 'Farba musí byť hex (napr. #1450df).')
+      .nullable()
+      .default(null),
+    approverIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).default([]),
+    requiresApprovalByDefault: z.boolean().default(true),
+    maxLoanDays: z.number().int().positive().max(3650).nullable().default(null),
+    isActive: z.boolean().default(true),
+    sortOrder: z.number().int().default(0),
+  })
+  .describe('Telo pre vytvorenie kategórie; slug je voliteľný (server odvodí z name).');
 
 /**
  * PATCH body schema. Mirrors what the service accepts: a partial of the
@@ -194,14 +240,23 @@ const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
           'Creates a new category. Slug must be unique. If parentId is supplied, ' +
           'the parent must exist. Requires ASSET_MANAGER or ADMIN role.',
         security: [{ bearerAuth: [] }],
-        body: CreateCategorySchema,
+        body: ApiCreateCategoryBodySchema,
         response: {
           201: CategoryResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const created = await service.create(request.body, request.currentUser, request);
+      // request.body matches `ApiCreateCategoryBodySchema` (slug optional plus
+      // defaults for parentId, description, icon, color, approverIds,
+      // requiresApprovalByDefault, maxLoanDays, isActive, sortOrder). The cast
+      // to `CreateCategoryServiceInput` is sound because that type only
+      // differs from this in making `slug` optional — same shape otherwise.
+      const created = await service.create(
+        request.body as Parameters<typeof service.create>[0],
+        request.currentUser,
+        request,
+      );
       return reply.status(201).send(created);
     },
   );
