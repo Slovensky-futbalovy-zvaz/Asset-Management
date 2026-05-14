@@ -21,6 +21,15 @@
  *   vitest does NOT auto-load .env.local (unlike `tsx --env-file=...`).
  *   We load it manually here so tests can connect to the same Atlas
  *   cluster the dev app uses.
+ *
+ * CI behaviour:
+ *   When running on CI, `.env.local` does not exist and Entra env vars
+ *   are not set. We detect this and gracefully skip keypair generation,
+ *   letting unit tests run normally. Integration tests must skip
+ *   themselves via `describe.skipIf(process.env.CI === 'true')` since
+ *   they cannot run without Atlas connectivity. Once we either add a
+ *   CI Atlas secret or switch to mongodb-memory-server with replica
+ *   set, this CI bypass can be removed.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -50,15 +59,17 @@ export const TEST_KEYS_FILE = join(tmpdir(), 'sfz-test-keys.json');
 // Load .env.local into process.env (vitest doesn't do this automatically)
 // ---------------------------------------------------------------------------
 
-function loadEnvLocal(): void {
+/**
+ * Returns `true` if `.env.local` was found and loaded, `false` otherwise.
+ * The boolean lets the caller decide whether to proceed with operations
+ * that depend on env vars from the file (e.g. test JWT setup).
+ */
+function loadEnvLocal(): boolean {
   // Find .env.local relative to this file (tests/setup.ts → ../.env.local)
   const envPath = join(__dirname, '..', '.env.local');
 
   if (!existsSync(envPath)) {
-    console.warn(
-      `⚠️  tests/setup.ts: ${envPath} not found — tests requiring MONGO_URI or Entra env vars will fail.`,
-    );
-    return;
+    return false;
   }
 
   const content = readFileSync(envPath, 'utf-8');
@@ -77,6 +88,8 @@ function loadEnvLocal(): void {
       process.env[key] = value;
     }
   }
+
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,11 +97,33 @@ function loadEnvLocal(): void {
 // ---------------------------------------------------------------------------
 
 export default async function setup(): Promise<void> {
-  // -- Load .env.local first so we have MONGO_URI, ENTRA_* etc. ----------
-  loadEnvLocal();
-
   // -- Ensure NODE_ENV is "test" so the auth plugin enables test JWT path
   process.env['NODE_ENV'] = 'test';
+
+  // -- Detect CI early -------------------------------------------------------
+  //
+  // On CI we don't have `.env.local` and don't run integration tests, so
+  // we skip the entire test JWT setup. Unit tests don't need any of this.
+  const isCI = process.env['CI'] === 'true';
+
+  // -- Load .env.local first so we have MONGO_URI, ENTRA_* etc. -------------
+  const envLoaded = loadEnvLocal();
+
+  if (!envLoaded) {
+    if (isCI) {
+      // Expected on CI — skip JWT setup, unit tests will still run.
+      console.log(
+        '\nℹ️  tests/setup.ts: running on CI without .env.local — skipping test JWT setup. Integration tests will be skipped via describe.skipIf().\n',
+      );
+      return;
+    }
+
+    // Locally, missing .env.local is unusual but not fatal. Warn loudly.
+    console.warn(
+      '\n⚠️  tests/setup.ts: .env.local not found — tests requiring MONGO_URI or Entra env vars will fail.\n',
+    );
+    return;
+  }
 
   // -- Generate keypair --------------------------------------------------
   const { publicKeyPem, privateKeyPem } = await generateTestKeyPair();
