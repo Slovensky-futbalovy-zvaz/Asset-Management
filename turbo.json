@@ -44,7 +44,8 @@
     "ENABLE_SWAGGER",
     "PORT",
     "ENTRA_TENANT_ID",
-    "ENTRA_CLIENT_ID",
-    "ENTRA_JWKS_URI"
+    "ENTRA_API_CLIENT_ID",
+    "ENTRA_JWKS_URI",
+    "TEST_JWT_PUBLIC_KEY"
   ]
 }
