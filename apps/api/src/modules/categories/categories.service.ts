@@ -22,9 +22,19 @@
  *   PATCH: slug is updated only if the client explicitly sends one.
  *   Renaming via `name` does NOT regenerate the slug — URLs stay stable.
  *
- * Hierarchy handling (K1 scope):
- *   `parentId` is stored as provided. Cycle detection and depth limits land
- *   in K4. K1 only validates that the parent (if non-null) exists.
+ * Hierarchy handling (K4 scope):
+ *   `parentId` forms a tree. Both POST and PATCH check:
+ *     - parent existence (if non-null)
+ *     - max depth (root + 4 nested = 5 total levels via MAX_HIERARCHY_DEPTH)
+ *     - cycle prevention on PATCH (the proposed parent must not have the
+ *       edited category in its ancestor chain)
+ *     - detection of pre-existing cycles in the DB (returns 400 with a
+ *       distinct message so admins can investigate)
+ *
+ *   Traversal logic lives in `src/lib/hierarchy.ts` — pure, testable in
+ *   isolation. The service wires it up by passing a session-aware
+ *   ParentLookup callback that calls `repo.findById` inside the
+ *   transaction.
  *
  * Why no inventoryNumber-style server generation here:
  *   Categories don't have a sequence. Slug is the URL key but it derives
@@ -32,6 +42,12 @@
  *   the server derives it deterministically from name).
  */
 
+import {
+  checkHierarchyOnReparent,
+  MAX_HIERARCHY_DEPTH,
+  type HierarchyCheckResult,
+  type ParentLookup,
+} from '../../lib/hierarchy.js';
 import { isValidSlug, slugify, slugWithSuffix } from '../../lib/slugify.js';
 import { BadRequestError, NotFoundError } from '../../plugins/error-handler.js';
 import { computeShallowDiff } from '../assets/assets-diff.js';
@@ -166,6 +182,15 @@ export class CategoriesService {
         if (!parent) {
           throw new BadRequestError(`Parent category ${input.parentId} does not exist.`);
         }
+
+        // ----- Step 2b: depth check (no cycle possible — the new node
+        //               doesn't exist yet, so it can't be in any chain) -----
+        const hierarchyResult = await checkHierarchyOnReparent(
+          null, // editedId = null on create
+          input.parentId,
+          this.makeParentLookup(session),
+        );
+        this.assertHierarchyOk(hierarchyResult);
       }
 
       // ----- Step 3: build document with audit fields -----
@@ -306,8 +331,16 @@ export class CategoriesService {
         }
       }
 
-      // ----- Step 3: parent existence check (only if parentId is changing to non-null) -----
-      if (patch.parentId !== undefined && patch.parentId !== null) {
+      // ----- Step 3: parent existence + hierarchy check ---------------
+      //   Only runs when parentId is changing to a non-null value. We also
+      //   guard against the trivial self-parent here in case the parentId
+      //   exists — the hierarchy check would catch it too, but throwing
+      //   early gives a clearer error message.
+      if (
+        patch.parentId !== undefined &&
+        patch.parentId !== before.parentId &&
+        patch.parentId !== null
+      ) {
         if (patch.parentId === id) {
           throw new BadRequestError('A category cannot be its own parent.');
         }
@@ -315,6 +348,13 @@ export class CategoriesService {
         if (!parent) {
           throw new BadRequestError(`Parent category ${patch.parentId} does not exist.`);
         }
+
+        const hierarchyResult = await checkHierarchyOnReparent(
+          id,
+          patch.parentId,
+          this.makeParentLookup(session),
+        );
+        this.assertHierarchyOk(hierarchyResult);
       }
 
       // ----- Step 4: apply patch with audit fields -----
@@ -412,6 +452,63 @@ export class CategoriesService {
         session,
       );
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Hierarchy helpers
+  // -------------------------------------------------------------------------
+
+  /**
+   * Build a `ParentLookup` closure that resolves a category's parentId by
+   * id, using `repo.findById` inside the given transaction session.
+   *
+   * Returns:
+   *   - the parent id (as a string) when the node has a parent
+   *   - null when the node is a root
+   *   - undefined when the node doesn't exist (treated as a terminating
+   *     walk by checkHierarchyOnReparent)
+   *
+   * Why a closure: the hierarchy utility is generic and doesn't know about
+   * MongoDB sessions. We bind the session here so the traversal reads see
+   * the same transactional snapshot as the rest of the write.
+   */
+  private makeParentLookup(session: ClientSession): ParentLookup {
+    return async (id: string) => {
+      const doc = await this.repo.findById(id, session);
+      if (!doc) return undefined;
+      return doc.parentId;
+    };
+  }
+
+  /**
+   * Translate a `HierarchyCheckResult` into a thrown `BadRequestError` for
+   * any non-`ok` outcome. Centralized so both `create` and `update` use
+   * the same message phrasing.
+   *
+   * The three failure modes map to distinct messages:
+   *   - cycle:        "would create a cycle (chain: ...)"
+   *   - too-deep:     "exceeds maximum depth of N levels"
+   *   - corrupt-tree: "detected pre-existing cycle in DB" (admin alert)
+   */
+  private assertHierarchyOk(result: HierarchyCheckResult): void {
+    if (result.kind === 'ok') return;
+
+    if (result.kind === 'cycle') {
+      throw new BadRequestError(
+        `This parent assignment would create a cycle (chain via ${result.chain.join(' -> ')}).`,
+      );
+    }
+
+    if (result.kind === 'too-deep') {
+      throw new BadRequestError(
+        `This parent assignment would exceed the maximum hierarchy depth of ${MAX_HIERARCHY_DEPTH + 1} levels (root + ${MAX_HIERARCHY_DEPTH} nested).`,
+      );
+    }
+
+    // corrupt-tree
+    throw new BadRequestError(
+      `Detected pre-existing cycle in the category tree at node ${result.revisitedId} (chain: ${result.chain.join(' -> ')}). Please report this to an administrator.`,
+    );
   }
 
   // -------------------------------------------------------------------------

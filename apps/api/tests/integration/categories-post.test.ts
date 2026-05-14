@@ -371,6 +371,60 @@ describe('POST /v1/categories', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Hierarchy depth (K4) — only depth applies on POST since the new node
+  // can't already be in any chain. Cycle detection is exclusive to PATCH.
+  // -------------------------------------------------------------------------
+
+  describe('hierarchy depth', () => {
+    it('allows creating at the maximum legal depth (root + 4 nested)', async () => {
+      // Build root -> d1 -> d2 -> d3 (depths 0..3). New POST under d3
+      // lands at depth 4 = max.
+      const root = await insertTestCategory(app, { slug: 'cr-root' });
+      const d1 = await insertTestCategory(app, { slug: 'cr-d1', parentId: root._id });
+      const d2 = await insertTestCategory(app, { slug: 'cr-d2', parentId: d1._id });
+      const d3 = await insertTestCategory(app, { slug: 'cr-d3', parentId: d2._id });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: validCreateCategoryBody({
+          name: 'Deep leaf',
+          slug: 'cr-leaf',
+          parentId: d3._id,
+        }),
+      });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.json<{ parentId: string }>().parentId).toBe(d3._id);
+    });
+
+    it('rejects creating one level past the maximum depth', async () => {
+      // Build root -> d1 -> d2 -> d3 -> d4 (depths 0..4). POST under d4
+      // would land at depth 5 = over limit.
+      const root = await insertTestCategory(app, { slug: 'crover-root' });
+      const d1 = await insertTestCategory(app, { slug: 'crover-d1', parentId: root._id });
+      const d2 = await insertTestCategory(app, { slug: 'crover-d2', parentId: d1._id });
+      const d3 = await insertTestCategory(app, { slug: 'crover-d3', parentId: d2._id });
+      const d4 = await insertTestCategory(app, { slug: 'crover-d4', parentId: d3._id });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/categories',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: validCreateCategoryBody({
+          name: 'Too deep',
+          slug: 'crover-toodeep',
+          parentId: d4._id,
+        }),
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<{ message: string }>().message).toMatch(/depth/i);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Audit fields
   // -------------------------------------------------------------------------
 

@@ -255,6 +255,110 @@ describe('PATCH /v1/categories/:id', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Cycle and depth detection (K4)
+  // -------------------------------------------------------------------------
+
+  describe('cycle detection', () => {
+    it('rejects a 2-cycle: PATCH A.parentId = B when B.parentId = A', async () => {
+      // A is a root. B is a child of A. We try to reparent A under B,
+      // which would close a loop A -> B -> A -> ...
+      const a = await insertTestCategory(app, { slug: 'node-a' });
+      const b = await insertTestCategory(app, { slug: 'node-b', parentId: a._id });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/categories/${a._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { parentId: b._id },
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = res.json<{ message: string }>();
+      expect(body.message).toMatch(/cycle/i);
+    });
+
+    it('rejects a 3-cycle through an intermediate', async () => {
+      // Chain: A -> B -> C (each is child of previous). We try to reparent
+      // A under C, which would create A -> C -> B -> A.
+      const a = await insertTestCategory(app, { slug: 'cyc-a' });
+      const b = await insertTestCategory(app, { slug: 'cyc-b', parentId: a._id });
+      const c = await insertTestCategory(app, { slug: 'cyc-c', parentId: b._id });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/categories/${a._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { parentId: c._id },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<{ message: string }>().message).toMatch(/cycle/i);
+    });
+
+    it('allows reparenting that does NOT create a cycle', async () => {
+      // Sibling reparent: both B and C are children of A. We move C under B.
+      // No cycle: C -> B -> A.
+      const a = await insertTestCategory(app, { slug: 'sib-a' });
+      const b = await insertTestCategory(app, { slug: 'sib-b', parentId: a._id });
+      const c = await insertTestCategory(app, { slug: 'sib-c', parentId: a._id });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/categories/${c._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { parentId: b._id },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json<{ parentId: string }>().parentId).toBe(b._id);
+    });
+  });
+
+  describe('depth limit', () => {
+    it('allows reparenting that lands at the maximum legal depth', async () => {
+      // Chain root -> d1 -> d2 -> d3 (depths 0, 1, 2, 3). We add an orphan
+      // node and reparent it under d3 -> would land at depth 4 = max.
+      const root = await insertTestCategory(app, { slug: 'depth-root' });
+      const d1 = await insertTestCategory(app, { slug: 'depth-d1', parentId: root._id });
+      const d2 = await insertTestCategory(app, { slug: 'depth-d2', parentId: d1._id });
+      const d3 = await insertTestCategory(app, { slug: 'depth-d3', parentId: d2._id });
+      const orphan = await insertTestCategory(app, { slug: 'depth-orphan' });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/categories/${orphan._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { parentId: d3._id },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json<{ parentId: string }>().parentId).toBe(d3._id);
+    });
+
+    it('rejects reparenting that would exceed the maximum depth', async () => {
+      // Build chain root -> d1 -> d2 -> d3 -> d4 (depths 0..4 = max).
+      // Try to reparent orphan under d4 -> would be depth 5 = over limit.
+      const root = await insertTestCategory(app, { slug: 'over-root' });
+      const d1 = await insertTestCategory(app, { slug: 'over-d1', parentId: root._id });
+      const d2 = await insertTestCategory(app, { slug: 'over-d2', parentId: d1._id });
+      const d3 = await insertTestCategory(app, { slug: 'over-d3', parentId: d2._id });
+      const d4 = await insertTestCategory(app, { slug: 'over-d4', parentId: d3._id });
+      const orphan = await insertTestCategory(app, { slug: 'over-orphan' });
+
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `/v1/categories/${orphan._id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { parentId: d4._id },
+      });
+
+      expect(res.statusCode).toBe(400);
+      const body = res.json<{ message: string }>();
+      expect(body.message).toMatch(/depth/i);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Slug collision
   // -------------------------------------------------------------------------
 
