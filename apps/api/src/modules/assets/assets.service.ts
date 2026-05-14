@@ -27,9 +27,11 @@
 
 import { BadRequestError, NotFoundError } from '../../plugins/error-handler.js';
 
+import { computeShallowDiff } from './assets-diff.js';
+
 import type { AssetsRepository, AssetUpdatePatch, ListAssetsParams } from './assets.repository.js';
 import type { AuditLogService } from '../audit/audit.service.js';
-import type { Asset, AuditLog, CreateAssetInput, UpdateAssetInput, User } from '@sfz/shared-types';
+import type { Asset, CreateAssetInput, UpdateAssetInput, User } from '@sfz/shared-types';
 import type { FastifyRequest } from 'fastify';
 import type { ClientSession, MongoClient, WithId } from 'mongodb';
 
@@ -365,69 +367,4 @@ function toApiShape(doc: WithId<Asset>): Record<string, unknown> {
     ...doc,
     _id: String(doc._id),
   };
-}
-
-/**
- * Compute a shallow diff between two documents for audit logging.
- *
- * Returns an array of `{ field, before, after }` for each top-level
- * field that differs. Excludes fields listed in `skip` (typically the
- * audit fields themselves, which always change on update but don't
- * represent business-meaningful changes).
- *
- * Nested object changes are detected via shallow inequality but reported
- * as a single field change — deep diff is a future enhancement.
- */
-function computeShallowDiff(
-  before: WithId<Asset>,
-  after: WithId<Asset>,
-  skip: readonly string[],
-): NonNullable<AuditLog['changes']> {
-  const skipSet = new Set(skip);
-  const changes: NonNullable<AuditLog['changes']> = [];
-
-  // Iterate keys of `after` — adds and modifications appear here.
-  // Deletes (a field in `before` not in `after`) won't be caught by this,
-  // but Mongo `$set` semantics don't unset fields anyway, so this is
-  // accurate for our update path.
-  for (const key of Object.keys(after) as (keyof WithId<Asset>)[]) {
-    if (skipSet.has(key as string)) continue;
-    if (key === '_id') continue;
-
-    const beforeVal = before[key];
-    const afterVal = after[key];
-
-    if (!shallowEqual(beforeVal, afterVal)) {
-      changes.push({
-        field: key as string,
-        before: beforeVal,
-        after: afterVal,
-      });
-    }
-  }
-
-  return changes;
-}
-
-/**
- * Shallow equality check sufficient for diff detection:
- *   - Primitive equality via ===
- *   - Arrays compared element-by-element with ===
- *   - Objects compared via JSON.stringify (good enough for our schemas,
- *     where nested objects are small and have stable key order)
- *
- * Date instances appear as ISO strings in our docs (timestamps are stored
- * as strings per the shared-types convention), so === works for them.
- */
-function shallowEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (a === null || b === null) return false;
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
-    return a.every((v, i) => v === b[i]);
-  }
-  if (typeof a === 'object' && typeof b === 'object') {
-    return JSON.stringify(a) === JSON.stringify(b);
-  }
-  return false;
 }

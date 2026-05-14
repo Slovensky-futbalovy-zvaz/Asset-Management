@@ -31,9 +31,11 @@ import buildGetJwks from 'get-jwks';
 import {
   createLocalJWKSet,
   decodeProtectedHeader,
+  importSPKI,
   jwtVerify,
   type JWK,
   type JWTPayload,
+  type KeyLike,
 } from 'jose';
 
 import { ForbiddenError, UnauthorizedError } from './error-handler.js';
@@ -200,7 +202,43 @@ function assertEntraClaims(payload: JWTPayload): asserts payload is JWTPayload &
 // ---------------------------------------------------------------------------
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
-  const { ENTRA_TENANT_ID, ENTRA_ISSUER_RESOLVED, ENTRA_ACCEPTED_AUDIENCES } = fastify.config;
+  const {
+    NODE_ENV,
+    ENTRA_TENANT_ID,
+    ENTRA_ISSUER_RESOLVED,
+    ENTRA_ACCEPTED_AUDIENCES,
+    TEST_JWT_PUBLIC_KEY,
+  } = fastify.config;
+
+  // -------------------------------------------------------------------------
+  // Test JWT support (slice #2c)
+  // -------------------------------------------------------------------------
+  //
+  // When `TEST_JWT_PUBLIC_KEY` is set, the plugin ALSO accepts tokens whose
+  // `iss` claim is `urn:sfz-test:dev`, verifying them against that public
+  // key instead of Microsoft's JWKS. This lets vitest integration tests
+  // mint their own tokens without going through the Entra device-code flow.
+  //
+  // Defense in depth: refuse to enable this in production, even if someone
+  // accidentally sets the env var.
+  const TEST_JWT_ISSUER = 'urn:sfz-test:dev';
+  let testPublicKey: KeyLike | null = null;
+
+  if (TEST_JWT_PUBLIC_KEY) {
+    if (NODE_ENV === 'production') {
+      throw new Error(
+        'TEST_JWT_PUBLIC_KEY is set but NODE_ENV is "production". ' +
+          'The test JWT verification path must never be enabled in production. ' +
+          'Unset TEST_JWT_PUBLIC_KEY from the production environment.',
+      );
+    }
+
+    testPublicKey = await importSPKI(TEST_JWT_PUBLIC_KEY, 'RS256');
+    fastify.log.info(
+      { issuer: TEST_JWT_ISSUER, nodeEnv: NODE_ENV },
+      'Test JWT verification enabled (development/test only)',
+    );
+  }
 
   // -------------------------------------------------------------------------
   // JWKS fetcher — caches signing keys for 10 minutes, handles rotation.
@@ -235,6 +273,17 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
    *
    * Throws `UnauthorizedError` for any verification failure. Never throws
    * a generic 500 — auth failures are always client errors.
+   *
+   * Two verification paths:
+   *   1. Test path (only if TEST_JWT_PUBLIC_KEY is configured): tokens
+   *      with iss=`urn:sfz-test:dev` are verified against the test public
+   *      key. Used by vitest integration tests.
+   *   2. Entra path (default): real Microsoft Entra ID tokens verified
+   *      against Microsoft's JWKS.
+   *
+   * The path is selected by the unverified `iss` header claim. Test tokens
+   * cannot impersonate Entra tokens (they have a different issuer) and
+   * vice versa. The signing keys are completely separate.
    */
   async function verifyToken(token: string): Promise<EntraClaims> {
     // ----- Step 1: peek at unverified header to find the key ID -----
@@ -259,7 +308,75 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       throw new UnauthorizedError(`Unsupported signing algorithm: ${String(header.alg)}`);
     }
 
-    // ----- Step 2: fetch the matching public key from JWKS -----
+    // ----- Step 2: peek at unverified payload to choose verification path -----
+    //
+    // We decode the payload (still unverified) just to read the `iss` claim.
+    // Based on that we either route to the test path or the Entra path.
+    // The actual signature verification happens AFTER this routing, so a
+    // forged `iss` doesn't grant anything — it just selects which key to
+    // verify against, and verification will fail if the signature doesn't
+    // match that key.
+    let unverifiedPayload: { iss?: unknown };
+    try {
+      const payloadBase64 = token.split('.')[1];
+      if (!payloadBase64) throw new Error('Token has no payload segment');
+      // base64url decode
+      const padded = payloadBase64 + '='.repeat((-payloadBase64.length + 4) % 4);
+      const json = Buffer.from(padded, 'base64url').toString('utf-8');
+      unverifiedPayload = JSON.parse(json) as { iss?: unknown };
+    } catch {
+      throw new UnauthorizedError('Malformed JWT (cannot decode payload)');
+    }
+
+    if (testPublicKey && unverifiedPayload.iss === TEST_JWT_ISSUER) {
+      return verifyTestToken(token);
+    }
+
+    return verifyEntraToken(token, header.kid);
+  }
+
+  /**
+   * Verifies a token signed by the test private key (vitest integration tests).
+   * Only callable when `testPublicKey` is set.
+   */
+  async function verifyTestToken(token: string): Promise<EntraClaims> {
+    if (!testPublicKey) {
+      // Should be unreachable — verifyToken checks this before routing here.
+      throw new UnauthorizedError('Test JWT verification is not enabled');
+    }
+
+    let payload: JWTPayload;
+    try {
+      ({ payload } = await jwtVerify(token, testPublicKey, {
+        issuer: TEST_JWT_ISSUER,
+        audience: Array.from(ENTRA_ACCEPTED_AUDIENCES),
+        algorithms: ['RS256'],
+        clockTolerance: 30,
+      }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown verification error';
+      fastify.log.warn({ err: message }, 'Test JWT verification failed');
+      throw new UnauthorizedError(`Token verification failed: ${message}`);
+    }
+
+    assertEntraClaims(payload);
+
+    // Test tokens skip the tenant-match check (they use a synthetic tenant ID).
+    // The scope check still applies — tests must explicitly include `access_as_user`.
+    const scopes = payload.scp.split(' ');
+    if (!scopes.includes('access_as_user')) {
+      throw new UnauthorizedError('Test token lacks required scope `access_as_user`.');
+    }
+
+    return payload;
+  }
+
+  /**
+   * Verifies a real Microsoft Entra ID token against the cached JWKS.
+   * The original (pre-#2c) verification logic, now in its own function.
+   */
+  async function verifyEntraToken(token: string, kid: string): Promise<EntraClaims> {
+    // ----- Fetch the matching public key from JWKS -----
     //
     // get-jwks indexes by (domain, alg, kid). `domain` here means the
     // token's `iss` claim — get-jwks will fetch the OpenID discovery
@@ -269,14 +386,14 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       publicJwk = await getJwks.getJwk({
         domain: ENTRA_ISSUER_RESOLVED,
         alg: 'RS256',
-        kid: header.kid,
+        kid,
       });
     } catch (err) {
-      fastify.log.warn({ err, kid: header.kid }, 'JWKS lookup failed');
+      fastify.log.warn({ err, kid }, 'JWKS lookup failed');
       throw new UnauthorizedError('Token signing key not found in JWKS');
     }
 
-    // ----- Step 3: verify signature + standard claims via jose -----
+    // ----- Verify signature + standard claims via jose -----
     //
     // We build a local key set from the single fetched JWK because jose's
     // `createRemoteJWKSet` would do its own caching and we want get-jwks
@@ -307,7 +424,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       throw new UnauthorizedError(`Token verification failed: ${message}`);
     }
 
-    // ----- Step 4: validate custom claims -----
+    // ----- Validate custom claims -----
     assertEntraClaims(payload);
 
     if (payload.tid !== ENTRA_TENANT_ID) {

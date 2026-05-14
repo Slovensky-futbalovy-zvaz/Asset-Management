@@ -75,6 +75,22 @@ const envSchema = z.object({
     ),
   ENTRA_ISSUER: z.string().url().optional(),
   ENTRA_JWKS_URI: z.string().url().optional(),
+
+  // ---------------------------------------------------------------------
+  // Test JWT — development/test only (slice #2c)
+  // ---------------------------------------------------------------------
+  // When set, the auth plugin will additionally accept JWTs signed by
+  // this public key with issuer `urn:sfz-test:dev`. This enables vitest
+  // integration tests to generate their own tokens without going through
+  // the Entra ID device-code flow.
+  //
+  // In production this env var MUST be unset — the auth plugin refuses
+  // to enable the test path if NODE_ENV === 'production'.
+  //
+  // Format: PEM-encoded public key (typically Ed25519, but RS256 also works).
+  // The vitest setup generates an ephemeral keypair at test start and writes
+  // the public half here, so no key material is ever committed to git.
+  TEST_JWT_PUBLIC_KEY: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
