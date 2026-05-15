@@ -142,6 +142,11 @@ Všetka **príprava dokumentácie** pre deploy je hotová. Zostáva už len **ex
 - **Backend slice #5**: GDPR Article 30 hardening + DPIA + Threat Model
 - **Backend slice #6**: MCP server pre AI agentov + chatbot infraštruktúra
 - **Documentation site**: `docs.inventario.sportup.sk` (Astro alebo Docusaurus)
+  - 🔴 **Po deploy:** revertni commit `fix(marketing): defer docs.inventario.sportup.sk subdomain`
+    aby sa nav-bar **Dokumentácia** link aktivoval späť (mom. má "Čoskoro" badge).
+    Stačí `git revert <hash>` — vráti `shared.js` desktop nav, mobile menu, footer
+    "Zdroje", plus `technology.html` CTA na oficiálne odkazy na docs subdoménu.
+  - Plánovaný termin: **Q3 2026** (paralelne so slice #4 frontend)
 
 ---
 

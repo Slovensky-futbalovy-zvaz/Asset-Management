@@ -333,6 +333,46 @@ body {
   font-weight: 600;
 }
 
+/* Disabled nav-link (e.g. "Dokumentácia — Čoskoro") */
+.nav-link-disabled {
+  color: var(--brand-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.nav-link-disabled:hover {
+  background: transparent;
+}
+.nav-soon-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand-accent) 15%, transparent);
+  color: var(--brand-accent);
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent);
+  vertical-align: middle;
+}
+.footer-link-disabled {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: not-allowed;
+}
+.footer-link-disabled .nav-soon-badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .nav-right {
   display: flex;
   align-items: center;
@@ -614,7 +654,7 @@ ul.checklist li::before {
   }
 
   /* Hide non-essential nav-right items on small mobile */
-  .nav-right .nav-link[href*='docs'] {
+  .nav-right .nav-link-disabled {
     display: none;
   }
   .nav-right .btn {
