@@ -13,6 +13,7 @@
   const NAV_LINKS = [
     { href: 'index.html', page: 'home', label: 'Domov' },
     { href: 'use-cases.html', page: 'use-cases', label: 'Pre koho' },
+    { href: 'interactive-demo.html', page: 'demo', label: 'Demo' },
     { href: 'pricing.html', page: 'pricing', label: 'Cenník' },
     { href: 'technology.html', page: 'technology', label: 'Technológia' },
     { href: 'about.html', page: 'about', label: 'O projekte' },
@@ -124,7 +125,7 @@
                             <ul class="footer-links">
                                 <li><span class="footer-link-disabled" title="Dokumentácia bude dostupná v Q3 2026">Dokumentácia <span class="nav-soon-badge">Čoskoro</span></span></li>
                                 <li><a href="${EXTERNAL_LINKS.github}" target="_blank" rel="noopener">GitHub repo ↗</a></li>
-                                <li><a href="../design/screens/index.html" target="_blank">UI mockupy</a></li>
+                                <li><a href="interactive-demo.html">Demo aplikácie</a></li>
                                 <li><a href="../decisions/0010-multi-tenant-white-label.md" target="_blank">ADR-0010</a></li>
                             </ul>
                         </div>

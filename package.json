@@ -2,7 +2,7 @@
   "name": "sfz-asset-management",
   "version": "0.1.0",
   "private": true,
-  "description": "Interný systém SFZ na evidenciu a vypožičiavanie majetku. Open-source monorepo (apps/api, apps/web, apps/mcp-server, packages/*).",
+  "description": "Interný systém SFZ na evidenciu a vypožičiavanie majetku. Open-source monorepo (apps/api, apps/docs, packages/*).",
   "homepage": "https://github.com/jletko/Asset-Management",
   "repository": {
     "type": "git",

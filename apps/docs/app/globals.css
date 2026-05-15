@@ -1,0 +1,115 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+ * SPDX-License-Identifier: EUPL-1.2
+ *
+ * Inventario docs · global styles
+ * Override Nextra default theme s Inventario brand identitou.
+ * Konzistentné s docs/marketing-site/assets/shared.css.
+ */
+
+:root {
+  /* Inventario brand farby */
+  --brand-primary: #1a2d47;
+  --brand-accent: #388fc3;
+  --brand-bg: #f8f6f1;
+  --brand-muted: #6b7a8d;
+
+  /* Typography */
+  --font-sans: 'Poppins', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Menlo', monospace;
+}
+
+/* Nextra theme override — light mode */
+:root,
+html[data-theme='light'] {
+  --nextra-primary-hue: 213; /* hue pre Navy */
+  --nextra-primary-saturation: 47%;
+  --nextra-bg: 248 246 241; /* paper (#F8F6F1) ako 8-bit triplet pre RGB() funkcie */
+}
+
+/* Nextra theme override — dark mode (Inventario navy-tinted) */
+html[data-theme='dark'] {
+  --nextra-primary-hue: 203; /* hue pre Blue */
+  --nextra-primary-saturation: 53%;
+  --nextra-bg: 11 18 32; /* tmavá navy varianta */
+}
+
+/* Font family aplikovaný globálne (Poppins) */
+html {
+  font-family: var(--font-sans);
+}
+
+/* Mono pre code blocks */
+code,
+pre,
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Inventario brand accent na links a hover-och */
+.nextra-content a {
+  color: var(--brand-accent);
+}
+.nextra-content a:hover {
+  text-decoration: underline;
+}
+
+/* Sidebar zvýraznený aktívny item s Inventario navy */
+.nextra-sidebar-container [aria-current='page'] {
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+html[data-theme='dark'] .nextra-sidebar-container [aria-current='page'] {
+  background: color-mix(in srgb, var(--brand-accent) 20%, transparent);
+  color: white;
+}
+
+/* Banner s brand-friendly farbou */
+.nextra-banner-container {
+  background: linear-gradient(
+    90deg,
+    var(--brand-primary) 0%,
+    color-mix(in srgb, var(--brand-primary) 70%, var(--brand-accent) 30%) 100%
+  );
+  color: white;
+}
+
+/* Custom callout styles pre :::note, :::warning, :::tip */
+.nextra-callout {
+  border-left-width: 3px;
+}
+
+/* Italic Inventario brand pre headings (subtle nod k Poppins italic logo) */
+.nextra-content h1 em,
+.nextra-content h2 em {
+  font-style: italic;
+  font-weight: 800;
+  color: var(--brand-primary);
+}
+
+html[data-theme='dark'] .nextra-content h1 em,
+html[data-theme='dark'] .nextra-content h2 em {
+  color: var(--brand-accent);
+}
+
+/* Footer Inventario styling */
+.nextra-footer {
+  border-top: 1px solid color-mix(in srgb, var(--brand-primary) 10%, transparent);
+}
+
+/* TOC (right sidebar) — softer accent */
+.nextra-toc a:hover {
+  color: var(--brand-accent);
+}
+
+/* Print friendly */
+@media print {
+  .nextra-sidebar-container,
+  .nextra-toc,
+  .nextra-banner-container,
+  .nextra-footer button {
+    display: none !important;
+  }
+}

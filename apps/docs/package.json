@@ -1,0 +1,40 @@
+{
+  "name": "@sfz/docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inventario · Dokumentačný web (docs.inventario.sportup.sk). Postavený na Nextra v4 + Next.js 15.",
+  "license": "EUPL-1.2",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind",
+    "start": "next start",
+    "lint": "next lint --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next .turbo public/_pagefind *.tsbuildinfo"
+  },
+  "dependencies": {
+    "next": "~15.5.0",
+    "nextra": "4.6.0",
+    "nextra-theme-docs": "4.6.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "pagefind": "^1.1.1",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "keywords": [
+    "inventario",
+    "documentation",
+    "nextra",
+    "open-source"
+  ]
+}

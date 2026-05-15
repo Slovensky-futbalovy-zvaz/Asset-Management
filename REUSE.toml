@@ -44,6 +44,20 @@ path = "apps/**"
 SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
 SPDX-License-Identifier = "EUPL-1.2"
 
+# ─── 3b. Docs site content (apps/docs/content/) — CC-BY-4.0 ───
+# MDX content je dokumentácia (CC-BY-4.0), nie zdrojový kód.
+# Kebabúč že apps/docs/** je EUPL, content/ účelovo override-ujeme na CC-BY.
+[[annotations]]
+path = "apps/docs/content/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# README.md v apps/docs/ je dokumentaciá.
+[[annotations]]
+path = "apps/docs/README.md"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 # ─── 4. Zdieľané packages (packages/) — EUPL-1.2 ───
 # shared-types (Zod schémy), design-tokens, api-client, ui komponenty.
 # Tieto sú zdrojový kód projektu, takže EUPL.

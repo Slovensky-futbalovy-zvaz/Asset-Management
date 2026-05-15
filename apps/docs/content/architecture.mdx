@@ -1,0 +1,203 @@
+---
+title: Architektúra
+description: Multi-tenant architektúra Inventaria. Backend stack, dátový model, security model, deployment topológia.
+---
+
+# Architektúra
+
+Inventario je **multi-tenant SaaS platforma** postavená na **TypeScript** end-to-end. Tento dokument popisuje **architektonické princípy** a **technologické rozhodnutia**.
+
+## Architektonické princípy
+
+Inventario je postavené na 5 princípoch (viď [ADR-0010](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/docs/decisions/0010-multi-tenant-white-label.md)):
+
+1. **Multi-tenancy first** — žiadny tenant nie je hardcoded, všetko cez `organisationId`
+2. **EU compliance first** — REUSE, GDPR, WCAG od dňa 1, nie ako dodatočné
+3. **Anti vendor lock-in** — používateľ si môže kedykoľvek exportovať dáta + forknúť kód
+4. **TypeScript-first** — strict mode všade, Zod schémy ako single source of truth
+5. **Open by default** — verejný GitHub, EUPL-1.2, transparentný roadmap
+
+## Tech stack overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                     │
+│  ┌────────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │  Next.js Web   │  │  Native iOS  │  │  Native And. │  │
+│  │  (slice #4)    │  │  (future)    │  │  (future)    │  │
+│  └────────────────┘  └──────────────┘  └──────────────┘  │
+└────────────────┬─────────────────────────────────────────┘
+                 │ HTTPS + Bearer JWT
+                 ▼
+┌──────────────────────────────────────────────────────────┐
+│                       API LAYER                           │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │           Fastify + TypeScript + Zod              │  │
+│  │  Routes → Service → Repository pattern            │  │
+│  │  Multi-tenant cez organisationId middleware       │  │
+│  └────────────────────────────────────────────────────┘  │
+└────────────────┬─────────────────────────────────────────┘
+                 │ Mongo Driver (transactions)
+                 ▼
+┌──────────────────────────────────────────────────────────┐
+│                      DATA LAYER                           │
+│  ┌──────────────────┐  ┌──────────────┐  ┌────────────┐  │
+│  │ MongoDB Atlas    │  │  Audit Log   │  │  Object    │  │
+│  │ (production +    │  │  (immutable) │  │  Storage   │  │
+│  │  dev cluster)    │  │              │  │  (R2/S3)   │  │
+│  └──────────────────┘  └──────────────┘  └────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+## Komponenty
+
+### Backend (apps/api)
+
+| Knižnica | Verzia | Účel |
+|----------|--------|------|
+| **Fastify** | 5.x | HTTP framework, najrýchlejší pre Node.js |
+| **TypeScript** | 5.6+ | Strict mode, type safety |
+| **Zod** | 3.23+ | Runtime validácia + type inference |
+| **MongoDB Driver** | 6.x | Native driver, podporuje transakcie |
+| **@fastify/jwt** | 9.x | JWT validácia |
+| **jose** | 5.x | JWKS rotation |
+| **pino** | 9.x | Structured logging |
+| **vitest** | 2.x | Unit + integration tests |
+
+### Frontend (apps/web, Q3 2026)
+
+| Knižnica | Verzia | Účel |
+|----------|--------|------|
+| **Next.js** | 16.x | React framework, App Router |
+| **React** | 19.x | UI library |
+| **Tailwind CSS** | 4.x | Utility CSS |
+| **shadcn/ui** | latest | Component library |
+
+### Docs (apps/docs)
+
+| Knižnica | Verzia | Účel |
+|----------|--------|------|
+| **Nextra** | 4.6.0 | Documentation framework |
+| **Next.js** | 15.5 | Web framework |
+| **Pagefind** | 1.x | Rust-powered full-text search |
+
+## Multi-tenancy model
+
+Inventario je **single-instance multi-tenant** — všetky organizácie zdieľajú jednu MongoDB databázu, ale dáta sú **izolované cez `organisationId`** v každom dokumente.
+
+### Dátová izolácia
+
+Každý dokument má pole `organisationId: ObjectId`:
+
+```typescript
+type Asset = {
+  _id: ObjectId;
+  organisationId: ObjectId;  // ← tenant izolácia
+  inventoryNumber: string;
+  name: string;
+  // ... ostatné polia
+};
+```
+
+Backend **automaticky filtruje** všetky queries cez middleware:
+
+```typescript
+// Pred query: req.user.organisationId = "65f..."
+const assets = await db.collection('assets').find({
+  organisationId: req.user.organisationId,
+  // ďalšie filtre...
+}).toArray();
+```
+
+**Žiadny endpoint** nemôže obísť tento filter. To je **architektonický invariant**.
+
+### Bezpečnostné záruky
+
+**Žiadny tenant nemôže vidieť dáta iného tenanta.** Toto je garantované:
+
+- Middleware-om v každom request handler-i
+- Compound indexmi v MongoDB (organisationId, _id)
+- Integration testmi (testujeme cross-tenant access deny)
+- Code review PR procesom (každá nová query musí mať `organisationId`)
+
+## Security model
+
+### Roly (RBAC)
+
+Inventario má **3 roly**:
+
+- **EMPLOYEE** — vidí svoje výpožičky, môže žiadať o nové
+- **ASSET_MANAGER** — pridáva majetok, schvaľuje žiadosti
+- **ADMIN** — spravuje používateľov, kategórie, lokality
+
+### Auth tok
+
+```
+1. User → Microsoft Entra ID login (browser redirect)
+2. Entra ID → vráti access token (JWT) podpísaný RS256
+3. User → API request s Authorization: Bearer <token>
+4. API → validuje token cez JWKS (rotácia kľúčov každých 24h)
+5. API → extrahuje organisationId, userId, role z token claims
+6. API → JIT user provisioning (pri prvom logine)
+7. API → spracuje request s tenant scope
+```
+
+## Dátový model
+
+Inventario má **5 hlavných collections**:
+
+```
+organisations      Organizácie (tenants)
+├── users          Používatelia (s rolou v org)
+├── categories     Kategórie majetku (hierarchické)
+├── locations      Lokality (hierarchické)
+├── assets         Položky majetku
+└── loans          Výpožičky
+audit_log          Immutable audit záznamy (cross-tenant)
+```
+
+## Deployment topológia
+
+Inventario je deployované na **Vercel** (frontend + backend) + **MongoDB Atlas** (databáza).
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VERCEL (Frankfurt - fra1 region)                       │
+│                                                          │
+│  ┌─────────────────────┐    ┌──────────────────────┐    │
+│  │  inventario-       │    │  asset-management-   │    │
+│  │  marketing         │    │  api                 │    │
+│  │  (static HTML)     │    │  (Fastify on        │    │
+│  │  inventario.       │    │   serverless         │    │
+│  │  sportup.sk        │    │   functions)         │    │
+│  └─────────────────────┘    └──────────────────────┘    │
+│                                                          │
+│  ┌─────────────────────┐                                 │
+│  │  inventario-docs    │                                 │
+│  │  (Next.js +         │                                 │
+│  │   Nextra)           │                                 │
+│  │  docs.inventario.   │                                 │
+│  │  sportup.sk         │                                 │
+│  └─────────────────────┘                                 │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            │ MongoDB Driver (TLS)
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  MONGODB ATLAS (Frankfurt or Dublin - EU regions)       │
+│                                                          │
+│  ┌─────────────────────┐    ┌──────────────────────┐    │
+│  │  sfz-asset-mgmt-    │    │  sfz-asset-mgmt-     │    │
+│  │  prod (Flex)        │    │  dev (Flex)          │    │
+│  │  Production data    │    │  Preview + local dev │    │
+│  └─────────────────────┘    └──────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+Detaily v [Deployment](/deployment).
+
+## Ďalšie čítanie
+
+- [ADR-0010: Multi-tenant white-label](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/docs/decisions/0010-multi-tenant-white-label.md)
+- [ADR-0011: Licensing EUPL + REUSE](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/docs/decisions/0011-licensing-eupl-reuse.md)
+- [ROADMAP.md](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/ROADMAP.md)

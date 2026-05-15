@@ -1,0 +1,168 @@
+---
+title: O projekte
+description: Inventario — história od SFZ-interného nástroja po open-source multi-tenant platformu. Maintainers, kontribútori, licencie.
+---
+
+# O projekte
+
+**Inventario** je open-source projekt vyvíjaný spoločnosťou **LTK Solutions** v Slovenskej republike. Tieto stránky popisujú **históriu**, **filozofiu** a **ľudí** za projektom.
+
+## História
+
+### Október 2025 — Začiatok ako SFZ interný projekt
+
+Projekt pôvodne vznikol pod názvom **SFZ Asset Management** ako interný nástroj pre **Slovenský futbalový zväz**. SFZ potreboval moderný systém na evidenciu reprezentačných dresov, tréningového vybavenia a vozového parku.
+
+Pôvodný scope:
+
+- Backend pre evidenciu majetku (Fastify + MongoDB)
+- Single tenant (iba SFZ)
+- Microsoft Entra ID auth (SFZ má Microsoft 365)
+- RBAC s 3 rolami
+
+### Október 2025 — Marec 2026 — Backend slices #1, #2, #3
+
+Behom 5 mesiacov sa postavila pevná **backend infraštruktúra**:
+
+- **Slice #1**: pnpm monorepo, Fastify bootstrap, MongoDB Atlas connection
+- **Slice #2**: Authentication cez Entra ID, Assets CRUD, RBAC, audit log, transactions
+- **Slice #2c**: 100 integration testov, pre-commit hooks, CI s Atlas
+- **Slice #3 (K1-K9)**: Categories + Locations + FK protection, 257 testov
+
+V tomto bode bolo jasné, že **architektonicky je projekt univerzálny** — multi-tenant ready, type-safe, dobre testovaný.
+
+### 15. máj 2026 — Strategický pivot
+
+V piatok 15. mája 2026 sa rozhodlo o **strategickom pivote**:
+
+> _"Tento softvér je príliš dobrý na to, aby ho používal iba SFZ. Mestá, kluby, školy, neziskovky majú rovnaké potreby. Spravme z neho otvorenú multi-tenant platformu."_
+
+Pivot zahŕňal:
+
+- **Rebrand**: SFZ Asset Management → **Inventario**
+- **Multi-tenancy**: pridanie `organisationId` ako tenant izolátor
+- **Open source**: EUPL-1.2 licencia (oficiálne EU odporúčaná)
+- **REUSE 3.3 compliance**: 175/175 súborov compliant
+- **Brand identity**: nový vizuálny systém zdielaný so SportUp ekosystémom
+- **Marketing web**: 5-stránkový web nasadený na `inventario.sportup.sk`
+- **Pricing model**: Hybrid C (Free, Pro Small fixné ceny, Pro Standard+ Kontakt) + Annual Contract pre verejný sektor
+
+Po jednom dni práce bolo **inventario.sportup.sk LIVE** s open-source kódom, brand systémom, pricing modelom a marketing web-om. Pivot oslávila zakladajúca tím s **Nichta Brut** sektom z Čajkova.
+
+### Q3 2026 — Plánovaný launch v1.0
+
+Aktuálny stav (máj 2026) je **v0.3** — backend hotový po Slice #3, frontend (`apps/web`) v príprave. Plánovaný **v1.0 launch** je **Q3 2026** spolu s:
+
+- Frontend v Next.js + shadcn/ui
+- Mobile-friendly UI pre QR scanning
+- Verejný GitHub repo (aktuálne semi-public)
+- Founding customer program (-25 % prvý rok pre prvých 10 zákazníkov)
+- Documentation site (toto čo práve čítate) s plnou referenciou
+
+Detaily v [ROADMAP.md](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/ROADMAP.md).
+
+## Tím
+
+### LTK Solutions — Primary maintainer
+
+**[LTK Solutions](https://ltk.solutions)** je slovenská technologická spoločnosť zameraná na **open-source softvér pre verejný a neziskový sektor**. Okrem Inventaria vyvíja:
+
+- **[SportUp](https://sportup.sk)** — národná športová platforma SR
+- **ClubUp** — modul pre športové kluby (v príprave)
+- **Inventario** — tento projekt
+
+### SFZ — Founding contributor
+
+**Slovenský futbalový zväz** financoval pôvodný vývoj a ostáva **aktívnym contributor-om**. Je tiež **prvým reálnym tenant-om** v produkčnom prostredí.
+
+### Komunita
+
+Inventario je **open-source projekt** s otvorenou komunitou kontribútorov. Pridávajte sa cez:
+
+- **[CONTRIBUTING.md](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/CONTRIBUTING.md)** — ako prispieť
+- **[GitHub Discussions](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/discussions)** — Q&A, feature requests
+- **[Code of Conduct](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/CODE_OF_CONDUCT.md)** — pravidlá komunity
+
+## Licencia
+
+### Zdrojový kód: EUPL-1.2
+
+Inventario je licencované pod **[EUPL-1.2](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/LICENSE)** (European Union Public Licence) — oficiálne odporúčaná licencia **Európskej komisie** pre softvér verejného sektora.
+
+**Prečo EUPL?**
+
+- Compatible s GPL-3.0, AGPL-3.0, OSL-3.0 (a inými copyleftom)
+- Slovenský preklad je právne ekvivalentný
+- EU-vyhotovené verzie pre všetkých 24 oficiálnych jazykov EÚ
+- Špecificky pre verejnú správu — jurisdikčné klauzuly riešia EU právny rámec
+- REUSE 3.3 compliance je s ňou jednoduchá
+
+### Dokumentácia: CC-BY-4.0
+
+Dokumentácia (README, BRAND.md, marketing-site, tento web) je pod **[CC-BY-4.0](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/LICENSE-DOCS)** (Creative Commons Attribution).
+
+### REUSE 3.3 compliance
+
+Inventario je **100% REUSE 3.3 compliant** (175/175 súborov). To znamená:
+
+- Každý súbor má **SPDX-FileCopyrightText** hlavičku
+- Každý súbor má **SPDX-License-Identifier** hlavičku
+- Žiadne licenčné nejasnosti pre forkujúcich
+
+To je dôležité pre **EU funding** (OPII, Digital Europe, Horizon Europe) — granty často vyžadujú REUSE compliance.
+
+Detaily v [ADR-0011](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/docs/decisions/0011-licensing-eupl-reuse.md).
+
+## Filozofia
+
+### Anti vendor lock-in
+
+Veríme, že **softvér pre verejný sektor by nemal byť vendor lock-in**. Mestá, štáty a neziskovky nesmú byť rukojemníkmi jedného dodávateľa.
+
+Inventario rieši toto cez:
+
+1. **Open source kód** — môžete si ho stiahnuť a forkovať
+2. **Open formáty** — CSV, JSON exports, OpenAPI spec
+3. **Open standards** — REST API, OIDC/OAuth2, MongoDB (standardná NoSQL)
+4. **Transparentnosť** — verejný roadmap, public issue tracker, ADRs
+
+### Slovensko ako pilot pre EU
+
+Inventario je vyvinuté **na Slovensku, pre Slovensko**, ale dizajnované s **EU rozšírením** v mysli:
+
+- EUPL-1.2 funguje vo všetkých EU krajinách
+- i18n pripravené (SK + EN v prvej fáze, ďalšie jazyky v Q4 2026)
+- GDPR compliance od dňa 1
+- WCAG 2.1 AA accessibility v slice #4
+- EU-only hosting (Vercel Frankfurt, MongoDB Atlas Frankfurt/Dublin)
+
+### Open by default
+
+Vyvíjame **vo verejnosti** — publikujeme session summaries, ADRs, roadmapy. Veríme, že **transparentnosť tvorí dôveru**. Verejný sektor potrebuje dôveryhodný softvér a táto stratégia ju aktívne buduje.
+
+## Sponzori a granty
+
+Inventario v0.3 bolo financované cez:
+
+- **SFZ** — pôvodný vývoj (október 2025 – máj 2026)
+- **LTK Solutions** — pivot na open-source (máj 2026 – súčasnosť)
+
+Plánujeme aplikovať na:
+
+- **OPII** (Operačný program Integrovaná Infraštruktúra)
+- **Digital Europe Programme** (EU grant pre digitálne nástroje verejnej správy)
+- **Horizon Europe** (EU R&D grant)
+
+Ak vaša organizácia má záujem o **sponzorstvo** alebo **partnerstvo**, napíšte na [inventario@ltk.solutions](mailto:inventario@ltk.solutions).
+
+## Kontakt
+
+- **Email**: [inventario@ltk.solutions](mailto:inventario@ltk.solutions)
+- **GitHub**: [Slovensky-futbalovy-zvaz/Asset-Management](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management)
+- **Marketing web**: [inventario.sportup.sk](https://inventario.sportup.sk)
+- **Issues**: [GitHub Issues](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/issues)
+- **SportUp ekosystém**: [sportup.sk](https://sportup.sk)
+
+## Tradícia
+
+Každý významný míľnik osláviame **slovenským vínom** od [NICHTA winery & vineyards](https://vinonichta.sk) z Čajkova — pretože slovenský projekt si zaslúži slovenské víno z vlastných viníc.

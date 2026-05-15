@@ -1,0 +1,203 @@
+---
+title: REST API
+description: Inventario REST API — OpenAPI 3.1 spec, authentication, endpoints, error handling.
+---
+
+# REST API
+
+Inventario poskytuje **REST API** dokumentované cez **OpenAPI 3.1** špecifikáciu. API je single source of truth pre všetky klienti (Next.js web, mobilné aplikácie, MCP server, integrácie).
+
+**OpenAPI spec** bude dostupný na produkčnej URL: `https://api.inventario.sportup.sk/openapi.json` (po deploy slice #4).
+
+V dev móde s `ENABLE_SWAGGER=true` máte **Swagger UI** na `http://localhost:3000/docs`.
+
+## Authentication
+
+Všetky API endpointy (okrem `/health`) vyžadujú **Bearer token** v `Authorization` headeri:
+
+```http
+GET /v1/assets HTTP/1.1
+Host: api.inventario.sportup.sk
+Authorization: Bearer eyJhbGciOiJSUzI1NiIs...
+```
+
+Token získate z **Microsoft Entra ID** OAuth2 toku. Detaily v [Architektúra](/architecture).
+
+## API konvencie
+
+### URL structure
+
+```
+/v1/{resource}              → list / create
+/v1/{resource}/{id}         → get / update / delete
+/v1/{resource}/{id}/{rel}   → vnorené resources
+```
+
+Aktuálna verzia API je **v1**. Pri breaking changes pridáme `v2` paralelne.
+
+### HTTP metódy
+
+| Metóda | Použitie | Idempotent |
+|--------|----------|------------|
+| `GET` | Načítanie dát | áno |
+| `POST` | Vytvorenie nového resource | nie |
+| `PATCH` | Partial update | nie |
+| `PUT` | Nepoužívame (preferujeme PATCH) | — |
+| `DELETE` | Zmazanie | áno |
+
+### Status kódy
+
+| Kód | Význam |
+|-----|--------|
+| `200 OK` | Úspešné GET / PATCH |
+| `201 Created` | Úspešné POST (vrátime aj `Location` header) |
+| `204 No Content` | Úspešné DELETE |
+| `400 Bad Request` | Validation error (s Zod error details v body) |
+| `401 Unauthorized` | Chýbajúci alebo neplatný token |
+| `403 Forbidden` | Auth OK ale nemáte permissions |
+| `404 Not Found` | Resource neexistuje (alebo nie je v tvojom tenant) |
+| `409 Conflict` | Conflict (napr. duplikát inventárneho čísla) |
+| `429 Too Many Requests` | Rate limit prekročený |
+| `500 Internal Server Error` | Server error (logovaný v Sentry) |
+
+### Error response formát
+
+```json
+{
+  "error": {
+    "code": "ASSET_NOT_FOUND",
+    "message": "Asset with id 65f... not found in your organisation",
+    "details": {
+      "assetId": "65f...",
+      "organisationId": "65a..."
+    }
+  }
+}
+```
+
+## Hlavné endpointy (Slice #2)
+
+### Assets
+
+| Endpoint | Metóda | Rola | Popis |
+|----------|--------|------|-------|
+| `/v1/assets` | GET | EMPLOYEE+ | List všetkých assetov v tenant scope |
+| `/v1/assets` | POST | ASSET_MANAGER+ | Vytvorenie nového assetu |
+| `/v1/assets/{id}` | GET | EMPLOYEE+ | Detail assetu |
+| `/v1/assets/{id}` | PATCH | ASSET_MANAGER+ | Update assetu |
+| `/v1/assets/{id}` | DELETE | ADMIN | Zmazanie assetu |
+
+### Categories
+
+| Endpoint | Metóda | Rola | Popis |
+|----------|--------|------|-------|
+| `/v1/categories` | GET | EMPLOYEE+ | List kategórií |
+| `/v1/categories` | POST | ASSET_MANAGER+ | Vytvorenie kategórie |
+| `/v1/categories/{id}` | GET | EMPLOYEE+ | Detail kategórie |
+| `/v1/categories/{id}` | PATCH | ASSET_MANAGER+ | Update kategórie |
+| `/v1/categories/{id}` | DELETE | ADMIN | Zmazanie (iba ak nie sú referencované) |
+
+### Locations
+
+Rovnaký pattern ako Categories.
+
+### Users (Slice #3 K10, čoskoro)
+
+| Endpoint | Metóda | Rola | Popis |
+|----------|--------|------|-------|
+| `/v1/users` | GET | ADMIN | List používateľov v org |
+| `/v1/users/{id}` | GET | ADMIN | Detail používateľa |
+| `/v1/users/{id}` | PATCH | ADMIN | Update role / isActive |
+
+## Pagination
+
+List endpoints podporujú **cursor-based pagination**:
+
+```http
+GET /v1/assets?limit=20&cursor=eyJfaWQiOiI2NWYi...
+```
+
+Response:
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "limit": 20,
+    "total": 1234,
+    "nextCursor": "eyJfaWQiOiI2NjAi...",
+    "hasMore": true
+  }
+}
+```
+
+## Filtering a search
+
+```http
+GET /v1/assets?status=AVAILABLE&categoryId=65f...&q=lopta
+```
+
+## Rate limiting
+
+Default limity (per organisation):
+
+| Tier | Requests/min | Requests/day |
+|------|--------------|--------------|
+| Free | 60 | 10 000 |
+| Pro Small | 300 | 50 000 |
+| Pro Standard | 1 000 | 200 000 |
+| Pro Plus | 3 000 | 1 000 000 |
+| Enterprise | custom | custom |
+
+Limit headers v každej response:
+
+```http
+X-RateLimit-Limit: 300
+X-RateLimit-Remaining: 287
+X-RateLimit-Reset: 1746387600
+```
+
+## Testovanie API
+
+### cURL examples
+
+```bash
+# Health check (no auth)
+curl https://api.inventario.sportup.sk/health
+
+# Get assets (with auth)
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.inventario.sportup.sk/v1/assets
+
+# Create asset
+curl -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Lopta Adidas Tiro Pro",
+    "categoryId": "65f...",
+    "locationId": "65g..."
+  }' \
+  https://api.inventario.sportup.sk/v1/assets
+```
+
+### Postman / Insomnia
+
+OpenAPI spec môžete importovať do Postmana alebo Insomnie pre **automatické generovanie** všetkých requestov.
+
+## MCP Server (Slice #6, plánované)
+
+Inventario bude mať **MCP (Model Context Protocol) server** ktorý dovolí AI agentom (Claude, ChatGPT, vlastné agenty) priamo pracovať s API. Plánované endpointy:
+
+- `inventario_list_assets` — list majetku
+- `inventario_create_loan` — vytvorenie výpožičky
+- `inventario_get_audit_log` — query audit logu
+
+Pre dev kontext si pozrite [Roadmap](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/ROADMAP.md).
+
+## Ďalšie zdroje
+
+- **OpenAPI spec** (production): `https://api.inventario.sportup.sk/openapi.json` (čoskoro)
+- **Swagger UI** (production): `https://api.inventario.sportup.sk/docs` (čoskoro)
+- [Backend source code](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/tree/main/apps/api)
+- [Zod schemas](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/tree/main/packages/shared-types)

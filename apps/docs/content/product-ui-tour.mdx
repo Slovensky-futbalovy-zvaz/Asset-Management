@@ -1,0 +1,294 @@
+---
+title: Product UI tour
+description: Prehliadka 6 hlavných obrazoviek aplikácie Inventario. Login, dashboard, evidencia majetku, výpožičky.
+---
+
+# Product UI tour
+
+Tento dokument vás prevedie **6 hlavnými obrazovkami** aplikácie Inventario. Pre **interaktívne demo** (kde môžete kliknúť, prepínať tenanty a viewporty) navštívte [inventario.sportup.sk/interactive-demo](https://inventario.sportup.sk/interactive-demo).
+
+## Prehľad obrazoviek
+
+Inventario v0.3 má **6 P0 obrazoviek** pokrývajúcich celý user journey:
+
+| # | Obrazovka | Popis | Roly |
+|---|-----------|-------|------|
+| 01 | **Login** | Multi-tenant SSO prihlásenie | Všetky |
+| 02 | **Dashboard** | Role-aware hlavná plocha | Všetky |
+| 03 | **Majetok** | Zoznam s filtrami a vyhľadávaním | EMPLOYEE+ |
+| 04 | **Detail** | Evidenčná karta majetku | EMPLOYEE+ |
+| 05 | **Žiadosť** | 3-step wizard pre výpožičku | EMPLOYEE+ |
+| 06 | **Moje výpožičky** | Osobný cockpit zamestnanca | EMPLOYEE+ |
+
+---
+
+## 01 · Prihlásenie
+
+**URL pattern**: `https://{tenant}.inventario.sportup.sk/login`
+
+Login obrazovka je **prvý dotyk používateľa s aplikáciou**. Tenant (organizácia) sa identifikuje cez subdoménu — napríklad `pezinok.inventario.sportup.sk`. Login obrazovka okamžite zobrazuje **brand tej organizácie** (logo, farby, tagline), takže používateľ vie kam patrí.
+
+### Hlavné funkcie
+
+- **Microsoft Entra ID SSO** ako primárna metóda (slovenský verejný sektor ho už má)
+- **Trust signály** v hero panel — EUPL-1.2, REUSE, GDPR, WCAG, hneď viditeľné
+- **JIT user provisioning** — pri prvom logine sa účet automaticky vytvorí, admin priradí rolu neskôr
+- **SportUp identity** pripravená pre Q3 2026 ako sekundárna metóda
+
+### Layout
+
+- **Mobile (< 768px)**: stacked layout, hero hore, formulár dolu
+- **Tablet / Desktop**: side-by-side, hero vľavo (3/5 width), formulár vpravo (2/5)
+
+### Backend pripojenie
+
+Login flow používa **OAuth2 Authorization Code with PKCE** s Entra ID. Po úspešnom prihlásení:
+
+1. Frontend získa `access_token` (JWT, RS256, exp 1h)
+2. Backend validuje token cez JWKS (cache 24h)
+3. Extrahuje `organisationId`, `userId`, `role` z claimov
+4. Ak je to prvý login, urobí JIT provisioning v `users` collection
+
+Detaily v [Architektúra → Security](/architecture).
+
+---
+
+## 02 · Dashboard (role-aware)
+
+**URL**: `https://{tenant}.inventario.sportup.sk/`
+
+Dashboard sa **dynamicky mení podľa role** používateľa. Každá rola vidí čo potrebuje, žiadne preplnené menu.
+
+### EMPLOYEE view
+
+Pre bežného zamestnanca:
+
+- **Quick actions** — Požičať, QR sken, Vrátiť, História
+- **Moje aktívne výpožičky** — karty s odpočtom do termínu vrátenia
+- **Posledná aktivita** — timeline schválených/podaných žiadostí
+- **Notifikácie** — pripomienky pri blížiacom sa vrátení
+
+### ASSET_MANAGER view
+
+Pre asset managera (správca majetku):
+
+- **KPI cards** — celkom majetku, aktívne výpožičky, čaká na schválenie, po termíne
+- **Schvaľovacia queue** — 1-click approve/reject priamo na ploche
+- **Overdue loans** — výpožičky po termíne s "Kontaktovať" tlačidlom
+- **Pridať majetok** — primárny CTA v hlavičke
+
+### ADMIN view
+
+Pre administrátora systému:
+
+- **Zdravie systému** — uptime, počet používateľov, DB storage, audit log size
+- **Tenant info** — meno, doména, plán, audit retention
+- **Rýchle akcie** — pozvať používateľa, spravovať role, audit log, záloha
+- **Posledná systémová aktivita** — audit log preview s LOAN_APPROVED, ASSET_CREATED, USER_ROLE_CHANGED, atď.
+
+### Layout
+
+- **Mobile**: bottom navigation s 5 položkami (Domov, Majetok, QR sken (centrálny FAB), Výpožičky, Profil)
+- **Desktop**: left sidebar s plnou navigáciou + top bar (search, notifikácie, user menu)
+
+---
+
+## 03 · Zoznam majetku
+
+**URL**: `https://{tenant}.inventario.sportup.sk/assets`
+
+Hlavná pracovná plocha asset managera. **Všetok majetok** v organizácii na jednom mieste.
+
+### Funkcie
+
+- **Search-as-you-type** — okamžité výsledky pri zadávaní
+- **Multi-filter** — kategória, lokalita, stav, vlastník naraz
+- **Bulk akcie** — vyber 20 položiek a presuň ich do inej lokality jedným klikom
+- **Status farebne odlíšený**:
+  - 🟢 **AVAILABLE** — dostupné
+  - 🔵 **LOANED** — vypožičané
+  - 🟠 **MAINTENANCE** — opravované
+  - ⚫ **RETIRED** — vyradené
+- **Export do CSV / XLSX** pre účtovníkov a audit
+
+### Endpoint
+
+```http
+GET /v1/assets?status=AVAILABLE&categoryId=65f...&q=lopta&limit=20
+```
+
+Detaily v [REST API → Assets](/api).
+
+---
+
+## 04 · Detail majetku
+
+**URL**: `https://{tenant}.inventario.sportup.sk/assets/{id}`
+
+**Digitálna evidenčná karta** nahradzujúca papierové formuláre. 5 tabov organizovaných podľa workflow:
+
+### Tab 1: Prehľad
+
+- Kľúčové informácie (názov, inventárne číslo, kategória, lokalita)
+- Fotka majetku
+- Aktuálny stav (AVAILABLE / LOANED / MAINTENANCE / RETIRED)
+- **QR kód** pre rýchlu identifikáciu pri inventúre
+
+### Tab 2: Špecifikácia
+
+- Sériové číslo, výrobca, model
+- Dátum nákupu, hodnota, dodávateľ
+- Záručná doba
+- Custom polia (špecifické pre kategóriu)
+
+### Tab 3: História výpožičiek
+
+- Tabuľka všetkých výpožičiek tohto majetku
+- Kto si požičal, kedy, ako dlho, v akom stave vrátil
+- Filtrovateľné podľa obdobia
+
+### Tab 4: Opravy a údržba
+
+- Kompletná história servisov, faktúr, výmen
+- Plánované údržby (kalibrácia, výmena olejov, atď.)
+- Náklady na údržbu (TCO tracking)
+
+### Tab 5: Audit log
+
+- **Každá zmena** tohto záznamu — kto, kedy, čo
+- GDPR Article 30 ready
+- Immutable (nedá sa editovať ani mazať)
+
+### Endpoint
+
+```http
+GET /v1/assets/{id}
+```
+
+---
+
+## 05 · Žiadosť o výpožičku
+
+**URL**: `https://{tenant}.inventario.sportup.sk/loans/new`
+
+**Najčastejšia akcia zamestnanca** — vypožičať si niečo. Wizard rozdelený do 3 krokov aby to nebolo overwhelming na mobile:
+
+### Krok 1: Vyber majetok
+
+- Search alebo QR sken
+- Vidíš okamžite či je dostupný
+- Filter podľa kategórie
+
+### Krok 2: Termín
+
+- Dátum vyzdvihnutia a vrátenia
+- **Real-time conflict detection** — backend overí či nie sú prekrývajúce žiadosti
+- Predvyplnenie (smart defaults) ak si si požičal podobnú vec naposledy
+
+### Krok 3: Dôvod a podpis
+
+- Pre čo si požičiavaš
+- Kto schvaľuje (podľa pravidiel danej organizácie)
+- Email notifikácia ide schvaľovateľovi okamžite
+
+### Endpoint
+
+```http
+POST /v1/loans
+Content-Type: application/json
+
+{
+  "assetId": "65f...",
+  "startDate": "2026-05-20",
+  "endDate": "2026-05-22",
+  "purpose": "Konferencia v Bratislave"
+}
+```
+
+---
+
+## 06 · Moje výpožičky
+
+**URL**: `https://{tenant}.inventario.sportup.sk/my-loans`
+
+**Osobný cockpit zamestnanca.** Všetko čo som si požičal, čo čaká na schválenie, a história.
+
+### 3 taby
+
+#### Aktívne
+
+- Čo mám práve teraz
+- Odpočet do vrátenia (zelená > 7 dní, oranžová 1-7 dní, červená < 1 deň alebo po termíne)
+
+#### Čakajúce
+
+- Moje žiadosti čakajúce na schválenie
+- Možnosť **zrušiť** alebo **upraviť** žiadosť kým nie je schválená
+
+#### História
+
+- Všetko čo som si kedy požičal
+- Kedy som vrátil, v akom stave
+- Filtrovateľné podľa obdobia
+
+### Funkcie
+
+- **Pripomienky** — 3 dni pred koncom výpožičky email + in-app notifikácia
+- **One-click vrátenie** cez QR sken na detaile
+- **Predĺženie** ak schvaľovateľ povolí (závisí od politiky organizácie)
+
+### Endpoint
+
+```http
+GET /v1/loans?userId=me&status=ACTIVE
+```
+
+---
+
+## Pripravené pre rôzne tenanty
+
+Inventario je **multi-tenant** — všetky obrazovky podporujú **whitelabel branding**:
+
+| Tenant | Primary | Accent | Príklad organizácie |
+|--------|---------|--------|---------------------|
+| `default` | `#1a2d47` Navy | `#388fc3` Blue | Inventario default |
+| `inter` | `#003d7a` Navy | `#ffd700` Gold | ŠK Inter Bratislava |
+| `pezinok` | `#6b1f3a` Burgundy | `#c9a961` Beige | Mesto Pezinok |
+| `kremnica` | `#2d5a3d` Green | `#d4a843` Gold | Stredná škola Kremnica |
+
+Tenant sa **identifikuje cez subdoménu** alebo cez URL parameter `?tenant=X` (v demo móde).
+
+### Brand customization
+
+Pre Pro Standard+ tenantov je možné customizovať:
+
+- **Farby** (primary, accent, bg, muted)
+- **Logo** (SVG)
+- **Tagline** v hero panel
+- **Email templates** (welcome, loan approved, reminder)
+- **OG image** pre social sharing
+- **Custom doména** (`assets.bratislava.sk`)
+
+Detaily v [BRAND.md](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/BRAND.md).
+
+---
+
+## Interaktívne demo
+
+Pre **interaktívnu prehliadku** (kde môžete kliknúť cez všetky obrazovky a prepínať tenanty / viewporty) navštívte:
+
+➡️ **[inventario.sportup.sk/interactive-demo](https://inventario.sportup.sk/interactive-demo)**
+
+Tam môžete:
+
+- Otvoriť každú obrazovku v iframe
+- Prepnúť 4 demo tenanty (default / inter / pezinok / kremnica)
+- Prepnúť 3 viewporty (mobile / tablet / desktop)
+- Čítať vysvetlenie "Čo tu vidíš" pre každú obrazovku
+
+## Ďalšie zdroje
+
+- **Mockup zdrojový kód**: [docs/design/screens/](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/tree/main/docs/design/screens) — všetky 6 obrazoviek ako self-contained HTML
+- **Marketing wrapper**: [docs/marketing-site/interactive-demo.html](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/docs/marketing-site/interactive-demo.html) — verejne nasadený demo na inventario.sportup.sk
+- **Backend pripojenie**: [REST API dokumentácia](/api)
+- **Multi-tenancy detaily**: [Architektúra](/architecture)

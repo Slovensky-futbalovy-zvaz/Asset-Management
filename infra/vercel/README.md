@@ -12,19 +12,21 @@ Vercel konfigurácia a deployment guides pre Inventario projekt.
 | Súbor                                                      | Účel                                                      |
 | ---------------------------------------------------------- | --------------------------------------------------------- |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md)                           | Krok-po-kroku návod ako nasadiť marketing site na Vercel  |
+| [`DOCS-DEPLOYMENT.md`](DOCS-DEPLOYMENT.md)                 | Krok-po-kroku návod ako nasadiť docs site (Nextra)        |
 | [`DNS-SETUP.md`](DNS-SETUP.md)                             | DNS konfigurácia pre `inventario.sportup.sk`              |
 | [`marketing-site.vercel.json`](marketing-site.vercel.json) | Template pre `vercel.json` (clean URLs, security headers) |
 
 ## Architektúra
 
-V repe budú postupne **dva oddelené Vercel projekty**:
+V repe budeme mať postupne **tri samostatné Vercel projekty**:
 
-| Projekt                | Cesta                  | Doména                      | Status                                          |
-| ---------------------- | ---------------------- | --------------------------- | ----------------------------------------------- |
-| `inventario-marketing` | `docs/marketing-site/` | `inventario.sportup.sk`     | Pripravený na deploy (B + C dnes)               |
-| `asset-management-api` | `apps/api/`            | `api.inventario.sportup.sk` | Existuje (slice #2+), čaká na rebrand z dev URL |
+| Projekt                | Cesta                  | Doména                       | Status                                          |
+| ---------------------- | ---------------------- | ---------------------------- | ----------------------------------------------- |
+| `inventario-marketing` | `docs/marketing-site/` | `inventario.sportup.sk`      | ✅ **LIVE** (15. máj 2026)                      |
+| `inventario-docs`      | `apps/docs/`           | `docs.inventario.sportup.sk` | Pripravený na deploy (Nextra v4 + Next.js 16.1) |
+| `asset-management-api` | `apps/api/`            | `api.inventario.sportup.sk`  | Existuje (slice #2+), čaká na rebrand z dev URL |
 
-> **Budúce projekty** (slice #4+): `inventario-web` (Next.js app), `inventario-docs` (Docusaurus / Astro).
+> **Budúce projekty** (slice #4+): `inventario-web` (Next.js app pre konečných používateľov).
 
 ## Quick start
 

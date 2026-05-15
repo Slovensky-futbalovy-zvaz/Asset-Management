@@ -1,0 +1,128 @@
+---
+title: Začíname
+description: Spustenie Inventaria lokálne za 5 minút. Predpoklady, klonovanie repa, env premenné, prvý dev server.
+---
+
+# Začíname s Inventariom
+
+Tento návod vás prevedie **lokálnym spustením** Inventaria na vašom počítači. Ak chcete platformu **iba používať** (nie vyvíjať), prejdite na [inventario.sportup.sk](https://inventario.sportup.sk).
+
+## Cieľ tohto návodu
+
+Po dokončení budete mať:
+
+- Bežiaci **Fastify backend** na `http://localhost:3000`
+- Pripojenú **MongoDB Atlas** databázu (free tier)
+- Konfigurované **Microsoft Entra ID SSO** pre auth
+- Funkčné API endpoints pre testovanie (Swagger UI)
+
+## Predpoklady
+
+Predtým, než začneme, uistite sa, že máte:
+
+| Nástroj | Verzia | Inštalácia |
+|---------|--------|------------|
+| **Node.js** | 22.20+ | [nodejs.org](https://nodejs.org/) alebo [nvm](https://github.com/nvm-sh/nvm) |
+| **pnpm** | 9.0+ | `npm install -g pnpm` |
+| **Git** | latest | [git-scm.com](https://git-scm.com/) |
+| **MongoDB** | 6.x | [Atlas free tier](https://www.mongodb.com/atlas) alebo lokálne |
+
+Odporúčame **MongoDB Atlas Free tier** (M0 cluster zadarmo, 512 MB). Vyhne vám to inštalácii Mongo lokálne a dáta máte v cloude.
+
+## Krok 1: Klonovanie repa
+
+```bash
+git clone https://github.com/Slovensky-futbalovy-zvaz/Asset-Management.git
+cd Asset-Management
+```
+
+## Krok 2: Inštalácia dependencies
+
+Projekt je **pnpm monorepo** s viacerými balíčkami (`apps/api`, `apps/docs`, `packages/shared-types`). pnpm si poradí so symlinkmi medzi nimi.
+
+```bash
+pnpm install
+```
+
+To zaberie **~30 sekúnd** pri prvej inštalácii. Pri ďalších bude rýchlejšie (pnpm má cache).
+
+## Krok 3: Environment premenné
+
+Skopírujte `.env.example` na `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
+Otvorte `.env.local` a vyplňte:
+
+```bash
+# MongoDB Atlas connection string
+MONGO_URI="mongodb+srv://user:pass@cluster.mongodb.net/inventario?retryWrites=true"
+MONGO_DB_NAME="inventario_dev"
+
+# Microsoft Entra ID — pre auth
+ENTRA_TENANT_ID="<your-tenant-id>"
+ENTRA_API_CLIENT_ID="<your-app-registration-client-id>"
+ENTRA_JWKS_URI="https://login.microsoftonline.com/<tenant>/discovery/v2.0/keys"
+
+# Server
+PORT=3000
+NODE_ENV=development
+LOG_LEVEL=debug
+ENABLE_SWAGGER=true
+
+# CORS pre lokálny frontend (Next.js bude na 3001)
+CORS_ORIGINS="http://localhost:3001"
+```
+
+**Microsoft Entra ID** vyžaduje **App Registration** v Azure Portal. Bez toho auth nebude fungovať. Pozrite si [Architektúra](/architecture) pre detaily ako Entra ID nastaviť.
+
+## Krok 4: Spustenie dev servera
+
+```bash
+pnpm dev
+```
+
+To spustí **všetky apps** v monorepe paralelne cez **Turborepo**. Backend by mal byť dostupný na:
+
+- **API**: http://localhost:3000
+- **Swagger UI**: http://localhost:3000/docs (ak `ENABLE_SWAGGER=true`)
+- **Health check**: http://localhost:3000/health
+
+## Krok 5: Otestujte API
+
+V druhom termináli skúste health check:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Mali by ste vidieť:
+
+```json
+{
+  "status": "ok",
+  "uptime": 12.34,
+  "db": "connected"
+}
+```
+
+## Hotovo!
+
+Máte **lokálnu inštanciu Inventaria** bežiacu. Ďalšie kroky:
+
+- **[Architektúra](/architecture)** — pochopte multi-tenancy a tech stack
+- **[REST API](/api)** — preskúmajte všetky endpointy
+- **[Deployment](/deployment)** — nasaďte do produkcie
+
+## Problémy?
+
+Ak vám niečo nefunguje:
+
+1. **Skontrolujte verzie**: `node --version` (≥22.20), `pnpm --version` (≥9.0)
+2. **Pre-commit hook zlyhal?** Pozrite si [husky troubleshooting](https://typicode.github.io/husky/troubleshoot.html)
+3. **MongoDB connection refused?** Skontrolujte IP whitelist v MongoDB Atlas (Network Access)
+4. **Entra ID 401?** Skontrolujte `ENTRA_TENANT_ID` a `ENTRA_API_CLIENT_ID` v `.env.local`
+
+Stále nič? [Otvorte issue na GitHube](https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/issues/new) alebo napíšte na [inventario@ltk.solutions](mailto:inventario@ltk.solutions).
