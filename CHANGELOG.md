@@ -49,6 +49,14 @@ Formát vychádza zo štandardu [Keep a Changelog](https://keepachangelog.com/en
   - `docs/sessions/2026-05-15-day-summary.md` — komplet prečlad celej session s metrikami a lessons learned
   - `docs/sessions/NEXT.md` — continuation plan pre budúce sessions (súčasný stav, najbližšie kroky, long-term ideas, technical debt, EU compliance roadmap)
   - `docs/sessions/2026-05-15-pricing-strategy.md` — interná cenová stratégia (pre Sales)
+  - `docs/sessions/README.md` — session index s konvenciami
+- **Deploy príprava (A-B-C dokumentácia)**:
+  - `docs/marketing-site/og-image.html` — OG image template 1200×630 s hero gradient + brand pattern + logo + tagline + trust badges
+  - `docs/marketing-site/assets/README.md` — návod ako vygenerovať `og-image.png` cez Chrome DevTools / Playwright / Puppeteer
+  - `infra/vercel/marketing-site.vercel.json` — template config (clean URLs, security headers, cache control)
+  - `infra/vercel/DEPLOYMENT.md` — krok-po-kroku deploy guide (Dashboard + CLI variants)
+  - `infra/vercel/DNS-SETUP.md` — DNS konfigurácia pre Cloudflare / Webglobe / Websupport / iine providers
+  - `infra/vercel/README.md` — index pre `infra/vercel/` priečinok
 
 ### Changed
 

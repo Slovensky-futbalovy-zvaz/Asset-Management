@@ -7,7 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 > **Účel:** Single source of truth pre "čo robiť ďalej" pri začatí novej session s Claude.
 > **Update protocol:** Aktualizuj na konci každej session.
-> **Last updated:** 15. máj 2026, 21:00
+> **Last updated:** 15. máj 2026, 22:00 (post A-B-C session)
 
 ---
 
@@ -21,59 +21,85 @@ To Claude-ovi naloaduje kompletný kontext za 30 sekúnd.
 
 ---
 
-## ⏭️ Najbližšie kroky (16. máj 2026, zajtra)
+## ✅ A-B-C dokončené dnes (15. máj 2026, večer)
 
-Plán je **A → B → C** z dnešného konca:
+Všetka **príprava dokumentácie** pre deploy je hotová. Zostáva už len **execution**:
 
-### A. OG Image pre social sharing (15 min)
+### A. OG Image — ✅ pripravené
 
-**Cieľ:** Pekný preview keď niekto linkneš `inventario.sportup.sk` na LinkedIn / Slack / Discord / Twitter.
+- `docs/marketing-site/og-image.html` — template 1200×630 s hero gradient + brand pattern + logo + tagline + trust badges
+- `docs/marketing-site/assets/README.md` — návod ako spraviť screenshot (Chrome DevTools, Playwright, Puppeteer variants)
+- OG meta tags pridané do všetkých 5 marketingových stránok (`og:image` → `https://inventario.sportup.sk/assets/og-image.png`)
 
-**Postup:**
+**⚠️ Zostáva spraviť po prvom deploy:**
 
-1. Vytvor `docs/marketing-site/og-image.html` — HTML template 1200×630
-2. Hero gradient background + brand pattern overlay
-3. Logo + wordmark "Inventario"
-4. Tagline: "Transparentná správa majetku. Bez vendor lock-in."
-5. Trust badges (EUPL, REUSE, GDPR)
-6. "Powered by SportUp ecosystem" v rohu
-7. User otvorí v prehliadači, spraví screenshot → uloží ako `og-image.png` v `assets/`
-8. Pridať do `<meta property="og:image">` všetkých 5 marketingových stránok
+- [ ] Otvor `og-image.html` v Chrome, nastav viewport 1200×630, screenshot → ulož ako `assets/og-image.png`
+- [ ] Otestuj OG preview cez https://www.opengraph.xyz/
 
-### B. Vercel deploy pipeline (~20 min)
+### B. Vercel deploy config — ✅ pripravené
 
-**Cieľ:** Web dostupný na `inventario.sportup.sk` (alebo `inventario-asset-management.vercel.app` ako fallback).
+- `infra/vercel/marketing-site.vercel.json` — template config s clean URLs (`/use-cases`, `/pricing`, ...) + security headers (HSTS, X-Frame-Options, atď.) + cache control pre assety
+- `infra/vercel/DEPLOYMENT.md` — krok-po-kroku návod (Dashboard variant + CLI variant + troubleshooting + Lighthouse audit)
+- `infra/vercel/README.md` — index pre Vercel infra priečinok
 
-**Postup:**
+**⚠️ Zostáva spraviť:**
 
-1. Skontroluj že máš Vercel account + CLI nainštalované (`vercel --version`)
-2. V root repa: `vercel link` — nalinkovať existujúci projekt `asset-management-api` alebo vytvoriť nový pre marketing site
-3. Vytvor `vercel.json` config s:
-   - `outputDirectory: docs/marketing-site`
-   - Redirects pre `index.html` → `_home.html`
-   - Headers pre security (CSP, X-Frame-Options)
-4. Test deploy: `vercel deploy` (preview URL)
-5. Po overení: `vercel --prod`
+- [ ] Vercel dashboard → vytvoriť projekt `inventario-marketing`
+- [ ] Root Directory: `docs/marketing-site`, Framework: `Other`, Build Command: prázdny
+- [ ] Skopíruj `infra/vercel/marketing-site.vercel.json` → `docs/marketing-site/vercel.json`
+- [ ] Commit + push → automatický redeploy
+- [ ] Settings → Domains → Add → `inventario.sportup.sk` (Vercel ti ukáže DNS údaje pre krok C)
 
-**Alternatíva:** GitHub Pages (lacnejšie, ale obmedzená flexibilita). Vercel je odporúčaný.
+### C. DNS setup guide — ✅ pripravené
 
-### C. DNS setup pre `inventario.sportup.sk` (~5 min)
+- `infra/vercel/DNS-SETUP.md` — návod pre Cloudflare / Webglobe / Websupport / GoDaddy / Namecheap variants
+- Verification cez `dig` / `nslookup` / online tools (whatsmydns.net, dnschecker.org)
+- SSL verification (Let's Encrypt cez Vercel)
+- Troubleshooting (proxy bug, cache flush, atď.)
 
-**Cieľ:** Web dostupný na production doméne.
+**⚠️ Zostáva spraviť po Vercel deploy:**
 
-**Postup:**
+- [ ] Zistiť DNS provider pre `sportup.sk` (https://whois.com/whois/sportup.sk → Registrar)
+- [ ] Pridať CNAME záznam: `inventario` → `cname.vercel-dns.com` (TTL 300 alebo Auto)
+- [ ] Cloudflare: **NIE** Proxied (sivé oblako, **nie** oranžové)
+- [ ] Počkaj 5–60 min na propagáciu + SSL verification vo Vercel
+- [ ] Otestuj `https://inventario.sportup.sk` — by mal loadovať homepage
 
-1. V DNS panelu `sportup.sk` (kde to spravuješ — Cloudflare? Webglobe?) pridaj:
-   - `inventario` → CNAME → `cname.vercel-dns.com`
-2. Vo Vercel projekte: Settings → Domains → Add → `inventario.sportup.sk`
-3. Počkaj na SSL certifikát (Vercel automaticky cez Let's Encrypt, ~5 min)
-4. Otestuj v prehliadači
+---
 
-**Možný problém:** Wildcard SSL na `*.sportup.sk` — overiť či to nepotrebuje špeciálne nastavenie.
+## ⏭️ Najbližšie kroky (zajtra alebo pondelok)
 
-### D. (odložené na pondelok 14:00) Ďalšie sliceové práce
+### Priorita 1: Dokončiť A-B-C execution (~30–60 min)
 
-Po reseti Claude weekly limitu môžeme robiť veľké veci. Viď sekciu "Backlog" nižšie.
+1. **Vercel deploy** (postup B z `infra/vercel/DEPLOYMENT.md`)
+2. **DNS setup** (postup C z `infra/vercel/DNS-SETUP.md`)
+3. **OG image screenshot** (postup A z `assets/README.md`)
+4. **Final verification**:
+   - `https://inventario.sportup.sk` loaduje
+   - Všetky 5 stránok funguje (Domov / Pre koho / Cenník / Technológia / O projekte)
+   - SSL test cez https://www.ssllabs.com/ssltest/ → A+ rating
+   - OG preview cez https://www.opengraph.xyz/
+   - Lighthouse audit > 90 (Performance, Accessibility, SEO)
+
+### Priorita 2: Backend slice #3 K10 (~3 hod)
+
+- Users admin module (ADMIN-only)
+- `apps/api/src/modules/users/`:
+  - `repository.ts` — UsersRepository s `findAll`, `findById`, `updateRole`, `updateActive`
+  - `service.ts` — business logic + edge cases
+  - `routes.ts` — GET /v1/users (list + pagination + filtre), GET /:id, PATCH /:id
+- Edge cases:
+  - Admin sa nemôže deaktivovať sám (`assert actorId !== targetId`)
+  - Posledný ADMIN je chránený (count ADMIN rolí pred PATCH)
+- Audit log: nový typ `USER_ROLE_CHANGED`, `USER_DEACTIVATED`, `USER_ACTIVATED`
+- ~30-40 integration testov
+
+### Priorita 3: Slice #3 milestone (~1 hod)
+
+- `docs/milestones/slice-3-categories-locations-users.md`
+- Final test count + coverage report
+- Lessons learned z categories + locations + users
+- Pripraviť ground pre slice #4 (frontend Next.js)
 
 ---
 
@@ -91,12 +117,13 @@ Po reseti Claude weekly limitu môžeme robiť veľké veci. Viď sekciu "Backlo
 - **Marketing site**: 5 stránok + brand assets + favicon
 - **Brand system v1.0**: Logo, pattern, BRAND.md
 - **Pricing strategy v1.0**: Hybrid C + Annual Contract pre verejný sektor
+- **Vercel + DNS guides**: pripravené v `infra/vercel/`
 
 ### Rozpracované / čaká 🟡
 
 - **Backend slice #3 K10**: Users admin module (ADMIN-only, ~30-40 testov)
 - **Backend slice #3 K11**: Milestone doc po K10
-- **Marketing web deploy**: Pripravený, čaká na Vercel + DNS
+- **Marketing web deploy**: pripravený, čaká na execution (Vercel + DNS)
 
 ### Plánované 🚀
 
@@ -174,6 +201,7 @@ Z dnešnej session a predošlých:
 - [ ] `UpdateCategorySchema` + `UpdateLocationSchema` do `shared-types`
 - [ ] Migrácia: pridať `organisationId: ObjectId` field do všetkých kolekcií (per ADR-0010)
 - [ ] Refactor design tokens (Phase B z dnešnej session — odložené)
+- [ ] OG image PNG vygenerovať a commitnúť (po Vercel deploy)
 
 ---
 
@@ -209,9 +237,9 @@ Z dnešnej session a predošlých:
 
 ```
 Asset-Management/
-├── BRAND.md                     # Brand guide (NEW today)
+├── BRAND.md                     # Brand guide
 ├── README.md                    # Project overview
-├── ROADMAP.md                   # Verejná roadmap (TO UPDATE)
+├── ROADMAP.md                   # Verejná roadmap
 ├── CHANGELOG.md                 # Keep a Changelog
 ├── LICENSE                      # EUPL-1.2
 ├── LICENSE-DOCS                 # CC-BY-4.0
@@ -228,19 +256,27 @@ Asset-Management/
 │   ├── decisions/               # ADRs (0001-0011)
 │   ├── architecture/
 │   ├── design/
-│   │   └── screens/             # 6 P0 mockupy (NEW today)
-│   ├── marketing-site/          # Public marketing web (NEW today)
+│   │   └── screens/             # 6 P0 mockupy
+│   ├── marketing-site/          # Public marketing web
+│   │   ├── og-image.html        # OG template (NEW today)
+│   │   └── assets/
 │   ├── milestones/              # Slice milestones
-│   ├── sessions/                # Session docs (this folder)
+│   ├── sessions/                # Session docs
 │   ├── api/
 │   ├── user-guide/
 │   ├── workflows/
 │   ├── functional-spec.md
 │   └── assets/
 │       └── brand/
-│           ├── inventario/      # Inventario brand assets (NEW today)
+│           ├── inventario/      # Inventario brand assets
 │           └── SFZ_Design-manual_2024-01.pdf
 └── infra/
+    ├── docker-compose.yml
+    └── vercel/                  # NEW today
+        ├── README.md
+        ├── DEPLOYMENT.md
+        ├── DNS-SETUP.md
+        └── marketing-site.vercel.json
 ```
 
 ---

@@ -1,0 +1,250 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+
+Inventario · Open Graph image template (1200 × 630 px)
+
+POSTUP NA VYTVORENIE og-image.png:
+1. Otvor tento súbor v Chrome / Safari
+2. Cmd+Shift+I → DevTools
+3. Toggle device toolbar (Cmd+Shift+M)
+4. Set viewport na 1200 × 630
+5. Cmd+Shift+P → "Capture full size screenshot" alebo "Capture screenshot"
+6. Ulož ako: docs/marketing-site/assets/og-image.png
+7. Po uložení screenshot-u môžeš tento .html súbor zmazať (alebo nechať pre budúce edits)
+
+Alternatíva (CLI cez Playwright/Puppeteer):
+  npx playwright screenshot --viewport-size=1200,630 \\
+    file://$(pwd)/docs/marketing-site/og-image.html \\
+    docs/marketing-site/assets/og-image.png
+-->
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8" />
+    <title>Inventario · OG Image</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700;1,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            width: 1200px;
+            height: 630px;
+            overflow: hidden;
+            font-family: 'Poppins', system-ui, sans-serif;
+            background: #f8f6f1;
+        }
+
+        :root {
+            --brand-primary: #1a2d47;
+            --brand-accent: #388fc3;
+            --brand-bg: #f8f6f1;
+        }
+
+        .og-container {
+            width: 1200px;
+            height: 630px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--brand-primary) 0%, #2a5078 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 60px 80px;
+        }
+
+        /* Mountain gradient overlay (rovnaký ako web) */
+        .og-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'><path d='M0,200 L0,140 L100,90 L220,130 L350,60 L480,110 L600,70 L730,120 L860,80 L980,130 L1100,90 L1200,140 L1200,200 Z' fill='white' opacity='0.06'/><path d='M0,200 L0,160 L120,120 L260,150 L400,100 L540,130 L680,110 L820,140 L960,120 L1080,150 L1200,130 L1200,200 Z' fill='white' opacity='0.09'/></svg>");
+            background-repeat: no-repeat;
+            background-position: bottom center;
+            background-size: 100% 55%;
+            pointer-events: none;
+        }
+
+        /* Brand pattern overlay */
+        .og-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='white' opacity='0.06'><rect x='15' y='25' width='80' height='12' rx='3'/><rect x='15' y='50' width='62' height='12' rx='3'/><rect x='15' y='75' width='44' height='12' rx='3'/><circle cx='92' cy='81' r='7' fill='%23388fc3' opacity='0.5'/></g></svg>");
+            background-repeat: repeat;
+            background-size: 180px 180px;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            opacity: 0.7;
+        }
+
+        .og-container > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Top section: brand */
+        .og-top {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .og-logo {
+            width: 72px;
+            height: 72px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .og-logo svg {
+            width: 70%;
+            height: 70%;
+        }
+
+        .og-brand-text {
+            line-height: 1;
+        }
+
+        .og-brand-name {
+            font-size: 36px;
+            font-weight: 800;
+            font-style: italic;
+            letter-spacing: -0.02em;
+            color: white;
+        }
+
+        .og-brand-tag {
+            font-size: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 6px;
+        }
+
+        /* Middle section: tagline */
+        .og-middle {
+            max-width: 880px;
+        }
+
+        .og-tagline {
+            font-size: 64px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1.05;
+            color: white;
+        }
+
+        .og-tagline em {
+            font-style: italic;
+            font-weight: 800;
+        }
+
+        .og-tagline .accent {
+            opacity: 0.75;
+            display: block;
+            margin-top: 6px;
+        }
+
+        .og-subtitle {
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.85);
+            margin-top: 24px;
+            font-weight: 400;
+            line-height: 1.4;
+            max-width: 780px;
+        }
+
+        /* Bottom section: trust badges + URL */
+        .og-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .og-badges {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .og-badge {
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 100px;
+            font-size: 16px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .og-url {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .og-url-arrow {
+            color: var(--brand-accent);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="og-container">
+
+        <!-- Top: Logo + brand -->
+        <div class="og-top">
+            <div class="og-logo">
+                <!-- Inventario logomark: 3 stacked layers + accent dot -->
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="5" y="7"  width="22" height="4" rx="1" fill="white" fill-opacity="0.95"/>
+                    <rect x="5" y="14" width="17" height="4" rx="1" fill="white" fill-opacity="0.75"/>
+                    <rect x="5" y="21" width="12" height="4" rx="1" fill="white" fill-opacity="0.55"/>
+                    <circle cx="25" cy="23" r="2.2" fill="#388fc3"/>
+                </svg>
+            </div>
+            <div class="og-brand-text">
+                <div class="og-brand-name">Inventario</div>
+                <div class="og-brand-tag">Open asset management</div>
+            </div>
+        </div>
+
+        <!-- Middle: Tagline -->
+        <div class="og-middle">
+            <h1 class="og-tagline">
+                <em>Transparentná</em> správa majetku.
+                <span class="accent">Bez vendor lock-in.</span>
+            </h1>
+            <p class="og-subtitle">
+                Otvorená multi-tenant platforma pre športové zväzy, mestá, kluby a školy.
+            </p>
+        </div>
+
+        <!-- Bottom: Trust badges + URL -->
+        <div class="og-bottom">
+            <div class="og-badges">
+                <span class="og-badge">🇪🇺 EUPL-1.2</span>
+                <span class="og-badge">✓ REUSE 3.3</span>
+                <span class="og-badge">🔒 GDPR ready</span>
+            </div>
+            <div class="og-url">
+                inventario.sportup.sk
+                <span class="og-url-arrow">→</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

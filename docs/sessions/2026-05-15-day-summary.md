@@ -320,5 +320,47 @@ Pricing tieri:                 5 (web) + 4 (annual)
 ---
 
 **Session zaznamenaná:** 15. máj 2026, ~21:00
-**Ďalšia session:** zajtra 16. máj 2026 (OG image + Vercel deploy + DNS setup)
-**Status:** ✅ ALL OBJECTIVES MET
+**Ďalšia session:** zajtra 16. máj 2026 alebo pondelok 18. máj (execution A-B-C + slice #3 K10)
+**Status:** ✅ ALL OBJECTIVES MET + A-B-C dokumentácia hotová
+
+---
+
+## ⏰ Pripojenie z 22:00 — A-B-C dokumentácia
+
+Po pôvodnom konci session sme sa rozhodli **dokončiť A-B-C prípravu ešte dnes**, aby všetko bolo pripravené a commit-able. Dodatočné deliverables:
+
+### A. OG Image — hotové
+
+- `docs/marketing-site/og-image.html` — 1200×630 template s hero gradient + brand pattern overlay + logo + tagline + trust badges (EUPL, REUSE, GDPR) + URL
+- `docs/marketing-site/assets/README.md` — step-by-step návod pre Chrome DevTools / Playwright / Puppeteer variants
+- OG meta tags pridané do všetkých 5 marketingových stránok (`og:image`, `og:title`, `og:description`, `og:url`, `twitter:card`)
+
+### B. Vercel deploy config — hotové
+
+- `infra/vercel/marketing-site.vercel.json` — template config:
+  - Clean URLs: `/`, `/use-cases`, `/pricing`, `/technology`, `/about`
+  - Security headers: HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+  - Cache control: immutable 1 rok pre assety, must-revalidate pre HTML
+- `infra/vercel/DEPLOYMENT.md` — dual-path návod (Dashboard + CLI) + troubleshooting + Lighthouse audit
+- `infra/vercel/README.md` — index s architektúrou (2 separátne Vercel projekty: `inventario-marketing` + `asset-management-api`)
+
+### C. DNS setup guide — hotové
+
+- `infra/vercel/DNS-SETUP.md` — provider-agnostic návod:
+  - Cloudflare (s dôrazom na "DNS only" mode, nie Proxied)
+  - Webglobe / Websupport (SK registrátori)
+  - GoDaddy / Namecheap (generálny postup)
+  - Verification cez `dig`, `nslookup`, whatsmydns.net, dnschecker.org
+  - SSL/TLS automatické cez Let's Encrypt
+  - Troubleshooting (proxy bug, cache flush, Vercel re-verify)
+
+### Celkový výsledok
+
+Všetka dokumentácia pre deploy je **v repe a pripravená**. Zajtra (alebo cez víkend) stačí:
+
+1. Vytvoriť Vercel projekt + skopírovať config → deploy
+2. Pridať DNS záznam podľa provider-u
+3. Spraviť screenshot OG image
+4. Otestovať všetko spolu
+
+**Predpokladaný execution time:** 30–60 min keď bude všetko naplánované v poradí.
