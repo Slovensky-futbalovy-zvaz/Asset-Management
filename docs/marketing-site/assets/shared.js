@@ -63,8 +63,8 @@
                     </a>
                     <div class="nav-links">${linksHtml}</div>
                     <div class="nav-right">
-                        <a class="nav-link nav-link-disabled" title="Dokumentácia bude dostupná v Q3 2026" aria-disabled="true">
-                            Dokumentácia <span class="nav-soon-badge">Čoskoro</span>
+                        <a href="${EXTERNAL_LINKS.docs}" class="nav-link" target="_blank" rel="noopener">
+                            Dokumentácia
                         </a>
                         <a href="${EXTERNAL_LINKS.github}" class="nav-link" target="_blank" rel="noopener" title="GitHub">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -3px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.04-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4 1.02 0 2.04.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22 0 1.61-.01 2.91-.01 3.3 0 .32.22.7.83.58C20.57 21.79 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -83,8 +83,8 @@
                 </div>
                 <div class="nav-mobile-menu">
                     ${mobileLinksHtml}
-                    <a class="nav-link nav-link-disabled" aria-disabled="true" title="Dokumentácia bude dostupná v Q3 2026">
-                        Dokumentácia <span class="nav-soon-badge">Čoskoro</span>
+                    <a href="${EXTERNAL_LINKS.docs}" class="nav-link" target="_blank" rel="noopener">
+                        Dokumentácia ↗
                     </a>
                     <a href="${EXTERNAL_LINKS.github}" class="nav-link" target="_blank" rel="noopener">GitHub ↗</a>
                 </div>
@@ -123,7 +123,7 @@
                         <div>
                             <h4 class="footer-heading">Zdroje</h4>
                             <ul class="footer-links">
-                                <li><span class="footer-link-disabled" title="Dokumentácia bude dostupná v Q3 2026">Dokumentácia <span class="nav-soon-badge">Čoskoro</span></span></li>
+                                <li><a href="${EXTERNAL_LINKS.docs}" target="_blank" rel="noopener">Dokumentácia ↗</a></li>
                                 <li><a href="${EXTERNAL_LINKS.github}" target="_blank" rel="noopener">GitHub repo ↗</a></li>
                                 <li><a href="/interactive-demo">Demo aplikácie</a></li>
                                 <li><a href="../decisions/0010-multi-tenant-white-label.md" target="_blank">ADR-0010</a></li>
