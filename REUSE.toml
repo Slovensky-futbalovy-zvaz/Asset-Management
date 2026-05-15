@@ -82,6 +82,19 @@ path = ".husky/**"
 SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
 SPDX-License-Identifier = "EUPL-1.2"
 
+# ─── 7b. Development scripts (scripts/) — EUPL-1.2 ───
+# Migračné a maintenance bash skripty (rename-marketing-pages.sh, atď.).
+# README.md v scripts/ je CC-BY-4.0 (dokumentácia), .sh súbory EUPL-1.2.
+[[annotations]]
+path = "scripts/*.sh"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "EUPL-1.2"
+
+[[annotations]]
+path = "scripts/*.md"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 # ─── 8. Root config súbory (TypeScript, ESLint, Turbo, Vercel) ───
 # Konfiguračné súbory — krátke, väčšinou bez "duševnej hodnoty",
 # ale predsa zdrojové artefakty projektu → EUPL.

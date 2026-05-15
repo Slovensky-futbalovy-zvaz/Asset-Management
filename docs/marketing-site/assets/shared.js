@@ -11,11 +11,11 @@
   'use strict';
 
   const NAV_LINKS = [
-    { href: '_home.html', page: 'home', label: 'Domov' },
-    { href: '_use-cases.html', page: 'use-cases', label: 'Pre koho' },
-    { href: '_pricing.html', page: 'pricing', label: 'Cenník' },
-    { href: '_technology.html', page: 'technology', label: 'Technológia' },
-    { href: '_about.html', page: 'about', label: 'O projekte' },
+    { href: 'index.html', page: 'home', label: 'Domov' },
+    { href: 'use-cases.html', page: 'use-cases', label: 'Pre koho' },
+    { href: 'pricing.html', page: 'pricing', label: 'Cenník' },
+    { href: 'technology.html', page: 'technology', label: 'Technológia' },
+    { href: 'about.html', page: 'about', label: 'O projekte' },
   ];
 
   const EXTERNAL_LINKS = {
@@ -53,7 +53,7 @@
     return `
             <nav class="nav" id="site-nav">
                 <div class="nav-inner">
-                    <a href="_home.html" class="nav-brand">
+                    <a href="index.html" class="nav-brand">
                         <span class="nav-brand-icon">${LOGO_SVG}</span>
                         <span class="nav-brand-text">
                             <div class="nav-brand-name">Inventario</div>
@@ -111,10 +111,10 @@
                         <div>
                             <h4 class="footer-heading">Produkt</h4>
                             <ul class="footer-links">
-                                <li><a href="_home.html">Domov</a></li>
-                                <li><a href="_use-cases.html">Pre koho</a></li>
-                                <li><a href="_pricing.html">Cenník</a></li>
-                                <li><a href="_technology.html">Technológia</a></li>
+                                <li><a href="index.html">Domov</a></li>
+                                <li><a href="use-cases.html">Pre koho</a></li>
+                                <li><a href="pricing.html">Cenník</a></li>
+                                <li><a href="technology.html">Technológia</a></li>
                             </ul>
                         </div>
                         <div>
@@ -130,7 +130,7 @@
                             <h4 class="footer-heading">Kontakt</h4>
                             <ul class="footer-links">
                                 <li><a href="mailto:${EXTERNAL_LINKS.email}">${EXTERNAL_LINKS.email}</a></li>
-                                <li><a href="_about.html">O projekte</a></li>
+                                <li><a href="about.html">O projekte</a></li>
                                 <li><a href="${EXTERNAL_LINKS.sportup}" target="_blank" rel="noopener">${EXTERNAL_LINKS.sportup} ↗</a></li>
                             </ul>
                         </div>
