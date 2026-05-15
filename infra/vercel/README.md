@@ -18,15 +18,31 @@ Vercel konfigurácia a deployment guides pre Inventario projekt.
 
 ## Architektúra
 
-V repe budeme mať postupne **tri samostatné Vercel projekty**:
+V repe máme **tri samostatné Vercel projekty**, všetky v `ltksolutions-projects` team:
 
 | Projekt                | Cesta                  | Doména                       | Status                                          |
 | ---------------------- | ---------------------- | ---------------------------- | ----------------------------------------------- |
 | `inventario-marketing` | `docs/marketing-site/` | `inventario.sportup.sk`      | ✅ **LIVE** (15. máj 2026)                      |
-| `inventario-docs`      | `apps/docs/`           | `docs.inventario.sportup.sk` | Pripravený na deploy (Nextra v4 + Next.js 16.1) |
+| `inventario-docs`      | `apps/docs/`           | `docs.inventario.sportup.sk` | ✅ **LIVE** (16. máj 2026)                      |
 | `asset-management-api` | `apps/api/`            | `api.inventario.sportup.sk`  | Existuje (slice #2+), čaká na rebrand z dev URL |
 
 > **Budúce projekty** (slice #4+): `inventario-web` (Next.js app pre konečných používateľov).
+
+### `inventario-docs` build config (pamataj)
+
+Deploy potreboval **UI override** pre monorepo support:
+
+| Field            | Hodnota                                      |
+| ---------------- | -------------------------------------------- |
+| Root Directory   | `apps/docs`                                  |
+| Install Command  | `cd ../.. && pnpm install --frozen-lockfile` |
+| Build Command    | `cd ../.. && pnpm --filter @sfz/docs build`  |
+| Output Directory | (default `.next`)                            |
+| Framework Preset | Next.js                                      |
+
+`apps/docs/vercel.json` obsahuje len HTTP headers (security + Pagefind cache), všetko ostatné cez UI lebo Turbo monorepo + workspace dependencies majú quirks pri auto-detection.
+
+Detaily v [`DOCS-DEPLOYMENT.md`](DOCS-DEPLOYMENT.md).
 
 ## Quick start
 

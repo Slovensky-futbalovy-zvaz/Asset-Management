@@ -25,12 +25,13 @@ Tým získaš okamžitý kontext za 30 sekúnd.
 
 ### 2026-05
 
-| Súbor                                                              | Typ               | Popis                                                             |
-| ------------------------------------------------------------------ | ----------------- | ----------------------------------------------------------------- |
-| [`NEXT.md`](NEXT.md)                                               | **Living**        | **Continuation plan** — vždy aktuálny stav projektu a plán ďalej  |
-| [`2026-05-15-design-pivot.md`](2026-05-15-design-pivot.md)         | Pre-session plan  | Plán dňa: pivot SFZ → Inventario, design exploration              |
-| [`2026-05-15-day-summary.md`](2026-05-15-day-summary.md)           | Day summary       | Súhrn celej session: pivot + design + brand + marketing + pricing |
-| [`2026-05-15-pricing-strategy.md`](2026-05-15-pricing-strategy.md) | Internal strategy | Cenová stratégia pre Sales calls (Free, Pro, Annual Contract)     |
+| Súbor                                                              | Typ               | Popis                                                                 |
+| ------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------- |
+| [`NEXT.md`](NEXT.md)                                               | **Living**        | **Continuation plan** — vždy aktuálny stav projektu a plán ďalej      |
+| [`2026-05-16-day-summary.md`](2026-05-16-day-summary.md)           | Day summary       | Marketing polish + interactive demo + Nextra docs deploy + clean URLs |
+| [`2026-05-15-design-pivot.md`](2026-05-15-design-pivot.md)         | Pre-session plan  | Plán dňa: pivot SFZ → Inventario, design exploration                  |
+| [`2026-05-15-day-summary.md`](2026-05-15-day-summary.md)           | Day summary       | Súhrn celej session: pivot + design + brand + marketing + pricing     |
+| [`2026-05-15-pricing-strategy.md`](2026-05-15-pricing-strategy.md) | Internal strategy | Cenová stratégia pre Sales calls (Free, Pro, Annual Contract)         |
 
 ---
 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Roadmap — Inventario
 
-> **Last updated:** 15. máj 2026
+> **Last updated:** 16. máj 2026
 > **Status:** Active, post-pivot
 > **Current version:** v0.3
 
@@ -51,11 +51,14 @@ Inventario je **dlhodobý open-source projekt** určený pre slovenský verejný
 - [x] 257 integration testov (CI green proti Atlas dev)
 - [x] Pre-commit hooks (lint-staged + typecheck) + GitHub Desktop kompatibilita
 
-### Design + Marketing
+### Design + Marketing + Docs
 
 - [x] 6 P0 mockupov plne interaktívnych (Login, Dashboard, Assets, Detail, Loan, My loans)
 - [x] 4 demo tenanti s vlastnými brand identitámi
 - [x] Marketingový web (5 stránok + landing + demo wrapper)
+- [x] **Interactive demo** stranka (interactive-demo.html, 6 obrazoviek, dual-mode sticky bar)
+- [x] **Documentation site** (Nextra v4.6.0 + Next.js 15.5, 7 stránok, Pagefind search) — https://docs.inventario.sportup.sk
+- [x] **Clean URLs** po celom marketing site (vrchná nav + footer + cross-page CTAs)
 - [x] Favicon, Open Graph meta tags
 - [x] Brand pattern overlay (CSS, scalable)
 
