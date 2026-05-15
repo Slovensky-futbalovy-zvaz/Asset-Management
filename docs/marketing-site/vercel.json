@@ -12,7 +12,9 @@
   ],
   "redirects": [
     { "source": "/index.html", "destination": "/", "permanent": true },
-    { "source": "/_home.html", "destination": "/", "permanent": false }
+    { "source": "/_home.html", "destination": "/", "permanent": false },
+    { "source": "/_home", "destination": "/", "permanent": false },
+    { "source": "/home", "destination": "/", "permanent": false }
   ],
   "headers": [
     {

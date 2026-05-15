@@ -7,7 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 > **Účel:** Single source of truth pre "čo robiť ďalej" pri začatí novej session s Claude.
 > **Update protocol:** Aktualizuj na konci každej session.
-> **Last updated:** 15. máj 2026, 22:00 (post A-B-C session)
+> **Last updated:** 15. máj 2026, ~23:00 (post A-B-C deploy)
 
 ---
 

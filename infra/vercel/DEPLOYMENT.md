@@ -81,6 +81,31 @@ Commit + push → Vercel automaticky redeployne s novou konfiguráciou. URL bude
 - `/technology` → technológia
 - `/about` → o projekte
 
+### ℹ️ Poznámka o `index.html` a `demo.html`
+
+V `docs/marketing-site/` sú dva HTML súbory ktoré si zaslužujú vysvetlenie:
+
+- **`index.html`** — minimálny HTML s `meta refresh` + JS redirect na `_home.html`.
+  Slúži ako **fallback** pre prípad keď `vercel.json` rewrites nefungujú, alebo pre
+  lokálne prezeranie (`open docs/marketing-site/index.html`). Má `noindex` robots tag
+  aby ho search engine neindexovali.
+- **`demo.html`** — viewport switcher + page selector preview wrapper.
+  Dostupný na `inventario.sportup.sk/demo` po deploy.
+  Pre interné prezentácie a viewport testing (375 / 768 / 1280 px).
+
+**Production routing** (cez `vercel.json` rewrites):
+
+| URL                                | Slúži                 |
+| ---------------------------------- | --------------------- |
+| `inventario.sportup.sk/`           | `_home.html`          |
+| `inventario.sportup.sk/use-cases`  | `_use-cases.html`     |
+| `inventario.sportup.sk/pricing`    | `_pricing.html`       |
+| `inventario.sportup.sk/technology` | `_technology.html`    |
+| `inventario.sportup.sk/about`      | `_about.html`         |
+| `inventario.sportup.sk/demo`       | `demo.html` (interný) |
+| `inventario.sportup.sk/index.html` | 301 redirect na `/`   |
+| `inventario.sportup.sk/_home.html` | 302 redirect na `/`   |
+
 ### Krok 4: Pridaj custom doménu
 
 1. Vo Vercel dashboard → Project: `inventario-marketing` → Settings → Domains
