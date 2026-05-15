@@ -11,12 +11,12 @@
   'use strict';
 
   const NAV_LINKS = [
-    { href: 'index.html', page: 'home', label: 'Domov' },
-    { href: 'use-cases.html', page: 'use-cases', label: 'Pre koho' },
-    { href: 'interactive-demo.html', page: 'demo', label: 'Demo' },
-    { href: 'pricing.html', page: 'pricing', label: 'Cenník' },
-    { href: 'technology.html', page: 'technology', label: 'Technológia' },
-    { href: 'about.html', page: 'about', label: 'O projekte' },
+    { href: '/', page: 'home', label: 'Domov' },
+    { href: '/use-cases', page: 'use-cases', label: 'Pre koho' },
+    { href: '/interactive-demo', page: 'demo', label: 'Demo' },
+    { href: '/pricing', page: 'pricing', label: 'Cenník' },
+    { href: '/technology', page: 'technology', label: 'Technológia' },
+    { href: '/about', page: 'about', label: 'O projekte' },
   ];
 
   const EXTERNAL_LINKS = {
@@ -54,7 +54,7 @@
     return `
             <nav class="nav" id="site-nav">
                 <div class="nav-inner">
-                    <a href="index.html" class="nav-brand">
+                    <a href="/" class="nav-brand">
                         <span class="nav-brand-icon">${LOGO_SVG}</span>
                         <span class="nav-brand-text">
                             <div class="nav-brand-name">Inventario</div>
@@ -114,10 +114,10 @@
                         <div>
                             <h4 class="footer-heading">Produkt</h4>
                             <ul class="footer-links">
-                                <li><a href="index.html">Domov</a></li>
-                                <li><a href="use-cases.html">Pre koho</a></li>
-                                <li><a href="pricing.html">Cenník</a></li>
-                                <li><a href="technology.html">Technológia</a></li>
+                                <li><a href="/">Domov</a></li>
+                                <li><a href="/use-cases">Pre koho</a></li>
+                                <li><a href="/pricing">Cenník</a></li>
+                                <li><a href="/technology">Technológia</a></li>
                             </ul>
                         </div>
                         <div>
@@ -125,7 +125,7 @@
                             <ul class="footer-links">
                                 <li><span class="footer-link-disabled" title="Dokumentácia bude dostupná v Q3 2026">Dokumentácia <span class="nav-soon-badge">Čoskoro</span></span></li>
                                 <li><a href="${EXTERNAL_LINKS.github}" target="_blank" rel="noopener">GitHub repo ↗</a></li>
-                                <li><a href="interactive-demo.html">Demo aplikácie</a></li>
+                                <li><a href="/interactive-demo">Demo aplikácie</a></li>
                                 <li><a href="../decisions/0010-multi-tenant-white-label.md" target="_blank">ADR-0010</a></li>
                             </ul>
                         </div>
@@ -133,7 +133,7 @@
                             <h4 class="footer-heading">Kontakt</h4>
                             <ul class="footer-links">
                                 <li><a href="mailto:${EXTERNAL_LINKS.email}">${EXTERNAL_LINKS.email}</a></li>
-                                <li><a href="about.html">O projekte</a></li>
+                                <li><a href="/about">O projekte</a></li>
                                 <li><a href="${EXTERNAL_LINKS.sportup}" target="_blank" rel="noopener">${EXTERNAL_LINKS.sportup} ↗</a></li>
                             </ul>
                         </div>

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Inventario docs site — Vercel deployment guide
 
-> **Cieľ:** Nasadiť `apps/docs/` (Nextra v4 + Next.js) na `docs.inventario.sportup.sk`
+> **Cieľ:** Nasadiť `apps/docs/` (Nextra v4.6.0 + Next.js 15.5) na `docs.inventario.sportup.sk`
 > **Predpokladaná dĺžka:** ~15 minút (vrátane DNS propagácie)
 > **Status:** Pripravené na execution
 
@@ -13,9 +13,10 @@ SPDX-License-Identifier: CC-BY-4.0
 
 ## 📋 Pred štartom
 
-- [x] Vercel account (`asset-management-api` a `inventario-marketing` už existujú)
+- [x] Vercel account (`asset-management-api` a `inventario-marketing` už existujú v `ltksolutions-projects` team-e)
 - [x] Prístup k Websupport DNS panelu pre `sportup.sk`
-- [x] `apps/docs/` committed na main branch
+- [x] `apps/docs/` committed na main branch (vrátane vercel.json, package.json, content/)
+- [x] Lokálne `pnpm build` v `apps/docs/` funguje
 
 ---
 
@@ -28,29 +29,44 @@ SPDX-License-Identifier: CC-BY-4.0
 3. **Configure Project**:
    - **Project Name**: `inventario-docs`
    - **Framework Preset**: `Next.js` (auto-detect)
-   - **Root Directory**: `apps/docs` ← DÔLEŽITÉ
-   - **Build Command**: prázdne (z `vercel.json` sa použije custom)
-   - **Output Directory**: `.next` (auto)
-   - **Install Command**: prázdne (handled v build command)
+   - **Root Directory**: `apps/docs` ← KLIKNI **Edit** a nastav
+   - **Build Command**: nechaj prázdne (Vercel použije `next build` z `package.json`)
+   - **Output Directory**: nechaj prázdne (Vercel auto-detect `.next`)
+   - **Install Command**: nechaj prázdne (Vercel detekuje pnpm cez `pnpm-workspace.yaml` a spustí `pnpm install` z root-u)
 4. **Environment Variables**: žiadne netreba pre static docs
 5. Klik **Deploy**
 
-### Krok 2: Skontroluj prvý deploy
+> 💡 **Prečo Vercel pochopí monorepo?** Lebo má `pnpm-workspace.yaml` v root-e + `Root Directory: apps/docs` v Vercel UI. Vercel automaticky spustí `pnpm install` z root-u (build sa zvyšok mountuje), potom `next build` z `apps/docs/`. **Postbuild script** (`pagefind ...`) ide automaticky po `next build` ako súčasť npm lifecycle.
 
-Vercel pridelí preview URL (napr. `inventario-docs-xyz.vercel.app`). Otestuj:
+### Krok 2: Sleduj prvý deploy
 
-- `/` → Welcome page s "Vitajte v _Inventariu_"
+Build by mal trvať **~2 minúty**:
+
+```
+[00:00] Cloning repo
+[00:15] Detecting pnpm workspace
+[00:20] Running pnpm install (~30s, lockfile cache hit po prvom)
+[00:50] Running next build
+[01:30] Running postbuild: pagefind --site .next/server/app
+[01:50] Uploading to CDN
+[02:00] Ready
+```
+
+Vercel pridelí preview URL (napr. `inventario-docs-abc123.vercel.app`). Otestuj:
+
+- `/` → Welcome page s "Vitajte v Inventariu"
 - `/getting-started` → Quick start guide
 - `/architecture` → Multi-tenant architektúra
 - `/api` → REST API dokumentácia
+- `/product-ui-tour` → Product UI tour (6 obrazoviek)
 - `/deployment` → Tento dokument
 - `/about` → História a tím
 
 ### Krok 3: Skontroluj Pagefind search
 
-Po deploy klikni do search bar-u (Cmd+K) a vyhľadaj napr. "multi-tenant" alebo "EUPL". Mali by sa zobraziť relevantné výsledky.
+Po deploy klikni do search bar-u (Cmd+K) a vyhľadaj napr. **"multi-tenant"** alebo **"EUPL"**. Mali by sa zobraziť relevantné výsledky.
 
-> ⚠️ Ak search **nefunguje** (žiadne výsledky), znamená to že `postbuild` script (Pagefind) nezbehol. Pozri sa do Vercel build log-ov.
+> ⚠️ Ak search **nefunguje** (žiadne výsledky), znamená to že `postbuild` script (Pagefind) nezbehol. Pozri do Vercel build log-ov, hľadaj riadok `Running postbuild`.
 
 ### Krok 4: Pridaj custom doménu
 
@@ -93,6 +109,7 @@ curl -sI https://docs.inventario.sportup.sk
 curl -sI https://docs.inventario.sportup.sk/getting-started
 curl -sI https://docs.inventario.sportup.sk/architecture
 curl -sI https://docs.inventario.sportup.sk/api
+curl -sI https://docs.inventario.sportup.sk/product-ui-tour
 curl -sI https://docs.inventario.sportup.sk/deployment
 curl -sI https://docs.inventario.sportup.sk/about
 
@@ -106,15 +123,17 @@ Všetko by malo vrátiť **HTTP/2 200**.
 
 ## 🔧 Po deploy — revertni "Čoskoro" badge v marketing site
 
-Marketing site má momentálne **`<span>Dokumentácia <span>Čoskoro</span></span>`** namiesto live linkov. Po úspešnom deploy docs site treba revertnúť.
+Marketing site má momentálne `<span class="nav-link-disabled">Dokumentácia <span class="nav-soon-badge">Čoskoro</span></span>` namiesto live linkov. Po úspešnom deploy treba premeniť na aktívny anchor.
 
 Najjednoduchšie: `git revert` commit ktorý pridal "Čoskoro" badge:
 
 ```bash
+cd /Users/janletko/Documents/GitHub/Asset-Management
+
 # Nájdi commit hash
 git log --oneline --grep="defer docs.inventario"
 
-# Revertni ho
+# Skopíruj hash (napr. abc1234) a revertni
 git revert <hash>
 
 # Push
@@ -127,21 +146,11 @@ Vercel `inventario-marketing` automaticky redeployne s aktívnymi linkmi na `doc
 
 ## 🐛 Troubleshooting
 
-### Problem: "Nextra build fails with metadata export error"
+### Problem: "next: command not found"
 
-```
-You are attempting to export 'metadata' from a component marked with 'use client'
-```
+**Príčina**: pnpm install nezbehol pre `apps/docs/`.
 
-**Príčina**: Next.js 16.2+ je nekompatibilný s Nextra v4.6.1 ([issue #5003](https://github.com/shuding/nextra/issues/5003)).
-
-**Riešenie**: Nextra v4.6.1 + Next.js 16.1.x funguje. V `package.json` máme `"next": "~16.1.0"` čo zabezpečuje. Ak by Vercel auto-upgradnul na 16.2+, pin to na `"next": "16.1.0"` (bez `~`).
-
-### Problem: "Module not found: next-mdx-import-source-file" (Turbopack)
-
-**Príčina**: Turbopack alias issue v Next.js 16.2+.
-
-**Riešenie**: Použiť Webpack (default v Next 16.1.x). Žiadny `--turbo` flag v `pnpm dev`.
+**Riešenie**: V Vercel project Settings → General → skontroluj že **Root Directory** je nastavené na `apps/docs`. Vercel detekuje pnpm-workspace.yaml v root-e a inštaluje deps cross-package.
 
 ### Problem: Pagefind search nezobrazuje výsledky
 
@@ -171,6 +180,16 @@ dig docs.inventario.sportup.sk CNAME +short
 # Ak je niečo iné než cname.vercel-dns.com → oprav CNAME na Websupporte
 ```
 
+### Problem: "Cannot find module 'react'" v build log
+
+**Príčina**: Vercel nedetekuje pnpm workspace.
+
+**Riešenie**:
+
+1. Skontroluj že `pnpm-workspace.yaml` je v root repa (nie v `apps/`)
+2. V Vercel Project Settings → General → **Install Command** override na: `pnpm install --frozen-lockfile`
+3. Redeploy
+
 ---
 
 ## 📊 Architektúra deployu (full picture)
@@ -193,15 +212,15 @@ Asset-Management repo
 
 Deploy je **úspešný** keď:
 
-- [x] `https://docs.inventario.sportup.sk` vráti HTTP/2 200
-- [x] Všetky 6 stránok funguje (homepage, getting-started, architecture, api, deployment, about)
-- [x] Sidebar nav funguje (kliknutia)
-- [x] Search funguje (Cmd+K)
-- [x] Dark/light theme toggle funguje
-- [x] Mobile responsive (375px viewport)
-- [x] SSL A+ na https://www.ssllabs.com/ssltest/
-- [x] Lighthouse score > 90 (Performance, Accessibility, SEO)
-- [x] OG preview funguje na https://www.opengraph.xyz/
+- [ ] `https://docs.inventario.sportup.sk` vráti HTTP/2 200
+- [ ] Všetkých 7 stránok funguje (homepage, getting-started, architecture, api, product-ui-tour, deployment, about)
+- [ ] Sidebar nav funguje (kliknutia medzi stránkami)
+- [ ] Search funguje (Cmd+K → vyhľadaj "multi-tenant")
+- [ ] Dark/light theme toggle funguje (svetlý/tmavý prepínač v nav)
+- [ ] Mobile responsive (375px viewport, hamburger menu)
+- [ ] SSL A alebo A+ na https://www.ssllabs.com/ssltest/
+- [ ] Lighthouse score > 90 (Performance, Accessibility, SEO, Best Practices)
+- [ ] OG preview funguje na https://www.opengraph.xyz/
 
 Po splnení → revertnúť "Čoskoro" badge v marketing site (viď vyššie).
 
