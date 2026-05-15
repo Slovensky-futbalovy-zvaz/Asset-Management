@@ -364,3 +364,71 @@ Všetka dokumentácia pre deploy je **v repe a pripravená**. Zajtra (alebo cez 
 4. Otestovať všetko spolu
 
 **Predpokladaný execution time:** 30–60 min keď bude všetko naplánované v poradí.
+
+---
+
+## 🎉 ZÁVER — 22:00–23:30 — LIVE DEPLOY
+
+Po dokumentačnej príprave sme sa rozhodli **zexekuovať A-B-C ešte dnes**. Postup:
+
+### Vercel deploy
+
+- Vytvorený projekt `inventario-marketing` v Vercel
+- Root Directory: `docs/marketing-site`, Framework: `Other`
+- Prvý preview deploy LIVE na `*.vercel.app` URL
+
+### Iterácia bugov a fixov
+
+1. **Bug 1**: `index.html` bol demo wrapper, nie production homepage → preview header sa zobrazoval na produkčnej stránke
+   - **Fix**: rename `index.html` (demo wrapper) → `demo.html`, nový `index.html` ako fallback redirect
+2. **Bug 2**: `vercel.json` mal `cleanUrls: true` + redirects pre `_home.html` → `/` → spôsobilo **infinite redirect loop**
+   - **Fix**: odstránené `cleanUrls` + redirects, ponechané len rewrites
+3. **Bug 3 (architektonický)**: zbytočný `_` prefix v názvoch súborov + 6 rewrites pre 5 stránok
+   - **Fix**: rename `_*.html` → `*.html` (bez `_`), `_home.html` → `index.html`, zjednodušený vercel.json (žiadne rewrites, len `cleanUrls: true`)
+   - Vytvorený migration skript `scripts/rename-marketing-pages.sh` pre idempotentnú migráciu
+
+### DNS Websupport → Vercel
+
+- Pridaný CNAME záznam: `inventario` → `cname.vercel-dns.com`
+- Websupport propagoval cca 5–7 min
+- Vercel automaticky vystavil SSL cez Let's Encrypt
+
+### OG image
+
+- `og-image.html` template renderovaný 1200×630 cez Chrome DevTools screenshot
+- 340 KB PNG s hero gradientom + brand patternom + logom + EU badges
+- Meta tags `og:image` aktualizované vo všetkých 5 stránkach
+
+### Final verification (22:30 UTC+1)
+
+```
+$ curl -sI https://inventario.sportup.sk
+HTTP/2 200 ✓
+
+$ curl -sI https://inventario.sportup.sk/pricing
+HTTP/2 200 ✓
+
+$ curl -sI https://inventario.sportup.sk/use-cases
+HTTP/2 200 ✓
+
+$ curl -sI https://inventario.sportup.sk/assets/og-image.png
+HTTP/2 200 ✓ (image/png)
+```
+
+### Celečný počet commitov v dnesňšej session
+
+```
+6 commits (final state):
+  feat: complete strategic pivot to Inventario plus deploy prep
+  fix(deploy): separate demo wrapper from production index
+  feat(deploy): add OG image plus fix legacy URL redirects
+  feat(deploy): add OG image PNG for social media previews
+  fix(deploy): remove cleanUrls and redirect loop in vercel.json
+  refactor(marketing): drop underscore prefix from page filenames
+```
+
+### Oslávené Nichta Brut sektom 🥂
+
+Slovenský sekt na slovenský projekt z vlastných viníc v Čajkove (NICHTA winery&vineyards, Branislav Nichta). Prefer slovenských vínorobov pre slovenské launchy ako forma podpory lokálnej tradicie.
+
+**Status na konci dňa:** `inventario.sportup.sk` je **LIVE a verejne dostupné**. Zajtra môžeme začať slice #3 K10 alebo si dať zaslužený vikend. 🌟

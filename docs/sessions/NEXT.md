@@ -7,7 +7,17 @@ SPDX-License-Identifier: CC-BY-4.0
 
 > **Účel:** Single source of truth pre "čo robiť ďalej" pri začatí novej session s Claude.
 > **Update protocol:** Aktualizuj na konci každej session.
-> **Last updated:** 15. máj 2026, ~23:00 (post A-B-C deploy)
+> **Last updated:** 15. máj 2026, ~23:30 (post deploy, brut pohár v ruke 🥂)
+
+## 🎉 STATUS: LIVE!
+
+**`inventario.sportup.sk` je oficiálne na internete.**
+
+- ✅ HTTP/2 200 na `/`, `/pricing`, `/use-cases`, `/technology`, `/about`, `/demo`
+- ✅ SSL Let's Encrypt vystavený
+- ✅ OG image funguje pre social sharing
+- ✅ Clean URLs (žiadny `_` prefix, žiadne rewrites loops)
+- ✅ Oslávené Nichta Brut sektom 🥂
 
 ---
 
