@@ -1,0 +1,47 @@
+cff-version: 1.2.0
+message: "Ak používate Inventario vo svojej práci, prosím citujte ho takto:"
+title: "Inventario — Otvorená platforma pre správu majetku organizácií"
+abstract: >-
+  Otvorená multi-tenant platforma pre evidenciu a vypožičiavanie
+  majetku, určená pre športové zväzy, mestá a obce, vyššie územné
+  celky, kluby, školy a neziskové organizácie. Transparentná,
+  auditovateľná, forkovateľná. Pripravená pre integráciu s
+  ekosystémom SportUp (Good Idea Sport Slovakia). Bez vendor
+  lock-in — veľké organizácie si môžu kód forkovať a hostiť
+  vlastnú inštanciu.
+type: software
+authors:
+  - family-names: Letko
+    given-names: Ján
+    email: inventario@ltk.solutions
+    affiliation: LTK Solutions
+  - name: "Slovenský futbalový zväz"
+    affiliation: "Founding contributor"
+    website: "https://futbalsfz.sk"
+repository-code: "https://github.com/Slovensky-futbalovy-zvaz/Asset-Management"
+url: "https://inventario.sk"
+license: EUPL-1.2
+license-url: "https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/LICENSE"
+keywords:
+  - asset management
+  - správa majetku
+  - inventory
+  - inventár
+  - loan management
+  - vypožičiavanie
+  - multi-tenant
+  - white-label
+  - open source
+  - slovakia
+  - sport
+  - šport
+  - public sector
+  - verejný sektor
+  - municipalities
+  - samospráva
+  - sports federations
+  - športové zväzy
+  - sportup ecosystem
+  - EUPL
+  - GDPR
+date-released: 2026-05-15

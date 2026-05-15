@@ -1,1 +1,28 @@
+#!/usr/bin/env sh
+# Commit message hook: validate Conventional Commits format via commitlint.
+#
+# PATH augmentation for GUI git clients — see .husky/pre-commit for rationale.
+
+for candidate in \
+    "/opt/homebrew/bin" \
+    "/usr/local/bin" \
+    "$HOME/.local/share/pnpm" \
+    "$HOME/Library/pnpm" \
+    "$HOME/.nvm/versions/node/current/bin" \
+    "$HOME/.volta/bin" \
+    "$HOME/.asdf/shims" \
+    "$HOME/n/bin"
+do
+    if [ -d "$candidate" ]; then
+        PATH="$candidate:$PATH"
+    fi
+done
+export PATH
+
+if ! command -v pnpm >/dev/null 2>&1; then
+    echo "❌ commit-msg hook: 'pnpm' not found in PATH."
+    echo "   See .husky/pre-commit for the list of probed locations."
+    exit 1
+fi
+
 pnpm exec commitlint --edit $1

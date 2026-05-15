@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # Kódex správania prispievateľov (Contributor Covenant)
 
 ## Náš záväzok
@@ -34,7 +39,7 @@ Tento kódex sa vzťahuje na všetky komunitné priestory a vzťahuje sa aj na s
 
 ## Vymáhanie
 
-Prípady urážlivého, obťažujúceho alebo inak neprijateľného správania je možné nahlásiť správcom komunity zodpovedným za vymáhanie na adrese: **_doplniť e-mail_** (napr. `oss@futbalsfz.sk`).
+Prípady urážlivého, obťažujúceho alebo inak neprijateľného správania je možné nahlásiť správcom komunity zodpovedným za vymáhanie na adrese: **inventario@ltk.solutions**.
 
 Všetky sťažnosti budú preskúmané a vyšetrené rýchlo a spravodlivo. Všetci správcovia komunity sú povinní rešpektovať súkromie a bezpečnosť oznamovateľa akéhokoľvek incidentu.
 

@@ -1,8 +1,13 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # Bezpečnostná politika
 
 ## Hlásenie zraniteľností
 
-Bezpečnosť projektu SFZ Asset Management berieme vážne. Ďakujeme, že nám pomáhate zodpovedným hlásením bezpečnostných problémov.
+Bezpečnosť projektu **Inventario** berieme vážne. Platforma spracúva údaje o majetku organizácií (športových zväzov, miest, obcí, klubov, škôl, neziskoviek) — informácie, ktoré nepatria do verejného priestoru. Ďakujeme, že nám pomáhate zodpovedným hlásením bezpečnostných problémov.
 
 ### ⚠️ Nehláste bezpečnostné chyby cez verejné GitHub issues
 
@@ -16,9 +21,9 @@ Použite jeden z týchto kanálov:
    - Choďte na záložku **Security** tohto repa → **Report a vulnerability**
    - Toto je súkromný kanál priamo medzi vami a údržbárami repa
 
-2. **E-mail:** `security@futbalsfz.sk` _(doplniť reálnu adresu)_
-   - Predmet: `[SECURITY] SFZ Asset Management - krátky popis`
-   - Voliteľne PGP šifrované – kľúč na vyžiadanie
+2. **E-mail:** `inventario@ltk.solutions`
+   - Predmet: `[SECURITY] Inventario — krátky popis`
+   - Voliteľne PGP šifrované — kľúč na vyžiadanie
 
 ### Čo zahrnúť do hlásenia
 
@@ -39,30 +44,61 @@ Pre čo najrýchlejšie vyriešenie nám prosím poskytnite:
 | Do 30 dní    | Plán opravy alebo finálne vyjadrenie                                              |
 | Po oprave    | Verejné zverejnenie (CVE ak relevantné) a poďakovanie reportérovi (ak si to želá) |
 
+### Disclosure timeline
+
+Praktizujeme **coordinated disclosure**:
+
+1. Hlásenie nahlásené súkromne
+2. Preverenie a oprava (typicky 30–90 dní podľa závažnosti)
+3. Patch nasadený do hosted SaaS inštancie aj odporúčaný self-hosted upgrade
+4. Verejné zverejnenie zraniteľnosti s atribúciou reportéra (ak si to želá)
+
+Pre zraniteľnosti, ktoré sú aktívne zneužívané, môže byť timeline kratší.
+
 ### Rozsah
 
 **V rozsahu (in-scope):**
 
 - Kód v tomto repe (`apps/`, `packages/`, `infra/`)
-- Verejne dostupné inštancie projektu (po nasadení)
+- Verejne dostupné inštancie projektu (po nasadení, napr. `inventario.sk`)
+- MCP servery v repe (po nasadení)
 - Závislosti, ak ich zraniteľnosť priamo ovplyvňuje náš projekt
 
 **Mimo rozsahu (out-of-scope):**
 
-- Sociálne inžinierstvo voči zamestnancom SFZ
+- **Self-hosted forks**: ak ste si forkli projekt a hostujete vlastnú inštanciu, ste primárne zodpovední za bezpečnosť svojho deployment-u. Radi vám poradíme cez community channels, ale CVD timeline neplatí.
+- Sociálne inžinierstvo voči maintainerom alebo prispievateľom
 - Fyzický prístup k zariadeniam
 - DDoS útoky
-- Zraniteľnosti v third-party službách (hláste priamo dodávateľovi)
+- Zraniteľnosti v third-party službách (hláste priamo dodávateľovi; my zaktualizujeme po ich fixe)
+- Aplikácie tretích strán postavené na Inventario API (sú zodpovednosťou ich autorov)
 - Spam alebo obsahové problémy bez bezpečnostného dopadu
 
 ## Bezpečnostné postupy v projekte
 
-- Závislosti sú monitorované cez Dependabot (GitHub) a pravidelne aktualizované.
-- Pre kritické závislosti je nastavený automatický PR pri bezpečnostných záplatách.
-- Pred releaseom prebieha `pnpm audit` a `npm audit` ako súčasť CI.
-- Bezpečnostné záplaty sa releasujú prioritne, mimo bežného release cyklu.
+- **Závislosti monitorované cez Dependabot** (GitHub) a pravidelne aktualizované.
+- **Automatické PR pri bezpečnostných záplatách** kritických závislostí.
+- **`pnpm audit`** ako súčasť CI pred každým release-om.
+- **Bezpečnostné záplaty** sa releasujú prioritne, mimo bežného release cyklu.
+- **Audit log** každej operácie zapisanej do MongoDB (kto, kedy, čo zmenil).
+- **RBAC** s rolami EMPLOYEE / ASSET_MANAGER / ADMIN na úrovni Fastify routes.
+- **Transactions** pre kritické operácie (audit log + dáta v jednej atomic akcii).
+- **JWT verifikácia** cez JWKS rotation (Microsoft Entra ID).
+- **MongoDB Atlas** s end-to-end TLS, IP whitelisting, encrypted storage at rest.
 
-## Poďakovanie (Hall of Fame)
+## Bezpečnostné princípy pre Inventario v EÚ verejnom sektore
+
+Plánované implementácie pred produkčným nasadením (slice #8):
+
+- **DPIA** (Data Protection Impact Assessment) — GDPR Article 35
+- **Threat Model** — STRIDE alebo PASTA framework
+- **Disaster Recovery Plan** — RTO/RPO definície
+- **SBOM** (CycloneDX) — Cyber Resilience Act compliance (2027)
+- **Penetration testing** — externý audit pred prvým produkčným tenant-om
+- **WCAG 2.1 AA accessibility** — zákon 95/2019 (povinné pre verejný sektor SR)
+- **Coordinated Vulnerability Disclosure (CVD)** policy — tento dokument
+
+## Hall of Fame (Poďakovanie)
 
 Po vyriešení zraniteľnosti radi uvedieme reportéra (ak si to želá) v zozname nižšie.
 
@@ -70,4 +106,6 @@ _Zatiaľ žiadne nahlásenia._
 
 ---
 
-Ďakujeme, že nám pomáhate udržiavať SFZ Asset Management v bezpečí. 🛡️
+Ďakujeme, že nám pomáhate udržiavať **Inventario** v bezpečí. 🛡️
+
+— Inventario maintainers · LTK Solutions · 2026

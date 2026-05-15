@@ -1,0 +1,108 @@
+# REUSE 3.3 specification — https://reuse.software/spec
+# Centralizovaná licenčná metadata pre celý Inventario repozitár.
+# Validuj cez: python3 -m reuse lint
+
+version = 1
+
+# ─── 1. Repo metadata: README, CHANGELOG, licenčné súbory, repo-meta ───
+[[annotations]]
+path = [
+    "README.md",
+    "CHANGELOG.md",
+    "ROADMAP.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+    "CITATION.cff",
+    "LICENSE",
+    "LICENSE-DOCS",
+    ".gitignore",
+    ".gitattributes",
+    ".editorconfig",
+    ".env.example",
+    ".npmrc",
+    ".nvmrc",
+    ".prettierrc",
+    ".prettierignore",
+    "REUSE.toml",
+]
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# ─── 2. Dokumentácia (docs/) — všetko CC-BY-4.0 ───
+[[annotations]]
+path = "docs/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# ─── 3. Aplikačný kód (apps/) — EUPL-1.2 ───
+# Backend (Fastify/Node.js), webový frontend (React), MCP server,
+# budúca mobilná aplikácia (Flutter). Zdrojový kód projektu.
+[[annotations]]
+path = "apps/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "EUPL-1.2"
+
+# ─── 4. Zdieľané packages (packages/) — EUPL-1.2 ───
+# shared-types (Zod schémy), design-tokens, api-client, ui komponenty.
+# Tieto sú zdrojový kód projektu, takže EUPL.
+[[annotations]]
+path = "packages/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "EUPL-1.2"
+
+# ─── 5. Infraštruktúra (infra/) — EUPL-1.2 ───
+# Docker compose, Terraform, deployment scripts.
+[[annotations]]
+path = "infra/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "EUPL-1.2"
+
+# ─── 6. GitHub Community files (.github/) — CC-BY-4.0 ───
+# Issue templates, PR templates, CODEOWNERS, workflows.
+# Metadata o projekte, nie zdrojový kód.
+[[annotations]]
+path = ".github/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# ─── 6b. VS Code editor config (.vscode/) — CC-BY-4.0 ───
+# Odporučané rozšírenia a settings pre developerov.
+# JSON súbory bez podpory komentov → mapovanie cez REUSE.toml.
+[[annotations]]
+path = ".vscode/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# ─── 7. Husky hooks (.husky/) — EUPL-1.2 ───
+# Shell skripty ako súčasť developer workflow.
+[[annotations]]
+path = ".husky/**"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "EUPL-1.2"
+
+# ─── 8. Root config súbory (TypeScript, ESLint, Turbo, Vercel) ───
+# Konfiguračné súbory — krátke, väčšinou bez "duševnej hodnoty",
+# ale predsa zdrojové artefakty projektu → EUPL.
+[[annotations]]
+path = [
+    "package.json",
+    "pnpm-workspace.yaml",
+    "pnpm-lock.yaml",
+    "turbo.json",
+    "tsconfig.json",
+    "tsconfig.base.json",
+    "eslint.config.js",
+    "commitlint.config.js",
+]
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "EUPL-1.2"
+
+# ─── 9. Brand assets prevzaté zo sportup.sk ───
+# Vizuálna identita SportUp ekosystému (logo, farby, ikony).
+# Ostáva CC-BY-4.0 ako v sportup.sk repe; atribúcia: SportUp ecosystem.
+# Aktivuje sa keď pridáme apps/web/public/brand/ v slice #4.
+# [[annotations]]
+# path = "apps/web/public/brand/**"
+# SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions · SportUp ecosystem"
+# SPDX-License-Identifier = "CC-BY-4.0"

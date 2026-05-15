@@ -13,6 +13,45 @@
 #   turbo caches typecheck results keyed on file contents + tsconfig.
 #   A no-op typecheck is ~200ms. A real typecheck of all packages is
 #   ~3-5s on a cold cache. Acceptable for the safety it provides.
+#
+# PATH augmentation for GUI git clients (GitHub Desktop, Sourcetree, Fork):
+#   Such tools launch shells without sourcing ~/.zshrc or ~/.bash_profile,
+#   so pnpm/node installed via Homebrew or asdf is not in PATH. We
+#   probe the common locations and add them if they exist. This keeps
+#   the hook working from terminal AND from GUI clients.
+
+# Add common Node.js / pnpm installation paths if they exist
+for candidate in \
+    "/opt/homebrew/bin" \
+    "/usr/local/bin" \
+    "$HOME/.local/share/pnpm" \
+    "$HOME/Library/pnpm" \
+    "$HOME/.nvm/versions/node/current/bin" \
+    "$HOME/.volta/bin" \
+    "$HOME/.asdf/shims" \
+    "$HOME/n/bin"
+do
+    if [ -d "$candidate" ]; then
+        PATH="$candidate:$PATH"
+    fi
+done
+export PATH
+
+# Verify pnpm is now reachable; if not, fail with a clear message.
+if ! command -v pnpm >/dev/null 2>&1; then
+    echo "❌ pre-commit hook: 'pnpm' not found in PATH."
+    echo ""
+    echo "PATH currently is:"
+    echo "  $PATH"
+    echo ""
+    echo "Install pnpm or add its install directory to one of these locations:"
+    echo "  /opt/homebrew/bin, /usr/local/bin, ~/.local/share/pnpm,"
+    echo "  ~/Library/pnpm, ~/.volta/bin, ~/.asdf/shims, ~/n/bin"
+    echo ""
+    echo "To bypass this hook for a single commit (use sparingly):"
+    echo "  git commit --no-verify"
+    exit 1
+fi
 
 pnpm exec lint-staged
 pnpm typecheck
