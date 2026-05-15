@@ -1,0 +1,412 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+
+Inventario marketing site · Technológia
+-->
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Technológia · Inventario</title>
+    <meta name="description" content="Inventario je postavené na modernom open-source technologickom stack-u: TypeScript, Fastify, MongoDB, Next.js. EUPL-1.2 licencia, REUSE 3.3 compliance, 257 backend testov." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700;1,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/shared.css" />
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <style>
+        .tech-stack-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .tech-stack-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .tech-stack-card code {
+            font-size: 0.75rem;
+            background: color-mix(in srgb, var(--brand-primary) 6%, white);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 0.5rem;
+            font-family: var(--font-mono);
+            color: var(--brand-primary);
+        }
+        .arch-diagram {
+            background: linear-gradient(135deg, #1a2d47 0%, #2a5078 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            line-height: 1.7;
+            overflow-x: auto;
+            white-space: pre;
+        }
+    </style>
+</head>
+<body data-page="technology">
+
+    <!-- HERO -->
+    <section class="hero-gradient">
+        <div class="container" style="padding: 4rem 1.5rem;">
+            <div class="mono-label" style="color: rgba(255,255,255,0.6); margin-bottom: 0.75rem;">TECHNOLÓGIA</div>
+            <h1 style="color: white; max-width: 800px;">Moderný stack. Open source. Audit-friendly.</h1>
+            <p class="lead-white" style="max-width: 720px; margin-top: 1rem;">
+                Inventario je postavené na overených open-source technológiách. Plný zdrojový kód je verejný na GitHube.
+                Architektúra je dokumentovaná v ADR-čkach. Testy pokrývajú kritické flow-y. Bezpečnosť je first-class concern.
+            </p>
+        </div>
+    </section>
+
+    <!-- TECH STACK -->
+    <section class="section" style="background: white;">
+        <div class="container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">TECHNOLOGICKÝ STACK</div>
+                <h2>Otestované technológie pre stabilný vývoj.</h2>
+                <p class="lead">Bez exotických frameworkov, bez vendor SDK-ov. Iba štandardy, ktoré budú fungovať aj o 5 rokov.</p>
+            </div>
+
+            <div class="grid grid-3 grid-gap-lg">
+
+                <div class="card tech-stack-card">
+                    <div class="icon">⚡</div>
+                    <h3>Backend</h3>
+                    <p class="brand-muted" style="font-size: 0.88rem;">Fastify (Node.js) s TypeScript. Zod schémy. Native MongoDB driver bez ORM.</p>
+                    <code>TypeScript · Fastify · Zod</code>
+                </div>
+
+                <div class="card tech-stack-card">
+                    <div class="icon">🍃</div>
+                    <h3>Databáza</h3>
+                    <p class="brand-muted" style="font-size: 0.88rem;">MongoDB Atlas v EU regióne. Compound indexy pre tenant isolation. Native transakcie pre kritické operácie.</p>
+                    <code>MongoDB · Atlas Flex</code>
+                </div>
+
+                <div class="card tech-stack-card">
+                    <div class="icon">🎨</div>
+                    <h3>Frontend</h3>
+                    <p class="brand-muted" style="font-size: 0.88rem;">Next.js (App Router) s React Server Components. Tailwind CSS s design tokens. Plne SSR-friendly.</p>
+                    <code>Next.js · React · Tailwind</code>
+                </div>
+
+                <div class="card tech-stack-card">
+                    <div class="icon">🔐</div>
+                    <h3>Autentifikácia</h3>
+                    <p class="brand-muted" style="font-size: 0.88rem;">Microsoft Entra ID (multi-tenant). JWT verifikácia s JWKS rotation. JIT user provisioning.</p>
+                    <code>Entra ID · OIDC · JWT</code>
+                </div>
+
+                <div class="card tech-stack-card">
+                    <div class="icon">🤖</div>
+                    <h3>MCP server</h3>
+                    <p class="brand-muted" style="font-size: 0.88rem;">Model Context Protocol server pre AI integrácie. Pripraví Inventario pre Claude, ChatGPT a iné agenty.</p>
+                    <code>MCP · OpenAPI 3.1</code>
+                </div>
+
+                <div class="card tech-stack-card">
+                    <div class="icon">☁️</div>
+                    <h3>Hosting</h3>
+                    <p class="brand-muted" style="font-size: 0.88rem;">Vercel (EU región: fra1 Frankfurt, cdg1 Paríž). MongoDB Atlas EU. Plne GDPR-compliant infraštruktúra.</p>
+                    <code>Vercel · EU región</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ARCHITECTURE -->
+    <section class="section">
+        <div class="container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">ARCHITEKTÚRA</div>
+                <h2>Multi-tenant from day one.</h2>
+                <p class="lead">Každá kolekcia v MongoDB má <code class="mono">organisationId</code>. Backend middleware vynucuje tenant isolation pri každom query.</p>
+            </div>
+
+            <div class="arch-diagram">┌──────────────────────────────────────────────────────────────┐
+│  TENANT-AWARE REQUEST FLOW                                    │
+└──────────────────────────────────────────────────────────────┘
+
+  USER REQUEST
+       │
+       ▼
+  [1] Microsoft Entra ID — JWT verifikácia (JWKS rotation)
+       │
+       ▼
+  [2] JIT user provisioning  ─►  Vytvor user ak neexistuje
+       │
+       ▼
+  [3] Tenant resolver — organisationId z JWT alebo custom doména
+       │
+       ▼
+  [4] RBAC middleware — overí rolu (Employee / Manager / Admin)
+       │
+       ▼
+  [5] Repository — auto-filter podľa organisationId
+       │
+       ▼
+  [6] Business logic — service layer (transakcie kde treba)
+       │
+       ▼
+  [7] Audit log — append-only zápis kto/čo/kedy/kde
+       │
+       ▼
+  RESPONSE  ◄─────────────────────────────────────────────────
+
+  KAŽDÝ QUERY MÁ organisationId V FILTER.
+  ŽIADNY DOKUMENT NIKDY NEPRESIAHNE TENANT HRANICE.</div>
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/docs/decisions/0010-multi-tenant-white-label.md" class="btn btn-secondary" target="_blank">
+                    Čítať ADR-0010 →
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECURITY -->
+    <section class="section" style="background: white;">
+        <div class="container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">BEZPEČNOSŤ</div>
+                <h2>Bezpečnosť je first-class concern.</h2>
+                <p class="lead">Nie je to feature, ktorú riešime na konci. Je to vstavané v architektúre.</p>
+            </div>
+
+            <div class="grid grid-2 grid-gap-lg">
+
+                <div class="card">
+                    <h3>🛡️ RBAC na úrovni routes</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Tri roly: <strong>EMPLOYEE</strong>, <strong>ASSET_MANAGER</strong>, <strong>ADMIN</strong>.
+                        Každá HTTP route má explicitne deklarovanú požadovanú rolu. Fastify middleware
+                        odmietne neautorizovaný request skôr než sa vôbec dostane k business logike.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3>📝 Append-only audit log</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Každá CRUD operácia sa zapíše do <code class="mono">audit_log</code> kolekcie spolu s actor-om,
+                        cieľom, timestampom, IP adresou a JSON diff-om zmien. Logy sa nedajú meniť ani mazať
+                        cez verejné API — len cez admin nástroje s plnou auditovateľnosťou.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3>🔒 End-to-end TLS</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        HTTPS všade. Vercel automaticky generuje TLS certifikáty cez Let's Encrypt.
+                        MongoDB Atlas používa TLS pre database connections. JWT tokens sú podpísané asymetrickou kryptografiou.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3>🗄️ Encrypted at rest</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        MongoDB Atlas šifruje všetky dáta na disku cez AES-256. Vercel filesystem storage tiež šifrovaný.
+                        Žiadne nešifrované backupy alebo logy.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3>⚙️ MongoDB transactions</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Kritické operácie (vytvorenie majetku + audit log, schválenie výpožičky + statusy)
+                        bežia v transakciách. Žiadne čiastočne aplikované zmeny — buď všetko, alebo nič.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h3>🎯 Coordinated Vulnerability Disclosure</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Verejne dokumentovaný CVD policy v <a href="https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/SECURITY.md" target="_blank">SECURITY.md</a>.
+                        Bezpečnostné správy môžu byť posielané cez GitHub Security Advisories alebo na email.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPLIANCE -->
+    <section class="section">
+        <div class="container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">COMPLIANCE</div>
+                <h2>EU public sector ready.</h2>
+                <p class="lead">Inventario je navrhnuté tak, aby bolo pripravené pre verejný sektor EÚ a EU rozvojové fondy.</p>
+            </div>
+
+            <div class="grid grid-2 grid-gap-lg">
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="badge">🇪🇺 EUPL-1.2</span>
+                    </div>
+                    <h3>European Union Public Licence</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Oficiálne odporúčaná open-source licencia Európskej komisie. Zdrojový kód je verejný a slobodne použiteľný.
+                        Slovenský preklad je právne ekvivalentný s anglickou verziou.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="badge">✓ REUSE 3.3</span>
+                    </div>
+                    <h3>REUSE 3.3 Software Specification</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Každý súbor v repe má SPDX licenčné metadata. Strojovo overiteľná licenčná čistota.
+                        <strong>175/175 súborov compliant.</strong> Verifikované cez <code class="mono">reuse lint</code> v CI.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="badge">🔒 GDPR</span>
+                    </div>
+                    <h3>GDPR Article 30 Records</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Audit log uchováva záznamy o spracovaní osobných údajov ako vyžaduje Article 30 GDPR.
+                        DPIA (Data Protection Impact Assessment) je v roadmape pred prvým produkčným nasadením
+                        s reálnymi dátami.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="badge">♿ WCAG 2.1 AA</span>
+                    </div>
+                    <h3>Accessibility (zákon 95/2019)</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Mockupy a finálne UI sú navrhnuté podľa WCAG 2.1 AA — povinný štandard pre verejný sektor
+                        SR. Kontrast farieb, focus states, screen reader friendly markup, klávesnicová navigácia.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="badge">📜 DCO</span>
+                    </div>
+                    <h3>Developer Certificate of Origin</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Namiesto Contributor License Agreement (CLA) používame DCO sign-off pri každom commit-e.
+                        Štandard z Linux kernel, Docker, Kubernetes ekosystémov.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <span class="badge">📦 SBOM</span>
+                    </div>
+                    <h3>Software Bill of Materials</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        CycloneDX SBOM export v roadmape pre slice #4. Pripravené pre EU Cyber Resilience Act (2027)
+                        a transparentnosť dependencies.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TESTS & QUALITY -->
+    <section class="section" style="background: white;">
+        <div class="container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">KVALITA</div>
+                <h2>257 testov. CI green. Aktívny vývoj.</h2>
+                <p class="lead">Otvorený zdrojový kód znamená že každý môže vidieť stav projektu. A my chceme, aby ten stav bol dobrý.</p>
+            </div>
+
+            <div class="grid grid-4 grid-gap-lg">
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: var(--brand-primary);">257</div>
+                    <div class="mono-label">Backend testov</div>
+                    <p class="brand-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">Integration testy proti reálnemu MongoDB Atlas</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: var(--brand-primary);">~158<span style="font-size: 1rem;">s</span></div>
+                    <div class="mono-label">Test suite runtime</div>
+                    <p class="brand-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">Vitest single-fork, paralelný kde sa dá</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: var(--color-success);">100<span style="font-size: 1rem;">%</span></div>
+                    <div class="mono-label">REUSE compliant</div>
+                    <p class="brand-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">175/175 súborov správne licencovaných</p>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: 800; color: var(--brand-primary);">11</div>
+                    <div class="mono-label">ADR-čiek</div>
+                    <p class="brand-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">Architecture Decision Records</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 2.5rem;">
+                <a href="https://github.com/Slovensky-futbalovy-zvaz/Asset-Management" class="btn btn-primary" target="_blank">
+                    Pozrieť na GitHub
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- OPEN API -->
+    <section class="section">
+        <div class="container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">API & INTEGRÁCIE</div>
+                <h2>OpenAPI 3.1. Žiadny vendor SDK.</h2>
+                <p class="lead">Inventario API je dokumentované cez OpenAPI 3.1. Generujte si SDK v ktoromkoľvek jazyku.</p>
+            </div>
+
+            <div class="grid grid-3 grid-gap-lg">
+                <div class="card">
+                    <h3>📘 OpenAPI 3.1 spec</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Plne dokumentované REST API s príkladmi requestov a responses. Auto-generované z Zod schém v backende.
+                    </p>
+                </div>
+                <div class="card">
+                    <h3>🤖 MCP server</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Model Context Protocol server pre AI agentov (Claude, ChatGPT, vlastné agenty).
+                        Pripravená infraštruktúra pre budúci chatbot v aplikácii.
+                    </p>
+                </div>
+                <div class="card">
+                    <h3>🔌 Webhooks (v roadmape)</h3>
+                    <p class="brand-muted" style="font-size: 0.92rem;">
+                        Event-driven integrácie: notifikácie pri schválení výpožičky, ASSET_CREATED do Slack-u,
+                        notify Microsoft Teams pri po-termínových položkách.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section" style="background: var(--brand-primary); color: white; text-align: center;">
+        <div class="container-narrow">
+            <h2 style="color: white;">Detailná dokumentácia na samostatnom subdoméne</h2>
+            <p class="lead-white">
+                <strong style="color: white;">docs.inventario.sportup.sk</strong> obsahuje plnú technickú dokumentáciu,
+                API reference, deployment guides a tutoriály.
+            </p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem;">
+                <a href="https://docs.inventario.sportup.sk" class="btn btn-primary" style="background: white; color: var(--brand-primary);">
+                    Otvoriť docs.inventario.sportup.sk →
+                </a>
+                <a href="https://github.com/Slovensky-futbalovy-zvaz/Asset-Management" class="btn" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.25);" target="_blank">
+                    GitHub repo
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <script src="assets/shared.js"></script>
+</body>
+</html>

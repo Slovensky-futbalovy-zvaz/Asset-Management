@@ -1,0 +1,14 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+
+Inventario logo · Containerized variant (navy rounded background + white layers).
+Pre použitia kde potrebuješ logo na svetlom pozadí alebo ako app icon.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Inventario logo">
+    <rect x="0" y="0" width="32" height="32" rx="7" fill="#1a2d47"/>
+    <rect x="5"  y="7"  width="22" height="4" rx="1" fill="white" fill-opacity="0.95"/>
+    <rect x="5"  y="14" width="17" height="4" rx="1" fill="white" fill-opacity="0.75"/>
+    <rect x="5"  y="21" width="12" height="4" rx="1" fill="white" fill-opacity="0.55"/>
+    <circle cx="25" cy="23" r="2.2" fill="#388fc3"/>
+</svg>

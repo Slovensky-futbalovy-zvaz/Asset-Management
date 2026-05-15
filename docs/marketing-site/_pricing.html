@@ -1,0 +1,722 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+
+Inventario marketing site · Cenník (hybrid C — Free a Pro Small s cenami,
+ostatné Kontakt, + annual contract pre verejný sektor)
+-->
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cenník · Inventario</title>
+    <meta name="description" content="Cenník Inventaria — Free zadarmo navždy, Pro Small od 29 €/mes, Pro Standard, Pro Plus a Enterprise individuálne. Annual contract pre verejný sektor od 890 €/rok." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700;1,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/shared.css" />
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+    <style>
+        .pricing-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .pricing-card.featured {
+            border-color: var(--brand-primary);
+            border-width: 2px;
+            transform: scale(1.02);
+        }
+        .pricing-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--brand-primary);
+            color: white;
+            padding: 0.3rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .pricing-name { font-weight: 700; font-size: 1.3rem; }
+        .pricing-tagline { color: var(--brand-muted); font-size: 0.92rem; margin-top: 0.25rem; min-height: 3.5rem; }
+        .pricing-price {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin: 1.25rem 0 0.25rem;
+            color: var(--brand-primary);
+            line-height: 1.1;
+        }
+        .pricing-price-unit {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--brand-muted);
+        }
+        .pricing-price-sub {
+            color: var(--brand-muted);
+            font-size: 0.82rem;
+            min-height: 2.5rem;
+        }
+        .pricing-features {
+            list-style: none;
+            padding: 0;
+            margin: 1.25rem 0;
+            flex: 1;
+        }
+        .pricing-features li {
+            padding: 0.45rem 0 0.45rem 1.3rem;
+            position: relative;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #f3f4f6;
+            line-height: 1.4;
+        }
+        .pricing-features li:last-child { border-bottom: none; }
+        .pricing-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            top: 0.45rem;
+            color: var(--color-success);
+            font-weight: 700;
+        }
+        .pricing-features li.minus::before { content: '−'; color: var(--brand-muted); }
+        .pricing-features li.star::before { content: '★'; color: var(--brand-accent); }
+
+        /* Annual contract section */
+        .annual-tier-card {
+            padding: 1.25rem;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        .annual-tier-card:hover {
+            border-color: color-mix(in srgb, var(--brand-primary) 30%, transparent);
+        }
+        .annual-tier-price {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--brand-primary);
+            margin: 0.5rem 0;
+            line-height: 1.1;
+        }
+        .annual-tier-price small {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--brand-muted);
+        }
+        .annual-tier-desc {
+            color: var(--brand-muted);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .comparison-table th { font-weight: 600; color: var(--brand-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+        .comparison-table tr:last-child td { border-bottom: none; }
+        .comparison-table .check { color: var(--color-success); font-weight: 700; }
+        .comparison-table .cross { color: #d1d5db; }
+        .comparison-table td:not(:first-child) { text-align: center; }
+        .comparison-table th:not(:first-child) { text-align: center; }
+
+        @media (max-width: 900px) {
+            .pricing-card.featured { transform: none; }
+        }
+    </style>
+</head>
+<body data-page="pricing">
+
+    <!-- HERO -->
+    <section class="hero-gradient">
+        <div class="container" style="padding: 4rem 1.5rem;">
+            <div class="mono-label" style="color: rgba(255,255,255,0.6); margin-bottom: 0.75rem;">CENNÍK</div>
+            <h1 style="color: white; max-width: 720px;">Cenovo dostupné. Bez prekvapení.</h1>
+            <p class="lead-white" style="max-width: 720px; margin-top: 1rem;">
+                Päť úrovní pre rôzne typy organizácií. Free a Pro Small s konkrétnymi cenami,
+                vyššie tieri s individuálnou ponukou podľa veľkosti vašej organizácie.
+            </p>
+            <p class="lead-white" style="max-width: 720px; margin-top: 0.5rem; font-size: 0.95rem; opacity: 0.85;">
+                Pre samosprávy a verejný sektor ponúkame <strong style="color: white;">annual contract</strong> model —
+                jedna ročná faktúra, predikovateľné do rozpočtu.
+            </p>
+        </div>
+    </section>
+
+    <!-- TIERS — row 1: Free, Pro Small, Pro Standard -->
+    <section class="section" style="background: white; padding-top: 3rem;">
+        <div class="container">
+
+            <div class="grid grid-3 grid-gap-lg" style="margin-top: 2rem;">
+
+                <!-- FREE -->
+                <div class="card pricing-card" id="free">
+                    <div class="pricing-name">Free</div>
+                    <p class="pricing-tagline">Pre neziskovky, malé OZ, pilotné nasadenia. Naozaj zadarmo, navždy.</p>
+                    <div class="pricing-price">0 €</div>
+                    <div class="pricing-price-sub">Bez kreditky, bez záväzkov</div>
+
+                    <ul class="pricing-features">
+                        <li>50 položiek majetku</li>
+                        <li>10 používateľov</li>
+                        <li>Microsoft Entra ID SSO</li>
+                        <li>QR kódy pre majetok</li>
+                        <li>Audit log (30 dní retention)</li>
+                        <li>Mobile-friendly web app</li>
+                        <li>Email podpora (best-effort)</li>
+                        <li class="minus">Custom branding</li>
+                    </ul>
+
+                    <a href="mailto:inventario@ltk.solutions?subject=Free%20plan%20signup" class="btn btn-secondary" style="justify-content: center;">
+                        Začať zadarmo
+                    </a>
+                </div>
+
+                <!-- PRO SMALL -->
+                <div class="card pricing-card" id="pro-small">
+                    <div class="pricing-name">Pro Small</div>
+                    <p class="pricing-tagline">Pre malé kluby, ZŠ, malé obce. Profesionálna platforma za prijateľnú cenu.</p>
+                    <div class="pricing-price">29 €<span class="pricing-price-unit">/mes</span></div>
+                    <div class="pricing-price-sub">alebo <strong>290 €/rok</strong> · ušetríš 58 €</div>
+
+                    <ul class="pricing-features">
+                        <li class="star">500 položiek majetku</li>
+                        <li class="star">25 používateľov</li>
+                        <li>Všetko z Free plánu</li>
+                        <li>Custom branding (logo, farby)</li>
+                        <li>Audit log (180 dní retention)</li>
+                        <li>Bulk import z Excel/CSV</li>
+                        <li>Email podpora (5 dní SLA)</li>
+                        <li class="minus">API access</li>
+                    </ul>
+
+                    <a href="mailto:inventario@ltk.solutions?subject=Pro%20Small%20signup" class="btn btn-primary" style="justify-content: center;">
+                        Začať 14-dňový trial
+                    </a>
+                </div>
+
+                <!-- PRO STANDARD (featured) -->
+                <div class="card pricing-card featured" id="pro-standard">
+                    <div class="pricing-badge">Najpopulárnejšie</div>
+                    <div class="pricing-name">Pro Standard</div>
+                    <p class="pricing-tagline">Pre stredné mestá, SŠ, klubové asociácie a stredné firmy.</p>
+                    <div class="pricing-price">Kontakt</div>
+                    <div class="pricing-price-sub">Indikatívne od <strong>79 €/mes</strong> · <strong>790 €/rok</strong></div>
+
+                    <ul class="pricing-features">
+                        <li class="star">2 000 položiek majetku</li>
+                        <li class="star">100 používateľov</li>
+                        <li>Všetko z Pro Small</li>
+                        <li>Audit log (365 dní retention)</li>
+                        <li>API access (OpenAPI 3.1)</li>
+                        <li>Export do CSV, PDF, JSON</li>
+                        <li>Email podpora (24h SLA)</li>
+                        <li>Onboarding session (2 hod)</li>
+                    </ul>
+
+                    <a href="mailto:inventario@ltk.solutions?subject=Pro%20Standard%20inquiry" class="btn btn-primary" style="justify-content: center;">
+                        Vyžiadať si ponuku
+                    </a>
+                </div>
+            </div>
+
+            <!-- TIERS — row 2: Pro Plus + Enterprise -->
+            <div class="grid grid-2 grid-gap-lg" style="margin-top: 1.5rem; max-width: 820px; margin-left: auto; margin-right: auto;">
+
+                <!-- PRO PLUS -->
+                <div class="card pricing-card" id="pro-plus">
+                    <div class="pricing-name">Pro Plus</div>
+                    <p class="pricing-tagline">Pre veľké mestá, športové zväzy a krajské organizácie.</p>
+                    <div class="pricing-price">Kontakt</div>
+                    <div class="pricing-price-sub">Indikatívne od <strong>199 €/mes</strong> · <strong>1 990 €/rok</strong></div>
+
+                    <ul class="pricing-features">
+                        <li class="star">10 000 položiek majetku</li>
+                        <li class="star">500 používateľov</li>
+                        <li>Všetko z Pro Standard</li>
+                        <li>Webhooks (Slack, Teams)</li>
+                        <li>Multi-level approval workflow</li>
+                        <li>Phone podpora (12h SLA)</li>
+                        <li>Onboarding session (4 hod)</li>
+                    </ul>
+
+                    <a href="mailto:inventario@ltk.solutions?subject=Pro%20Plus%20inquiry" class="btn btn-primary" style="justify-content: center;">
+                        Vyžiadať si ponuku
+                    </a>
+                </div>
+
+                <!-- ENTERPRISE -->
+                <div class="card pricing-card" id="enterprise">
+                    <div class="pricing-name">Enterprise</div>
+                    <p class="pricing-tagline">Pre samosprávy, VÚC, ministerstvá a veľké organizácie s tvrdými compliance požiadavkami.</p>
+                    <div class="pricing-price">Kontakt</div>
+                    <div class="pricing-price-sub">Indikatívne od <strong>4 990 €/rok</strong> · custom dohoda</div>
+
+                    <ul class="pricing-features">
+                        <li class="star">Neobmedzené položky a používatelia</li>
+                        <li class="star">Privátna inštancia</li>
+                        <li class="star">Custom doména (napr. assets.bratislava.sk)</li>
+                        <li>Data Processing Agreement (GDPR)</li>
+                        <li>SLA 99.9 % uptime</li>
+                        <li>Dedikovaný account manager (4h SLA)</li>
+                        <li>SSO integrácia (OIDC, SAML)</li>
+                        <li class="star">Možnosť self-host fork s podporou</li>
+                    </ul>
+
+                    <a href="mailto:inventario@ltk.solutions?subject=Enterprise%20plan%20inquiry" class="btn btn-secondary" style="justify-content: center;">
+                        Naplánovať konzultáciu
+                    </a>
+                </div>
+            </div>
+
+            <!-- ANNUAL CONTRACT MODEL pre verejný sektor -->
+            <div class="card" style="margin-top: 3rem; background: color-mix(in srgb, var(--brand-primary) 4%, white); border-color: color-mix(in srgb, var(--brand-primary) 15%, transparent);">
+                <div style="display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <div style="font-size: 2rem;">🏛️</div>
+                    <div style="flex: 1; min-width: 280px;">
+                        <h3 style="margin-top: 0;">Annual Contract pre verejný sektor</h3>
+                        <p class="brand-muted" style="font-size: 0.95rem; margin-bottom: 0;">
+                            Pre samosprávy, VÚC, ministerstvá a štátne inštitúcie ponúkame
+                            <strong style="color: var(--brand-primary);">ročnú zmluvu</strong>
+                            namiesto mesačného SaaS. Jeden invoice ročne, predikovateľné do rozpočtu,
+                            kompatibilné s verejným obstarávaním pod 40 000 € bez tendra.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-4 grid-gap-lg" style="margin-top: 1rem;">
+                    <div class="annual-tier-card">
+                        <div class="mono-label">Malá</div>
+                        <div class="annual-tier-price">890 €<small>/rok</small></div>
+                        <p class="annual-tier-desc">Do 50 zamestnancov<br />Obec, malý klub, ZŠ</p>
+                    </div>
+                    <div class="annual-tier-card">
+                        <div class="mono-label">Stredná</div>
+                        <div class="annual-tier-price">2 490 €<small>/rok</small></div>
+                        <p class="annual-tier-desc">51–200 zamestnancov<br />Mesto 5–20k obyv., SŠ</p>
+                    </div>
+                    <div class="annual-tier-card">
+                        <div class="mono-label">Veľká</div>
+                        <div class="annual-tier-price">5 990 €<small>/rok</small></div>
+                        <p class="annual-tier-desc">201–1000 zamestnancov<br />Mesto 20–100k obyv., zväz</p>
+                    </div>
+                    <div class="annual-tier-card">
+                        <div class="mono-label">XL</div>
+                        <div class="annual-tier-price">od 12 000 €<small>/rok</small></div>
+                        <p class="annual-tier-desc">1000+ zamestnancov<br />VÚC, ministerstvo</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; text-align: center;">
+                    <a href="mailto:inventario@ltk.solutions?subject=Annual%20contract%20-%20verejn%C3%BD%20sektor" class="btn btn-primary">
+                        Vyžiadať si ponuku pre verejný sektor
+                    </a>
+                </div>
+            </div>
+
+            <!-- Open-source note -->
+            <div class="card" style="margin-top: 1.5rem; background: color-mix(in srgb, var(--brand-primary) 5%, white); border-color: color-mix(in srgb, var(--brand-primary) 15%, transparent);">
+                <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                    <div style="font-size: 2.5rem;">🔓</div>
+                    <div style="flex: 1; min-width: 280px;">
+                        <h3 style="margin-top: 0;">Self-hosted fork — zadarmo, navždy</h3>
+                        <p class="brand-muted" style="font-size: 0.95rem; margin-bottom: 0;">
+                            Inventario je licencované pod <strong style="color: var(--brand-primary);">EUPL-1.2</strong>.
+                            To znamená že si môžeš celý zdrojový kód forknúť a hostiť na vlastnej infraštruktúre.
+                            Žiadne mesačné poplatky, plná kontrola nad dátami a kódom.
+                        </p>
+                    </div>
+                    <a href="https://github.com/Slovensky-futbalovy-zvaz/Asset-Management" class="btn btn-secondary" target="_blank" rel="noopener">
+                        Pozrieť GitHub →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMPARISON TABLE -->
+    <section class="section">
+        <div class="container">
+            <div style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">DETAILNÉ POROVNANIE</div>
+                <h2>Funkcie podľa plánu</h2>
+                <p class="brand-muted" style="font-size: 0.95rem;">
+                    Porovnanie hlavných troch tierov. Pro Plus má všetko z Pro Standard plus webhooks a multi-level approval.
+                    Enterprise má všetko plus privátnu inštanciu a custom doménu.
+                </p>
+            </div>
+
+            <div class="card" style="padding: 0; overflow-x: auto;">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 240px;">Funkcia</th>
+                            <th style="min-width: 90px;">Free</th>
+                            <th style="min-width: 110px;">Pro Small</th>
+                            <th style="min-width: 110px;">Pro Standard</th>
+                            <th style="min-width: 90px;">Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Cena</strong></td>
+                            <td colspan="4" style="background: #fafbfc;"></td>
+                        </tr>
+                        <tr>
+                            <td>Mesačne</td>
+                            <td>0 €</td>
+                            <td>29 €</td>
+                            <td>od 79 €</td>
+                            <td>kontakt</td>
+                        </tr>
+                        <tr>
+                            <td>Ročne (-17 %)</td>
+                            <td>0 €</td>
+                            <td>290 €</td>
+                            <td>od 790 €</td>
+                            <td>od 4 990 €</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Evidencia majetku</strong></td>
+                            <td colspan="4" style="background: #fafbfc;"></td>
+                        </tr>
+                        <tr>
+                            <td>Položky majetku</td>
+                            <td>50</td>
+                            <td>500</td>
+                            <td>2 000</td>
+                            <td>neobmedzene</td>
+                        </tr>
+                        <tr>
+                            <td>Používatelia</td>
+                            <td>10</td>
+                            <td>25</td>
+                            <td>100</td>
+                            <td>neobmedzene</td>
+                        </tr>
+                        <tr>
+                            <td>Kategórie a lokality (hierarchické)</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>QR kódy a tlač štítkov</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Prílohy (faktúry, foto, dokumenty)</td>
+                            <td>100 MB</td>
+                            <td>1 GB</td>
+                            <td>5 GB</td>
+                            <td>neobmedzene</td>
+                        </tr>
+                        <tr>
+                            <td>Bulk import z Excel/CSV</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>API access (OpenAPI 3.1)</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Výpožičky a schvaľovanie</strong></td>
+                            <td colspan="4" style="background: #fafbfc;"></td>
+                        </tr>
+                        <tr>
+                            <td>Žiadosti o výpožičku</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Multi-level schvaľovanie</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Conflict detection</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Email notifikácie</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Webhooks (Slack, Teams)</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓ (Pro Plus+)</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Bezpečnosť a SSO</strong></td>
+                            <td colspan="4" style="background: #fafbfc;"></td>
+                        </tr>
+                        <tr>
+                            <td>RBAC (3 roly)</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Microsoft Entra ID SSO</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>OIDC / SAML integrácia</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Audit log retention</td>
+                            <td>30 dní</td>
+                            <td>180 dní</td>
+                            <td>365 dní</td>
+                            <td>custom</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Brand a customizácia</strong></td>
+                            <td colspan="4" style="background: #fafbfc;"></td>
+                        </tr>
+                        <tr>
+                            <td>Custom logo a farby</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Custom doména</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Privátna inštancia</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                        </tr>
+
+                        <tr>
+                            <td><strong>Compliance a podpora</strong></td>
+                            <td colspan="4" style="background: #fafbfc;"></td>
+                        </tr>
+                        <tr>
+                            <td>GDPR Article 30 audit log</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Data Processing Agreement (DPA)</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="cross">−</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>SLA uptime</td>
+                            <td>best-effort</td>
+                            <td>best-effort</td>
+                            <td>99.5 %</td>
+                            <td>99.9 %</td>
+                        </tr>
+                        <tr>
+                            <td>Email podpora</td>
+                            <td>best-effort</td>
+                            <td>5 dní</td>
+                            <td>24h SLA</td>
+                            <td>4h + manager</td>
+                        </tr>
+                        <tr>
+                            <td>Self-host fork (EUPL-1.2)</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" style="background: white;">
+        <div class="container-narrow">
+            <div style="text-align: center; margin-bottom: 3rem;">
+                <div class="mono-label" style="margin-bottom: 0.75rem;">ČASTÉ OTÁZKY</div>
+                <h2>Skôr ako sa spýtate</h2>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Prečo nemajú všetky tieri konkrétne ceny?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Free a Pro Small majú fixné ceny, lebo sú vhodné pre malé organizácie so štandardnými potrebami.
+                        Pro Standard, Pro Plus a Enterprise prispôsobujeme veľkosti vašej organizácie — mesto s 20 000
+                        obyvateľmi má iné potreby než VÚC s 800 000 obyvateľmi. Indikatívne ceny sú uvedené pri každom tier-i.
+                        Konkrétnu ponuku dostanete do 2 pracovných dní.
+                    </p>
+                </details>
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Čo je „annual contract" pre verejný sektor?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Pre samosprávy, VÚC a štátne inštitúcie ponúkame ročnú zmluvu s jednou faktúrou namiesto
+                        mesačného SaaS. Dôvody: predikovateľné do rozpočtu, kompatibilné s verejným obstarávaním
+                        pod 40 000 €/rok bez tendra, menej administratívneho overheadu. Cena podľa veľkosti
+                        organizácie (Malá, Stredná, Veľká, XL).
+                    </p>
+                </details>
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Môžem prejsť medzi pricing plánmi?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Áno, kedykoľvek. Tvoje dáta sa migrujú automaticky. Z Free na Pro Small môžeš prejsť ihneď
+                        priamo cez aplikáciu. Z Pro Small na vyššie tieri (Standard/Plus/Enterprise) cez náš tím
+                        — pripravíme zmluvu, presunieme dáta, prejdeš na novú inštanciu (pri Enterprise privátnej inštancii).
+                        Naopak (down-grade) funguje tiež, ale limit položiek musí byť dodržaný.
+                    </p>
+                </details>
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Čo ak sa rozhodnem skončiť? Stratím dáta?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Nie. Inventario má plný export do CSV, JSON a OpenAPI formátu. Tvoje dáta sú vždy tvoje.
+                        Navyše si môžeš celý zdrojový kód forknúť a pokračovať vo vlastnej inštancii — to je celý
+                        zmysel EUPL-1.2 licencie a anti vendor lock-in princípu.
+                    </p>
+                </details>
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Sú možné zľavy pri viacročnej zmluve alebo skupinovom nákupe?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Áno. Štandardné zľavy: ročná platba ušetrí ~17 % (10 mesiacov ekvivalent), 2-ročná zmluva
+                        dodatočných -5 %, 3-ročná -10 %. Pre mestské skupiny alebo klubové asociácie (3+ tenantov)
+                        máme multi-tenant rabat -15 % per tenant. Pre prvých 10 zákazníkov ponúkame founding customer
+                        rabat -25 % prvý rok výmenou za logo na webe + case study súhlas.
+                    </p>
+                </details>
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Kde sú dáta hostované?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Cloud Multi-tenant a Privátna inštancia sú hostované v EU regióne (Vercel fra1 Frankfurt
+                        alebo cdg1 Paríž, MongoDB Atlas v Írsku alebo Frankfurte). Self-host fork si hostuješ kde chceš.
+                    </p>
+                </details>
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Aký je vzťah k SportUp ekosystému?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Inventario je súčasť SportUp ekosystému — národnej platformy pre šport na Slovensku.
+                        SportUp identita bude druhý SSO provider (popri Microsoft Entra ID). V budúcnosti
+                        plánujeme aj integráciu s ClubUp a inými modulmi ekosystému. Inventario je však
+                        nezávisle použiteľné aj pre ne-športové organizácie (mestá, školy).
+                    </p>
+                </details>
+
+                <details class="card" style="padding: 1.25rem 1.5rem;">
+                    <summary style="font-weight: 600; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Môžem si vyskúšať platený plán zadarmo?</span>
+                        <span style="color: var(--brand-muted);">+</span>
+                    </summary>
+                    <p style="margin-top: 1rem; color: var(--brand-muted); font-size: 0.95rem;">
+                        Áno — Pro Small má 14-dňový trial zadarmo, bez kreditky. Pro Standard a Pro Plus
+                        ponúkame 30-dňový trial po krátkom úvodnom hovore. Pre Enterprise plán radi pripravíme
+                        proof-of-concept s vašimi reálnymi dátami (typicky 4–6 týždňov).
+                    </p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section" style="background: var(--brand-primary); color: white; text-align: center;">
+        <div class="container-narrow">
+            <h2 style="color: white;">Stále nie ste si istí?</h2>
+            <p class="lead-white">
+                Naplánujte si 30-minútový discovery call. Pozrieme sa na vaše konkrétne potreby a navrhneme
+                najlepšiu cestu — či už cloud, privátnu inštanciu, annual contract pre verejný sektor,
+                alebo self-hosted fork.
+            </p>
+            <div style="margin-top: 2rem;">
+                <a href="mailto:inventario@ltk.solutions?subject=Discovery%20call" class="btn btn-primary" style="background: white; color: var(--brand-primary);">
+                    Naplánovať call
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <script src="assets/shared.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+
+Inventario logotype · Logo + wordmark v jednom SVG.
+Pre použitie v dokumentoch, prezentáciách, hlavičkách emailov.
+Šírka 240 × výška 60 (4:1 pomer, scaluje sa lineárne).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+    <!-- Logomark container (navy rounded square) -->
+    <rect x="6" y="10" width="40" height="40" rx="9" fill="#1a2d47"/>
+
+    <!-- Stacked layers -->
+    <rect x="12" y="18.75" width="27.5" height="5"   rx="1.25" fill="white" fill-opacity="0.95"/>
+    <rect x="12" y="27.5"  width="21.25" height="5" rx="1.25" fill="white" fill-opacity="0.75"/>
+    <rect x="12" y="36.25" width="15" height="5"     rx="1.25" fill="white" fill-opacity="0.55"/>
+
+    <!-- Accent dot -->
+    <circle cx="37" cy="38.75" r="2.75" fill="#388fc3"/>
+
+    <!-- Wordmark "Inventario" -->
+    <text x="58" y="40"
+          font-family="Poppins, system-ui, sans-serif"
+          font-size="22"
+          font-weight="800"
+          font-style="italic"
+          letter-spacing="-0.5"
+          fill="#1a2d47">Inventario</text>
+</svg>

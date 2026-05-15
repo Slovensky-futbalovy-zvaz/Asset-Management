@@ -11,14 +11,55 @@ Formát vychádza zo štandardu [Keep a Changelog](https://keepachangelog.com/en
 
 ## [Unreleased]
 
+### Added
+
+- **6 P0 design mockupov** (`docs/design/screens/`) — plne interaktívne high-fidelity HTML mockupy všetkých kritických obrazoviek aplikácie:
+  - `01-login.html` — multi-tenant login s brand switcher-om a Microsoft SSO
+  - `02-dashboard.html` — role-aware dashboard (Employee/Manager/Admin views)
+  - `03-assets-list.html` — live search + filtre + grid/table toggle
+  - `04-asset-detail.html` — 5 tabs, real QR kód, diff audit log, vertikálna timeline
+  - `05-loan-request.html` — 3-step wizard + conflict detection + success state
+  - `06-my-loans.html` — user-first tabs (Active/Pending/History) s due date urgency
+  - `index.html` — landing page so 6 screen cards pre prezentáciu
+- **4 demo tenanti** s vlastnými brand identitámi cez CSS custom properties (Inventario default, ŠK Inter, Mesto Pezinok, SŠ Kremnica), 48 unique demo assets celkovo.
+- **Marketingový web** (`docs/marketing-site/`) — 5 stránok pre verejnú prezentáciu projektu:
+  - `_home.html` — Hero, Pre koho, Ako to funguje, Prečo Inventario, Možnosti nasadenia, SSO
+  - `_use-cases.html` — 6 detailných use cases (zväzy, mestá, VÚC, kluby, školy, NGO)
+  - `_pricing.html` — hybrid C pricing (5 tierov + Annual Contract pre verejný sektor)
+  - `_technology.html` — tech stack + bezpečnosť + EU compliance
+  - `_about.html` — príbeh, timeline, SportUp ekosystém, team
+  - `index.html` — demo wrapper s viewport switcher-om (375/768/1280)
+- **Shared marketing assets** — `shared.css` (design system, ~430 riadkov), `shared.js` (auto-injekt nav + footer modul s mobile menu).
+- **Brand System v1.0**:
+  - `BRAND.md` — comprehensive brand guide (~600 riadkov, 11 sekcií: filozofia, logo, palety, typografia, pattern, copywriting, multi-tenant whitelabeling, forks)
+  - `docs/assets/brand/inventario/` — 4 SVG varianty (logo, logo-container, logotype, pattern)
+  - `docs/marketing-site/assets/favicon.svg` — browser tab icon
+  - CSS pattern systeme (`.hero-gradient::after`, `.pattern-bg`, `.pattern-bg.pattern-dark` utility classes)
+  - Aktualizovaný `docs/assets/brand/README.md` pre post-pivot reačitu
+- **Pricing strategy v1.0**:
+  - Hybrid C model implementovaný na webe (Free a Pro Small s konkrétnymi cenami: 0 €, 29 €/mes alebo 290 €/rok)
+  - 3 vyššie tieri s indikatívnymi cenami a Kontakt CTA (Pro Standard od 79 €, Pro Plus od 199 €, Enterprise od 4 990 €/rok)
+  - **Annual Contract model** pre verejný sektor (Malá 890 €, Stredná 2 490 €, Veľká 5 990 €, XL od 12 000 €/rok)
+  - Komplet comparison tabuľka 4 stĺpce
+  - 8 FAQ otázok pre verejné prípady
+  - **Interný Sales playbook** (`docs/sessions/2026-05-15-pricing-strategy.md`, ~700 riadkov): princípy cenotvorby, sanity check vs konkurencia, námietky a odpovede, 5 case studies (Pezinok, Inter, Kremnica, SFZ, BSK)
+- **Open Graph + Twitter Card meta tags** v `_home.html` pre social media preview.
+- **Favicon link** vo všetkých 6 marketingových HTML súboroch (`<link rel="icon" type="image/svg+xml">`).
+- **Session dokumentácia**:
+  - `docs/sessions/2026-05-15-day-summary.md` — komplet prečlad celej session s metrikami a lessons learned
+  - `docs/sessions/NEXT.md` — continuation plan pre budúce sessions (súčasný stav, najbližšie kroky, long-term ideas, technical debt, EU compliance roadmap)
+  - `docs/sessions/2026-05-15-pricing-strategy.md` — interná cenová stratégia (pre Sales)
+
 ### Changed
 
 - Strategický pivot z _SFZ Asset Management_ na **Inventario** — multi-tenant white-label platformu pre športové zväzy, mestá a obce, VÚC, kluby, školy a neziskové organizácie.
 - Licencia zmenená z MIT na **EUPL-1.2** (zdrojový kód) + **CC-BY-4.0** (dokumentácia) — pripravené pre EU verejný sektor a EU rozvojové fondy.
 - Brand identita prevzatá z [SportUp ekosystému](https://github.com/ltksolutions/sportup.sk) — Navy `#1A2D47`, Blue `#388FC3`, Paper `#F8F6F1`, font Poppins.
-- README.md kompletne prepísaný — Inventario branding, SFZ pozícia ako _founding contributor_.
+- README.md kompletne prepísaný — Inventario branding, SFZ pozícia ako _founding contributor_, link na `BRAND.md`.
+- `REUSE.toml` rozsírený — `BRAND.md` registrovaný pod CC-BY-4.0, REUSE compliance ostal 100 % (175/175 súborov).
+- `docs/assets/brand/README.md` prepísaný — odráža post-pivot realítu (Inventario primárne, SFZ ako founding contributor).
 
-### Added
+### Added (compliance & infrastructure)
 
 - ADR-0010: Multi-tenant white-label architektúra (logical multi-tenancy + open-source fork stratégia).
 - ADR-0011: Open-source licensing — EUPL-1.2 + CC-BY-4.0 + REUSE 3.3 compliance.
@@ -28,6 +69,12 @@ Formát vychádza zo štandardu [Keep a Changelog](https://keepachangelog.com/en
 - `CITATION.cff` — citačné metadata pre verejné a vedecké inštitúcie.
 - `CHANGELOG.md` — tento súbor (Keep a Changelog formát).
 - `docs/sessions/2026-05-15-design-pivot.md` — plán strategickej design session.
+
+### Fixed
+
+- Marketingová navigation — hamburger menu sa teraz zobrazuje aj na tablete (768 px), nielen na mobile (375 px). Pridané breakpointy: 1100 px (nav-links → hamburger), 700 px (skry nav-right items), 480 px (skry brand tag).
+- Nav-links text wrap fix — `white-space: nowrap` aby sa "Pre koho" / "O projekte" nezalamovali na viácero riadkov pri stredných breakpoint-och.
+- Logo upgrade — jednoduché písmeno "I" nahradené plnohodnotným SVG (3 horizontálne čiary klesá sa šírkou + modrý accent dot). Použité v nav, footri a favicon.
 
 ## [0.3.0] — 2026-05-14 — Slice #3 (čiastočne)
 

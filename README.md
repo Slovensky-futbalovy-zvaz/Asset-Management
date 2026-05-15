@@ -308,6 +308,8 @@ Inventario používa vizuálnu identitu **[SportUp — Good Idea Sport Slovakia]
 - ⚠️ **Pre nezávislé inštancie** si vytvorte vlastnú vizuálnu identitu cez design tokens (`packages/design-tokens/`)
 - 🚫 **Loga konkrétnych organizácií** (SFZ, Mesto Pezinok, atď.) nie sú súčasťou Inventaria — sú vlastníctvom príslušných organizácií
 
+📘 **Detailný brand guide pre developerov a designerov nájdete v [`BRAND.md`](BRAND.md)** — obsahuje použitie loga, farebnú paletu, typografiu, brand pattern, copywriting tonalitu a pravidlá pre forks & derivatives.
+
 ### Citácia
 
 Ak používate Inventario vo svojej práci alebo publikácii, prosím citujte ho cez metadata v [CITATION.cff](CITATION.cff). GitHub vám automaticky zobrazí "Cite this repository" tlačidlo.

@@ -1,0 +1,19 @@
+<!--
+SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+SPDX-License-Identifier: CC-BY-4.0
+
+Inventario logo · Standalone bez pozadia.
+Používa currentColor pre 3 čiary (vrstvy majetku) — sfarbí sa podľa kontextu.
+Accent dot ostáva fixne v brand-accent farbe (#388fc3).
+
+Voľby použitia:
+  - Inline v Markdown: ![Inventario](docs/assets/brand/inventario/logo.svg)
+  - V HTML cez <img>: <img src="..." style="color: white" alt="Inventario" />
+  - V CSS cez background-image (pridaj fill encoding)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Inventario logo">
+    <rect x="5"  y="7"  width="22" height="4" rx="1" fill="currentColor" fill-opacity="0.95"/>
+    <rect x="5"  y="14" width="17" height="4" rx="1" fill="currentColor" fill-opacity="0.75"/>
+    <rect x="5"  y="21" width="12" height="4" rx="1" fill="currentColor" fill-opacity="0.55"/>
+    <circle cx="25" cy="23" r="2.2" fill="#388fc3"/>
+</svg>

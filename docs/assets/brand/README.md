@@ -1,57 +1,91 @@
-# SFZ Brand Assety
+# Brand Assets
 
-Tento adresár obsahuje oficiálne brand assety Slovenského futbalového zväzu, ktoré používame v rámci Asset Management projektu.
+Tento adresár obsahuje brand assety projektu **Inventario** ako aj historické assety **SFZ** (founding contributor).
 
-## Obsah
+> Po strategickom pivote v máji 2026 ([ADR-0010](../../decisions/0010-multi-tenant-white-label.md)) sa primárna brand identita zmenila z SFZ-internal na multi-tenant white-label **Inventario**. SFZ ostáva ako prvý reálny tenant a founding contributor.
 
-- `SFZ_Design-manual_2024-01.pdf` – Oficiálny SFZ Design Manual, edícia 2024-01, vypracovaný štúdiom **Codes Brand House**
+## Štruktúra
 
-## Použitie
+```
+docs/assets/brand/
+├── README.md                       ← tento súbor
+├── inventario/                     ← primárna brand identita (Inventario)
+│   ├── logo.svg                    ← logo bez pozadia (currentColor)
+│   ├── logo-container.svg          ← logo s navy rounded background
+│   ├── logotype.svg                ← logo + wordmark
+│   └── pattern.svg                 ← brand pattern (tile)
+└── SFZ_Design-manual_2024-01.pdf   ← historický SFZ design manual (referenčný)
+```
 
-Tieto assety sú **referenčné** – nepoužívajte ich priamo v kóde. Namiesto toho:
+## 📘 Detailný brand guide
 
-1. **Pre farby, typografiu a spacing** → použite design tokens z [`packages/design-tokens/`](../../../packages/design-tokens/)
-2. **Pre logá v UI** → importujte SVG verzie z `packages/ui/src/assets/logos/` (TODO: pripraviť)
-3. **Pre tlačové výstupy** (protokoly, faktúry) → použite vektorové PDF/EPS varianty (TODO: získať od SFZ)
+Plný brand guide nájdeš v **[`BRAND.md`](../../../BRAND.md)** v root repa. Obsahuje:
 
-## Brand farby v skratke
+- Filozofia značky a hlasový tón
+- Farebná paleta (primary, semantic, gradients)
+- Typografia (Poppins + JetBrains Mono)
+- Použitie loga (variants, do/don't)
+- Brand pattern guidance
+- Multi-tenant whitelabeling rules
+- Print & ostatné materiály
 
-Pre rýchlu referenciu – plné špecifikácie nájdeš v `tokens.json`.
+## Rýchla referencia
 
-| Farba       | HEX       | PANTONE       | Použitie               |
-| ----------- | --------- | ------------- | ---------------------- |
-| SFZ Blue    | `#1450df` | 2935 C        | Primárna brand farba   |
-| SFZ Red     | `#ec1c24` | Warm Red C    | Alerty, dôležité       |
-| SFZ Black   | `#070504` | Black 6 C     | Text na svetlom pozadí |
-| Cool Grey 6 | `#bbbdbf` | Cool Grey 6 C | Svetlá sivá            |
-| Cool Grey 9 | `#808285` | Cool Grey 9 C | Stredná sivá           |
+### Primary brand farby (Inventario)
 
-## Varianty loga
+| Token             | HEX       | Použitie                             |
+| ----------------- | --------- | ------------------------------------ |
+| `--brand-primary` | `#1a2d47` | Navy — primary brand, headers, CTAs  |
+| `--brand-accent`  | `#388fc3` | Blue — accent dot, links, highlights |
+| `--brand-bg`      | `#f8f6f1` | Paper — page background              |
+| `--brand-muted`   | `#6b7a8d` | Steel — secondary text, captions     |
 
-Z design manuálu poznáme 4 hlavné varianty:
+### Typografia
 
-- **A variant** (základný) – kruhový s glóbusom a štátnym znakom → favicon, app icon
-- **B variant** – vertikálny štít s glóbusom → kompaktné priestory
-- **C variant** (vertikálny) – SFZ + nápis pod sebou → úzke priestory, login screen
-- **D variant** (horizontálny) – SFZ + nápis vpravo → hlavičky, podpisy
+- **Poppins** (sans) — telo + UI + headings
+- **JetBrains Mono** (mono) — kód, IDs, technical labels
 
-**Ochranná zóna:** ¼ výšky/šírky loga zo všetkých strán pre A/B varianty, ½ pre C/D varianty.
+### Logo varianty
 
-## Licencia a copyright
+1. **`logo.svg`** — len logomark, používa `currentColor` pre 3 čiary (vrstvy majetku). Accent dot ostáva fixne v `#388fc3`. Najflexibilnejšia varianta.
 
-Brand assety SFZ sú vlastníctvom Slovenského futbalového zväzu. Tento repozitár je open source pod MIT licenciou, ale **logá a brand prvky SFZ nie sú súčasťou MIT licencie** – ich použitie mimo tohto projektu vyžaduje samostatný súhlas SFZ.
+2. **`logo-container.svg`** — logo na navy rounded square pozadí. Pre použitie na svetlom pozadí, ako app icon, alebo keď chceš logo "zarámcovať".
 
-Ak forkneš tento repozitár a chceš ho použiť pre vlastnú organizáciu:
+3. **`logotype.svg`** — kompletný logotype = logo + wordmark "Inventario". Pre hlavičky dokumentov, vizitky, prezentácie. Pomer 4:1 (240×60).
 
-1. Odstráň všetky SFZ logá a brand assety z `docs/assets/brand/`
-2. Nahraď `tokens.json` vlastnými brand farbami
-3. Nahraď logá v UI komponentoch
+4. **`pattern.svg`** — repetičný tile. Pre použitie ako background pattern (hero sekcie, vizitky, brožúry). 120×120, opakuje sa nekonečne. Používa `currentColor` aby fungoval na ľubovoľnom pozadí.
 
-Viac informácií o copyright a brand pravidlách SFZ: [futbalsfz.sk](https://www.futbalsfz.sk)
+## Multi-tenant whitelabeling
+
+Keď organizácia (mesto, klub, škola, zväz) chce **vlastný branding** namiesto Inventario default:
+
+1. **Cloud Multi-tenant (Pro plán)** — nahrá si vlastné logo + farby cez admin UI. Inventario branding ostáva v footri ("Powered by Inventario").
+
+2. **Privátna inštancia (Enterprise plán)** — môže si nakonfigurovať custom doménu (`assets.bratislava.sk`) a kompletný rebrand. Inventario attribution v `/about` page.
+
+3. **Self-hosted fork (EUPL-1.2)** — môže si forknúť kód a kompletne odstrániť Inventario branding. **Musí ostať**:
+   - SPDX license headery v kóde (EUPL-1.2 compliance)
+   - Attribution k pôvodnému projektu v dokumentácii (EUPL-1.2 §5)
+   - REUSE 3.3 compliance
+
+Viac v **[`BRAND.md` § Forks & Derivatives](../../../BRAND.md#forks--derivatives)**.
+
+## Historický SFZ design manual
+
+`SFZ_Design-manual_2024-01.pdf` je oficiálny design manual Slovenského futbalového zväzu (Codes Brand House, edícia 2024-01).
+
+**Status**: **referenčný** — pre pochopenie SFZ ako jedného z tenants. SFZ logá a brand prvky **nie sú súčasťou EUPL-1.2 licencie** projektu — ich použitie mimo SFZ tenant prostredia vyžaduje samostatný súhlas SFZ.
+
+## Licencia
+
+- **Inventario logá a brand assety** (`inventario/`): CC-BY-4.0 (rovnako ako ostatná dokumentácia)
+- **SFZ assety**: vlastníctvo SFZ, výlučne pre SFZ tenant prostredie
+- **Brand pattern, design tokens**: CC-BY-4.0
 
 ## TODO
 
-- [ ] Získať od SFZ vektorové SVG/EPS verzie logo variantov A, B, C, D
-- [ ] Získať oficiálne fonty (ak používa SFZ konkrétny licencovaný typeface) – inak ostaneme pri Inter ako open-source alternatíve
-- [ ] Pripraviť ikonografickú sadu (kompatibilná s lucide-react v UI)
-- [ ] Pridať brand ilustrácie pre prázdne stavy (empty states) v aplikácii
+- [ ] Získať od SFZ vektorové SVG/EPS verzie SFZ logo variantov (A, B, C, D)
+- [ ] Pripraviť PNG fallbacky pre starší email klient (Outlook 2016 a starší)
+- [ ] OG image (1200×630) pre social sharing
+- [ ] Print verzie loga (CMYK + Pantone equivalents)
+- [ ] Brand video intro (animovaný pattern → logo reveal, 3 sekundy)
