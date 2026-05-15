@@ -7,7 +7,8 @@
     { "source": "/use-cases", "destination": "/_use-cases.html" },
     { "source": "/pricing", "destination": "/_pricing.html" },
     { "source": "/technology", "destination": "/_technology.html" },
-    { "source": "/about", "destination": "/_about.html" }
+    { "source": "/about", "destination": "/_about.html" },
+    { "source": "/demo", "destination": "/demo.html" }
   ],
   "redirects": [
     { "source": "/index.html", "destination": "/", "permanent": true },
