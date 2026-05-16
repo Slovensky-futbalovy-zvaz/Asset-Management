@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 1 — Organisation schema + tenant scoping fields)
+**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 2 — tenant-scoped repositories)
 
 ---
 
@@ -94,7 +94,15 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
   - JSON schema generator emits 26 schém (predtým 23)
   - Services propaguju `organisationId` z aktora pri create paths
   - JIT user provisioning používa `PENDING_TENANT_ID` placeholder (`'000000000000000000000000'`) kým nepríde tenant resolution v Blok 3
-  - **Test suite intentionally broken** — direct insert fixtures nemajú organisationId, fix-uje sa v Blok 2
+- ✅ **Phase C Blok 2**: Tenant-scoped repositories pre assets, categories, locations (2026-05-16)
+  - Nový `apps/api/src/lib/organisation-scoping.ts` — `requireTenantId(orgId)` validátor + `tenantFilter<T>(orgId, callerFilter, opts)` filter composer s default soft-delete exclusion + `PENDING_TENANT_ID` konštanta
+  - **Architektonický výber**: utility funkcie namiesto base class. Heterogénne kolekcie (assets má `inventoryNumber`, cats/locs má `slug`, audit má `at`, users má `entraOid`) by base class type signature lámali. Flat repos s explicit `requireTenantId + tenantFilter` calls na začiatku každej metódy sú čitateľnejšie a easier-to-debug
+  - **AssetsRepository, CategoriesRepository, LocationsRepository**: každá metóda berie `organisationId` ako prvý param, validuje cez `requireTenantId`, composes cez `tenantFilter`. Composite indexy `{organisationId: 1, X}` namiesto plain `{X}` (unique slugs sú teraz per-tenant)
+  - **AssetsService, CategoriesService, LocationsService**: thread `actor.organisationId` cez všetky repo calls. Read paths (`list`, `getById`) berú `actor: WithId<User>` parameter. Hierarchy helper `makeParentLookup(tenantId, session)` bind-uje aj tenant aj session
+  - **Routes** (categories, locations): `service.list({...}, request.currentUser)` a `service.getById(id, request.currentUser)` pridané `currentUser` arg
+  - **UsersRepository + AuditLogRepository**: zámerne nezmenené. Users JIT provisioning beží PRED tenant resolution (Blok 3). Audit log `insert(record)` dostáva tenantId v record obsahu od service
+  - Typecheck zelený. Test suite stále intentionally broken — fix-uje sa v Blok 5
+  - 10 modified files + 1 new file, +679/-357 riadkov
 
 ### Design system
 
@@ -127,30 +135,9 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ## 🎯 Next session — výber tém
 
-Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 done, Blok 2-5 zostávajú).
+Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 → done, Blok 2 → done, Blok 3-5 zostávajú).
 
-### 🅰️ Phase C Blok 2 — OrganisationScopedRepository + repo refactor (~2 hod) ⬅ **PRÍŠTÍ KROK**
-
-**Cieľ: každý read/write na 5 scoped kolekciách (assets, categories, locations, users, audit_logs) automaticky filtruje + injects `organisationId`. Po tomto bloku už nemôže žiadny query span-núť tenants.**
-
-- Vytvoriť `apps/api/src/lib/organisation-scoped-repository.ts` base class
-  - Constructor: `(collection, tenantContextProvider)`
-  - `tenantContextProvider`: closure ktorá vráti current `organisationId` (initially returns PENDING_TENANT_ID kým nepríde Blok 3)
-  - Auto-inject `organisationId` filter na všetkých read methods
-  - Auto-set `organisationId` field na všetkých write methods
-  - Strict mode: throw ak tenantContextProvider vráti null/undefined
-- Refactor 5 existing repositories aby extends:
-  - `AssetsRepository extends OrganisationScopedRepository<Asset>`
-  - `CategoriesRepository extends OrganisationScopedRepository<Category>`
-  - `LocationsRepository extends OrganisationScopedRepository<Location>`
-  - `UsersRepository extends OrganisationScopedRepository<User>`
-  - `AuditLogRepository extends OrganisationScopedRepository<AuditLog>` (s explicit `at` schema namiesto audit fields)
-- Update indexy aby zahŕňali `organisationId` (composite: `{organisationId: 1, slug: 1}` namiesto plain `{slug: 1}` lebo slug je unique-per-tenant)
-- Test fixtures aktualizovať aby injekcia tenant ID do `insertTestAsset`, `insertTestCategory`, `insertTestLocation`, `insertTestUser` fungovala s default tenant
-
-**Po Blok 2**: typecheck zelený, testy zatiaľ stále padajú (lebo `currentOrganisationId` v test contexte ešte nie je real), runtime zatiaľ produkuje docs s PENDING_TENANT_ID.
-
-### 🅱️ Phase C Blok 3 — Auth middleware tenant resolution + Organisations module (~2 hod)
+### 🅰️ Phase C Blok 3 — Auth middleware tenant resolution + Organisations module (~2 hod) ⬅ **PRÍŠTÍ KROK**
 
 **Cieľ: auth middleware extrahuje JWT `tid` claim → resolvuje Organisation document → injekuje `request.organisation` + `request.organisationId`. Plus admin endpoints na Organisations.**
 
@@ -164,9 +151,9 @@ Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 done, Blok 2-
   - Attach `request.organisation` + `request.organisationId` decorators
   - Update `loadCurrentUser` aby workflow začínal organisationId resolution
 - Update `UsersService.findOrProvision` aby brala `organisation: Organisation` parameter (nie iba claims) a write-la real `organisationId` (nie PENDING_TENANT_ID)
-- Wire `OrganisationScopedRepository` tenantContextProvider na `request.organisationId`
+- Refactor `UsersRepository` na tenant-scoped (rovnaký pattern ako assets/categories/locations)
 
-### 🅲 Phase C Blok 4 — Migration script + per-tenant unique index (~1 hod)
+### 🅱️ Phase C Blok 4 — Migration script + per-tenant unique index (~1 hod)
 
 - Skript `apps/api/scripts/migrate-organisation-id.ts`
   - Vytvorí default Inventario tenant document
@@ -175,25 +162,25 @@ Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 done, Blok 2-
   - Update `{inventoryNumber: 1}` na `{organisationId: 1, inventoryNumber: 1}` (slice #2b auto-increment per-tenant)
   - Drop old single-field indexes
 
-### 🅳 Phase C Blok 5 — Cross-tenant isolation tests + milestone doc (~1-1.5 hod)
+### 🅲 Phase C Blok 5 — Cross-tenant isolation tests + milestone doc (~1-1.5 hod)
 
 - Nový file `apps/api/tests/integration/cross-tenant-isolation.test.ts`
   - ~10-15 testov: tenant A nemôže read/update/delete tenant B documents
   - 2 tenants seed, requests as user-A na assets-of-B → 404 not 403
   - Slug collision per-tenant tested
   - Audit log filtered by tenant
-- Update všetky existujúce integration testy: per-test tenant provisioning
+- Update všetky existujúce integration testy: per-test tenant provisioning v test fixtures
 - Milestone doc `docs/milestones/slice-3.5-organisation-migration.md`
 - Update NEXT.md (Phase C complete, ďalej Phase D)
 
-### 🅴 Phase D — EU compliance (~half day, after Phase C complete)
+### 🅳 Phase D — EU compliance (~half day, after Phase C complete)
 
 - **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod) — useful for Slice #4 type generation
 - **SBOM CycloneDX export** v CI (~30 min) — pre EU verejné súťaže
 - **WCAG 2.1 AA audit** marketing site (~30 min) — Lighthouse + axe
 - **GDPR Article 30 audit log hardening** (~1-2 hod)
 
-### 🅵 Phase E — Tech debt cleanup (~1-2 hod, last before Slice #4)
+### 🅴 Phase E — Tech debt cleanup (~1-2 hod, last before Slice #4)
 
 **Quick wins z technical debt sekcie nižšie. Dobrý "lite" deň ak nemáš energiu na veľký feature work.**
 
@@ -205,7 +192,7 @@ Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 done, Blok 2-
 - `apps/docs/vercel.json` migrate UI override → repo file
 - `marketing-site/shared.css` migrate `--brand-*` → `@inventario/design-tokens/tokens.css`
 
-### 🅶 Slice #4 — Frontend (apps/web) — multi-day projekt 🏁 **FINÁLNY KROK**
+### 🅵 Slice #4 — Frontend (apps/web) — multi-day projekt 🏁 **FINÁLNY KROK**
 
 **Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je production-ready a čaká na konzumenta. Robíme posledný — design tokens, tenant scoping aj OpenAPI export už budú hotové.**
 
@@ -224,8 +211,9 @@ Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 done, Blok 2-
 
 Trackované pre eventuálnu cleanup session:
 
-- **Test suite broken** — `organisationId` required field na 5 collections rozbilo direct-insert fixtures. Fix-uje sa v Phase C Blok 2 (OrganisationScopedRepository) + Blok 5 (per-test tenant provisioning v test fixtures)
+- **Test suite broken** — `organisationId` required field na 5 collections rozbilo direct-insert fixtures. Fix-uje sa v Phase C Blok 5 (per-test tenant provisioning v test fixtures)
 - **`PENDING_TENANT_ID` placeholder** v `users.service.ts` — JIT users dostávajú `'000000000000000000000000'` kým nepríde tenant resolution v Blok 3. Migrácia v Blok 4 nahradí real Inventario \_id
+- **UsersRepository + AuditLogRepository nie tenant-scoped** — zámerne nezmenené v Blok 2. Users JIT beží PRED tenant resolution, scoping pridáme v Blok 3 spolu s auth middleware. Audit `insert(record)` dostáva tenantId v record obsahu od service, žiadne signature changes netreba
 - **`audit.test.ts`** flaky timeout — beží občas 30s+ na Atlas. Treba zvýšiť timeout alebo singleFork
 - **`LOCATION_TYPE_VALUES`** export do `packages/shared-types/` (currently duplicated)
 - **`UpdateCategorySchema`** + **`UpdateLocationSchema`** → presunúť do `packages/shared-types/`
