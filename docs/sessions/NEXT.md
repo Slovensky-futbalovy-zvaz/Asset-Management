@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-16 (skoro polnoc, koniec maratón session)
+**Aktualizované**: 2026-05-16 (po dokončení Slice #3 K10 + K11)
 
 ---
 
@@ -34,7 +34,7 @@ SPDX-License-Identifier: CC-BY-4.0
 ```
 Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 ├── apps/
-│   ├── api/                         → backend Fastify (production-ready, 257 tests)
+│   ├── api/                         → backend Fastify (production-ready, 310 tests)
 │   ├── docs/                        → Nextra docs site
 │   │   └── content/                 → 7 MDX stránok
 │   ├── mcp-server/                  → MCP for AI (future)
@@ -66,6 +66,8 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 - ✅ **Slice #2b**: Assets CRUD + RBAC + audit + transactions (2026-05-13)
 - ✅ **Slice #2c**: Tests + pre-commit + CI (100 testov, 2026-05-14)
 - ✅ **Slice #3 K1-K9**: Categories + Locations + FK protection (2026-05-15, 257 testov, ~158s)
+- ✅ **Slice #3 K10**: Users admin module — GET /v1/users, GET /:id, PATCH /:id (2026-05-16, +53 testov)
+- ✅ **Slice #3 K11**: Milestone doc `slice-3-categories-locations-users.md` (2026-05-16, 310 testov total, ~168s)
 
 ### Frontend marketing + demo
 
@@ -88,25 +90,10 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 Vyber jednu z týchto **alebo iné podľa toho čo dňom prichytí**:
 
-### 🅰️ Backend Slice #3 K10 — Users admin module (~3 hod)
+### 🅰️ Backend Slice #4 — Frontend (apps/web) — multi-day projekt
 
-**Najlogickejší ďalší krok pre backend completeness.**
-
-- **Súbor**: `apps/api/src/modules/users/`
-- **Endpoints**:
-  - `GET /v1/users` (ADMIN only, paginate)
-  - `GET /v1/users/:id` (ADMIN only)
-  - `PATCH /v1/users/:id` — role + isActive (ADMIN only)
-- **Edge cases**:
-  - Admin nemôže deaktivovať seba
-  - Posledný ADMIN nesmie byť odstránený / deaktivovaný
-  - `USER_ROLE_CHANGED` audit log entry
-- **Tests**: ~30-40 nových (cieľ ~290-300 total)
-- **Po K10**: K11 = milestone doc `docs/milestones/slice-3-categories-locations-users.md`
-
-### 🅱️ Backend Slice #4 — Frontend (apps/web) — multi-day projekt
-
-**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy.**
+**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je
+production-ready a čaká na konzumenta.**
 
 - Stack: Next.js 15 + TanStack Query + shadcn/ui + Tailwind
 - 6 P0 stránok podľa mockupov v `docs/design/screens/`
@@ -115,7 +102,7 @@ Vyber jednu z týchto **alebo iné podľa toho čo dňom prichytí**:
 - WCAG 2.1 AA accessibility v plánoch
 - Sub-tasks: bootstrap → auth → assets list → asset detail → loan workflow → polish
 
-### 🅲 Phase B — Design tokens refactor (~1-2 hod)
+### 🅱️ Phase B — Design tokens refactor (~1-2 hod)
 
 **Reorganizácia design systému z `docs/design/`.**
 
@@ -127,7 +114,7 @@ Vyber jednu z týchto **alebo iné podľa toho čo dňom prichytí**:
   - Flutter theme (`tokens.dart`) pre future mobile
 - Brand kit JSON pre tenant customization API
 
-### 🅳 OrganisationId migration — multi-tenant data isolation (~2 hod)
+### 🅲 OrganisationId migration — multi-tenant data isolation (~2 hod)
 
 **Per ADR-0010, treba pridať tenant scoping do všetkých collections.**
 
@@ -137,7 +124,7 @@ Vyber jednu z týchto **alebo iné podľa toho čo dňom prichytí**:
 - Update auth middleware → extract `organisationId` z JWT claim
 - Update tests (~40 zmenených)
 
-### 🅴 EU compliance roadmap items
+### 🅳 EU compliance roadmap items
 
 Voľne pickable:
 
@@ -145,6 +132,16 @@ Voľne pickable:
 - **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod)
 - **WCAG 2.1 AA audit** marketing site (~30 min) — Lighthouse + axe
 - **GDPR Article 30 audit log hardening** (~1-2 hod)
+
+### 🅴 Tech debt cleanup session (~1-2 hod)
+
+**Quick wins z technical debt sekcie nižšie. Dobrý "lite" deň ak nemáš
+energiu na veľký feature work.**
+
+- `categories.routes.ts isActive` fix (rovnaký pattern ako K10) — ~15 min
+- Export `LOCATION_TYPE_VALUES`, `UpdateCategorySchema`, `UpdateLocationSchema` do shared-types — ~30 min
+- `audit.test.ts` flaky timeout investigation — ~30-60 min
+- Marketing footer link cleanup — ~10 min
 
 ---
 
@@ -155,6 +152,7 @@ Trackované pre eventuálnu cleanup session:
 - **`audit.test.ts`** flaky timeout — beží občas 30s+ na Atlas. Treba zvýšiť timeout alebo singleFork
 - **`LOCATION_TYPE_VALUES`** export do `packages/shared-types/` (currently duplicated)
 - **`UpdateCategorySchema`** + **`UpdateLocationSchema`** → presunúť do `packages/shared-types/`
+- **`categories.routes.ts isActive` query param** — rovnaký `z.coerce.boolean()` bug ako bol v K10 users (string `"false"` interpretovaný ako `true`). Fix: replace s `z.enum(['true','false','1','0']).transform(...)` pattern
 - **Marketing footer link** `../decisions/0010-multi-tenant-white-label.md` — broken na production (decisions sa nedeployujú do marketing bundli)
 - **`apps/docs/vercel.json`** — momentálne len headers, buildCommand riešené UI override (cleaner to mať v `vercel.json` raz keď zistíme správny pattern pre monorepo)
 
@@ -173,14 +171,15 @@ Trackované pre eventuálnu cleanup session:
 
 ## 📚 Kde nájsť konkrétne info
 
-| Téma                          | Súbor                                               |
-| ----------------------------- | --------------------------------------------------- |
-| Multi-tenant architecture     | `docs/decisions/0010-multi-tenant-white-label.md`   |
-| Brand identity                | `BRAND.md` (root)                                   |
-| Roadmap                       | `ROADMAP.md` (root)                                 |
-| Pricing strategy              | `docs/sessions/2026-05-15-pricing-strategy.md`      |
-| Design pivot history          | `docs/sessions/2026-05-15-design-pivot.md`          |
-| Yesterday's progress          | `docs/sessions/2026-05-16-day-summary.md` ← **NEW** |
-| Vercel docs deploy guide      | `infra/vercel/DOCS-DEPLOYMENT.md`                   |
-| All Vercel projects           | `infra/vercel/README.md`                            |
-| Backend slice completion logs | `docs/milestones/`                                  |
+| Téma                          | Súbor                                                             |
+| ----------------------------- | ----------------------------------------------------------------- |
+| Multi-tenant architecture     | `docs/decisions/0010-multi-tenant-white-label.md`                 |
+| Brand identity                | `BRAND.md` (root)                                                 |
+| Roadmap                       | `ROADMAP.md` (root)                                               |
+| Pricing strategy              | `docs/sessions/2026-05-15-pricing-strategy.md`                    |
+| Design pivot history          | `docs/sessions/2026-05-15-design-pivot.md`                        |
+| Yesterday's progress          | `docs/sessions/2026-05-16-day-summary.md`                         |
+| Vercel docs deploy guide      | `infra/vercel/DOCS-DEPLOYMENT.md`                                 |
+| All Vercel projects           | `infra/vercel/README.md`                                          |
+| Backend slice completion logs | `docs/milestones/`                                                |
+| Latest milestone (Slice #3)   | `docs/milestones/slice-3-categories-locations-users.md` ← **NEW** |
