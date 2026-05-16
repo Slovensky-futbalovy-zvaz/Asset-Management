@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.eslint.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "migrate:organisation-id": "tsx --env-file=.env.local scripts/migrate-organisation-id.ts",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {

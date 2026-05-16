@@ -8,6 +8,6 @@
     "declarationMap": false,
     "rootDir": "."
   },
-  "include": ["src/**/*.ts", "api/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "api/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
