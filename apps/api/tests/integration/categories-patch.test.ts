@@ -25,6 +25,7 @@ import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
   insertTestCategory,
   provisionUserAsAndSignToken,
+  resolveTestTenantId,
   UserRole,
 } from '../helpers/test-fixtures.js';
 import { createTokenSigner } from '../helpers/test-jwt-loader.js';
@@ -452,7 +453,9 @@ describe('PATCH /v1/categories/:id', () => {
 
     it('advances updatedAt to a newer timestamp', async () => {
       const oldTimestamp = new Date(Date.now() - 60_000).toISOString();
+      const organisationId = await resolveTestTenantId(app);
       const insertResult = await app.mongo.db.collection('categories').insertOne({
+        organisationId,
         name: 'Old',
         slug: 'old-ts-cat',
         parentId: null,

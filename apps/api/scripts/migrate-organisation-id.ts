@@ -124,6 +124,18 @@ const LEGACY_INDEXES: Record<TenantScopedCollection, string[]> = {
   audit_logs: [],
 };
 
+/**
+ * Legacy indexes on the `organisations` root collection. These are not
+ * tenant-scoped (Organisation sits above tenancy) but the sparse-vs-
+ * partial fix from Phase C Blok 5 needs the old `*_unique_sparse`
+ * indexes dropped before the partial-filter replacements can be
+ * created on the next server boot.
+ */
+const LEGACY_ORGANISATION_INDEXES: string[] = [
+  'entraTenantId_unique_sparse',
+  'customDomain_unique_sparse',
+];
+
 // ---------------------------------------------------------------------------
 // CLI argument parsing
 // ---------------------------------------------------------------------------
@@ -332,6 +344,16 @@ async function dropLegacyIndexes(db: Db, dryRun: boolean): Promise<void> {
     totalSkipped += result.skipped;
   }
 
+  // Also drop the obsolete `*_unique_sparse` indexes on the root
+  // `organisations` collection. They are replaced by partial-filter
+  // equivalents that the repository's ensureIndexes() will recreate
+  // on the next server boot. Critical because the old sparse index
+  // treated `null` values as participating, which made two LOCAL
+  // tenants collide on `customDomain: null`.
+  const orgsResult = await dropLegacyOrganisationIndexes(db, dryRun);
+  totalDropped += orgsResult.dropped;
+  totalSkipped += orgsResult.skipped;
+
   console.log('');
   if (dryRun) {
     console.log(`  Summary: ${totalDropped} legacy index(es) would be dropped.`);
@@ -341,6 +363,51 @@ async function dropLegacyIndexes(db: Db, dryRun: boolean): Promise<void> {
     );
   }
   console.log('');
+}
+
+async function dropLegacyOrganisationIndexes(
+  db: Db,
+  dryRun: boolean,
+): Promise<{ dropped: number; skipped: number }> {
+  const collection = db.collection('organisations');
+
+  const existingIndexes = await collection.indexes();
+  const existingNames = new Set<string>(
+    existingIndexes
+      .map((idx) => (typeof idx['name'] === 'string' ? idx['name'] : null))
+      .filter((name): name is string => name !== null),
+  );
+
+  let dropped = 0;
+  let skipped = 0;
+
+  for (const indexName of LEGACY_ORGANISATION_INDEXES) {
+    if (!existingNames.has(indexName)) {
+      skipped += 1;
+      continue;
+    }
+
+    if (dryRun) {
+      console.log(`  [DRY-RUN] organisations: would drop "${indexName}".`);
+      dropped += 1;
+      continue;
+    }
+
+    try {
+      await collection.dropIndex(indexName);
+      console.log(`  ✓ organisations: dropped "${indexName}".`);
+      dropped += 1;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(
+        `  ! organisations: drop of "${indexName}" failed (${message}). ` +
+          'This is OK if another process already removed it.',
+      );
+      skipped += 1;
+    }
+  }
+
+  return { dropped, skipped };
 }
 
 async function dropLegacyIndexesForCollection(

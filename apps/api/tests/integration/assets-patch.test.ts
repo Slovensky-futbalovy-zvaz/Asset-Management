@@ -29,6 +29,7 @@ import {
   insertTestCategory,
   insertTestLocation,
   provisionUserAsAndSignToken,
+  resolveTestTenantId,
   UserRole,
 } from '../helpers/test-fixtures.js';
 import { createTokenSigner } from '../helpers/test-jwt-loader.js';
@@ -384,7 +385,9 @@ describe('PATCH /v1/assets/:id', () => {
     it('advances updatedAt to a newer timestamp', async () => {
       // Insert with a known-old updatedAt
       const oldTimestamp = new Date(Date.now() - 60_000).toISOString(); // 1 min ago
+      const organisationId = await resolveTestTenantId(app);
       const insertResult = await app.mongo.db.collection('assets').insertOne({
+        organisationId,
         inventoryNumber: 'TS-2026-001',
         serialNumber: null,
         name: 'Timestamp test',

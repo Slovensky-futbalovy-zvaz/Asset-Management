@@ -11,12 +11,21 @@
  *   - Reject deactivated users (401)
  *
  * We use `GET /v1/me` as the test target because:
- *   1. It uses only `requireAuth` (no `loadCurrentUser` / `requireRole`),
- *      so we isolate JWT verification + JIT logic
- *   2. It exercises the full JIT provisioning path — if this passes,
- *      every other authenticated endpoint will work too
- *   3. The response shape is well-defined and includes everything we
- *      need to assert on (oid → _id mapping, role defaults, etc.)
+ *   1. It exercises the full auth + tenant resolution + JIT chain
+ *      (`requireAuth` + `loadCurrentUser`) so a green run here means
+ *      every other protected endpoint will work too.
+ *   2. The response shape is well-defined and includes everything we
+ *      need to assert on (oid → _id mapping, role defaults, etc.).
+ *
+ * Phase C Blok 3 note:
+ *   `/v1/me` moved from `requireAuth` alone to the
+ *   `[requireAuth, loadCurrentUser]` chain so the tenant is resolved
+ *   before user JIT-provisioning lands. Side effect: deactivated
+ *   users now get 401 on `/v1/me` rather than 200 with `isActive: false`
+ *   — there is no longer an authenticated endpoint that returns to
+ *   a deactivated user. The trade-off is acceptable because
+ *   deactivation already locks the user out of every other endpoint,
+ *   so they cannot meaningfully use the platform regardless.
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -256,16 +265,17 @@ describe('Auth gate (GET /v1/me)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Deactivated user — note this requires loadCurrentUser, which /v1/me
-  // does NOT use. So /v1/me works even for deactivated users (that's by
-  // design from slice #2b — users can see their own deactivated state).
-  //
-  // To test deactivation enforcement, we hit a protected endpoint that
-  // uses loadCurrentUser: GET /v1/assets.
+  // Deactivated user — after Phase C Blok 3, both `/v1/me` and other
+  // protected endpoints use the `loadCurrentUser` chain that enforces
+  // `isActive`, so deactivated users now get 401 on every protected
+  // endpoint including `/v1/me`. Before Blok 3, `/v1/me` was an
+  // exception that let users see their own deactivated status; that
+  // exception was removed when tenant resolution became required for
+  // user resolution.
   // -------------------------------------------------------------------------
 
   describe('deactivated user', () => {
-    it('GET /v1/me still works (lets user see their own status)', async () => {
+    it('GET /v1/me returns 401 for a deactivated user (loadCurrentUser enforces)', async () => {
       const token = await signToken({ oid: 'soon-to-be-deactivated' });
 
       // First call: JIT provisions the user as active
@@ -284,14 +294,17 @@ describe('Auth gate (GET /v1/me)', () => {
       );
       expect(updateResult.modifiedCount).toBe(1);
 
-      // GET /v1/me should still succeed — the user can see they are inactive.
+      // GET /v1/me now rejects with 401. Deactivation is a hard lock
+      // out from the platform; we don't surface the inactive flag
+      // through a protected endpoint.
       const res = await app.inject({
         method: 'GET',
         url: '/v1/me',
         headers: { authorization: `Bearer ${token}` },
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.json<{ isActive: boolean }>().isActive).toBe(false);
+      expect(res.statusCode).toBe(401);
+      const body = res.json<{ message: string }>();
+      expect(body.message).toMatch(/deactivated/i);
     });
 
     it('GET /v1/assets returns 401 for deactivated user (loadCurrentUser enforces)', async () => {

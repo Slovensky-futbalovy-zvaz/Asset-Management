@@ -81,11 +81,17 @@ export class OrganisationsRepository {
    *   - `slug_unique` — globally unique tenant identifier used in URLs
    *     and `data-tenant` runtime brand switching. Cannot collide
    *     across the platform.
-   *   - `entraTenantId_unique_sparse` — JWT `tid` claim lookup. Sparse
-   *     so LOCAL-account tenants (no Entra tenant) can have null
-   *     without violating uniqueness.
-   *   - `customDomain_unique_sparse` — DNS-style routing for Pro/
-   *     Enterprise. Sparse for the same reason.
+   *   - `entraTenantId_unique_partial` — JWT `tid` claim lookup. The
+   *     partial filter restricts the index to rows where
+   *     `entraTenantId` is a string, so LOCAL-account tenants (with
+   *     `entraTenantId: null`) do NOT participate in uniqueness. We
+   *     use a partial filter rather than a sparse index because Mongo
+   *     sparse indexes still index rows with explicit `null` values
+   *     (only missing fields are skipped), which would collide for
+   *     two LOCAL tenants both storing `entraTenantId: null` from
+   *     the Zod schema default.
+   *   - `customDomain_unique_partial` — DNS-style routing for Pro and
+   *     Enterprise plans. Same partial-filter rationale as above.
    *   - `status_deletedAt` — admin list filters by status, the
    *     deletedAt component supports efficient soft-delete exclusion.
    */
@@ -94,11 +100,19 @@ export class OrganisationsRepository {
       this.collection.createIndex({ slug: 1 }, { unique: true, name: 'slug_unique' }),
       this.collection.createIndex(
         { entraTenantId: 1 },
-        { unique: true, sparse: true, name: 'entraTenantId_unique_sparse' },
+        {
+          unique: true,
+          partialFilterExpression: { entraTenantId: { $type: 'string' } },
+          name: 'entraTenantId_unique_partial',
+        },
       ),
       this.collection.createIndex(
         { customDomain: 1 },
-        { unique: true, sparse: true, name: 'customDomain_unique_sparse' },
+        {
+          unique: true,
+          partialFilterExpression: { customDomain: { $type: 'string' } },
+          name: 'customDomain_unique_partial',
+        },
       ),
       this.collection.createIndex({ status: 1, deletedAt: 1 }, { name: 'status_deletedAt' }),
     ]);

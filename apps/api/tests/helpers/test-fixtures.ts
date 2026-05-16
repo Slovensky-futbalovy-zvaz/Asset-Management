@@ -18,6 +18,17 @@
  *   Integration tests for endpoint X should fail when endpoint X is
  *   broken, not when a fixture happens to use endpoint Y. By bypassing
  *   the API for setup, failures point exactly at the SUT.
+ *
+ * Phase C Blok 5 (multi-tenant):
+ *   Every tenant-scoped document carries `organisationId`. The auth
+ *   middleware JIT-provisions an Organisation for the synthetic test
+ *   tenant id on the first `/v1/me` call, then all subsequent requests
+ *   from the same test reuse it. Direct-insert fixtures (`insertTestX`)
+ *   need to stamp `organisationId` on the row themselves — they take an
+ *   optional `organisationId` parameter that defaults to the JIT tenant
+ *   resolved via `resolveTestTenantId(app)`. Tests that want to assert
+ *   cross-tenant isolation can pass a different `organisationId` to seed
+ *   data for tenant B alongside tenant A.
  */
 
 import { UserRole, AccountType, type User } from '@inventario/shared-types';
@@ -25,6 +36,115 @@ import { UserRole, AccountType, type User } from '@inventario/shared-types';
 import type { SignTestTokenInput } from './test-jwt.js';
 import type { FastifyInstance } from 'fastify';
 import type { ObjectId, WithId } from 'mongodb';
+
+// ---------------------------------------------------------------------------
+// Tenant resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * The synthetic Entra tenant id all test tokens carry. The auth
+ * middleware will JIT-provision an Organisation for it on the first
+ * `/v1/me` call from any test that exercises the auth flow. Tests that
+ * need a tenant context BEFORE calling `/v1/me` use
+ * `resolveTestTenantId(app)` which provisions on demand.
+ *
+ * Defined as a string with no dashes (after lowercase normalization)
+ * since that is the slug format the OrganisationsService produces from
+ * the raw `tid` claim.
+ */
+const TEST_ENTRA_TENANT_ID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Resolve the test tenant's organisation `_id` (as a 24-hex string).
+ *
+ * Looks up the Organisation by the deterministic slug derived from
+ * `TEST_ENTRA_TENANT_ID`. If the row does not exist yet (no test has
+ * called `/v1/me` in this DB run), creates it inline so direct-insert
+ * fixtures can stamp `organisationId` even before the first authenticated
+ * request.
+ *
+ * Tests that seed two tenants (cross-tenant isolation) call
+ * `seedTestTenant(app, { slug: 'tenant-b' })` for the second one and
+ * pass that id to the fixtures.
+ */
+export async function resolveTestTenantId(app: FastifyInstance): Promise<string> {
+  const slug = TEST_ENTRA_TENANT_ID.toLowerCase().replace(/-/g, '');
+  const organisations = app.mongo.db.collection('organisations');
+
+  const existing = await organisations.findOne({ slug });
+  if (existing) {
+    return String(existing['_id']);
+  }
+
+  // Mirror the JIT-provision path so fixture-inserted tenants look
+  // exactly like auth-middleware-provisioned ones. The schema fields
+  // here match OrganisationsService.buildOrganisationFromClaims().
+  const now = new Date().toISOString();
+  const doc = {
+    displayName: `Test tenant ${slug}`,
+    slug,
+    entraTenantId: TEST_ENTRA_TENANT_ID,
+    customDomain: null,
+    status: 'ACTIVE' as const,
+    plan: 'FREE' as const,
+    primaryContactEmail: null,
+    brandKit: null,
+    settings: {},
+    createdAt: now,
+    updatedAt: now,
+    createdBy: 'SYSTEM' as const,
+    updatedBy: 'SYSTEM' as const,
+    deletedAt: null,
+    deletedBy: null,
+  };
+
+  const result = await organisations.insertOne(doc);
+  return String(result.insertedId);
+}
+
+/**
+ * Seed an additional test tenant with a custom slug. Used by cross-
+ * tenant isolation tests that need to assert tenant A cannot see tenant
+ * B's data. Returns the tenant's `_id` as a 24-hex string.
+ *
+ * The seeded tenant has `entraTenantId` set to a fresh UUID so it does
+ * not collide with `TEST_ENTRA_TENANT_ID` on the sparse unique index.
+ */
+export async function seedTestTenant(
+  app: FastifyInstance,
+  options: {
+    slug: string;
+    displayName?: string;
+    entraTenantId?: string | null;
+    status?: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+  },
+): Promise<{ _id: string; slug: string }> {
+  const now = new Date().toISOString();
+  const doc = {
+    displayName: options.displayName ?? `Tenant ${options.slug}`,
+    slug: options.slug,
+    entraTenantId:
+      options.entraTenantId !== undefined
+        ? options.entraTenantId
+        : // Random UUID v4-ish to avoid collision with TEST_ENTRA_TENANT_ID.
+          `00000000-0000-4000-8000-${randomHex(12)}`,
+    customDomain: null,
+    status: options.status ?? ('ACTIVE' as const),
+    plan: 'FREE' as const,
+    primaryContactEmail: null,
+    brandKit: null,
+    settings: {},
+    createdAt: now,
+    updatedAt: now,
+    createdBy: 'SYSTEM' as const,
+    updatedBy: 'SYSTEM' as const,
+    deletedAt: null,
+    deletedBy: null,
+  };
+
+  const result = await app.mongo.db.collection('organisations').insertOne(doc);
+  return { _id: String(result.insertedId), slug: options.slug };
+}
 
 // ---------------------------------------------------------------------------
 // User fixtures
@@ -115,6 +235,12 @@ export async function provisionUserAsAndSignToken(
 
 export interface InsertTestAssetOptions {
   /**
+   * Tenant scope for this asset. Defaults to the JIT-resolved test
+   * tenant (`resolveTestTenantId(app)`). Cross-tenant tests pass a
+   * different `_id` to seed data for a second tenant.
+   */
+  organisationId?: string;
+  /**
    * Inventory number. Defaults to a unique value based on the current
    * test timestamp, avoiding collisions across tests.
    */
@@ -150,6 +276,7 @@ export async function insertTestAsset(
   options: InsertTestAssetOptions = {},
 ): Promise<{ _id: string; inventoryNumber: string; name: string }> {
   const now = new Date().toISOString();
+  const organisationId = options.organisationId ?? (await resolveTestTenantId(app));
   // Unique-ish default inventory number so parallel tests don't clobber.
   // Format mirrors production: PREFIX-YYYY-NNN (but with millis for uniqueness).
   const defaultInventoryNumber =
@@ -157,6 +284,7 @@ export async function insertTestAsset(
     `TEST-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
 
   const doc = {
+    organisationId,
     inventoryNumber: defaultInventoryNumber,
     serialNumber: null,
     name: options.name ?? 'Test Asset',
@@ -266,6 +394,11 @@ export async function seedAssetFkRefs(
 // ---------------------------------------------------------------------------
 
 export interface InsertTestCategoryOptions {
+  /**
+   * Tenant scope for this category. Defaults to the JIT-resolved test
+   * tenant. Pass a different `_id` to seed cross-tenant data.
+   */
+  organisationId?: string;
   /** Display name. Defaults to a unique name based on millisecond timestamp. */
   name?: string;
   /** Slug. Defaults to a millisecond-timestamped variant to avoid collisions. */
@@ -314,8 +447,10 @@ export async function insertTestCategory(
 ): Promise<{ _id: string; name: string; slug: string }> {
   const now = new Date().toISOString();
   const stamp = Date.now().toString().slice(-6);
+  const organisationId = options.organisationId ?? (await resolveTestTenantId(app));
 
   const doc = {
+    organisationId,
     name: options.name ?? `Test Category ${stamp}`,
     slug: options.slug ?? `test-category-${stamp}`,
     parentId: options.parentId ?? null,
@@ -386,6 +521,11 @@ export type LocationType =
   | 'IN_TRANSIT';
 
 export interface InsertTestLocationOptions {
+  /**
+   * Tenant scope for this location. Defaults to the JIT-resolved test
+   * tenant. Pass a different `_id` to seed cross-tenant data.
+   */
+  organisationId?: string;
   /** Display name. Defaults to a unique name based on millisecond timestamp. */
   name?: string;
   /** Slug. Defaults to a millisecond-timestamped variant to avoid collisions. */
@@ -426,8 +566,10 @@ export async function insertTestLocation(
 ): Promise<{ _id: string; name: string; slug: string }> {
   const now = new Date().toISOString();
   const stamp = Date.now().toString().slice(-6);
+  const organisationId = options.organisationId ?? (await resolveTestTenantId(app));
 
   const doc = {
+    organisationId,
     name: options.name ?? `Test Location ${stamp}`,
     slug: options.slug ?? `test-location-${stamp}`,
     type: options.type ?? 'WAREHOUSE',
@@ -484,6 +626,11 @@ export function validCreateLocationBody(
 // ---------------------------------------------------------------------------
 
 export interface InsertTestUserOptions {
+  /**
+   * Tenant scope for this user. Defaults to the JIT-resolved test
+   * tenant. Pass a different `_id` to seed cross-tenant data.
+   */
+  organisationId?: string;
   /** Primary email. Defaults to a unique value based on millisecond timestamp. */
   email?: string;
   /** First name. Defaults to "Test". */
@@ -526,6 +673,7 @@ export async function insertTestUser(
   // Random hex stamp so concurrent inserts in the same tick get distinct
   // emails / entraOids without colliding on either unique index.
   const stamp = randomHex(12);
+  const organisationId = options.organisationId ?? (await resolveTestTenantId(app));
 
   const firstName = options.firstName ?? 'Test';
   const lastName = options.lastName ?? 'User';
@@ -537,6 +685,7 @@ export async function insertTestUser(
   const defaultEntraOid = accountType === 'ENTRA_ID' ? `00000000-0000-4000-8000-${stamp}` : null;
 
   const doc = {
+    organisationId,
     email: options.email ?? `test-${stamp}@example.com`,
     firstName,
     lastName,
