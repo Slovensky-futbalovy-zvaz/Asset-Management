@@ -101,7 +101,7 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
   - **AssetsService, CategoriesService, LocationsService**: thread `actor.organisationId` cez všetky repo calls. Read paths (`list`, `getById`) berú `actor: WithId<User>` parameter. Hierarchy helper `makeParentLookup(tenantId, session)` bind-uje aj tenant aj session
   - **Routes** (categories, locations): `service.list({...}, request.currentUser)` a `service.getById(id, request.currentUser)` pridané `currentUser` arg
   - **UsersRepository + AuditLogRepository**: zámerne nezmenené. Users JIT provisioning beží PRED tenant resolution (Blok 3). Audit log `insert(record)` dostáva tenantId v record obsahu od service
-  - Typecheck zelený. Test suite stále intentionally broken — fix-uje sa v Blok 5
+  - Typecheck zelený. shared-types unit testy zelené. apps/api integration testy stále intentionally broken (per-test tenant provisioning land-uje v Blok 5)
   - 10 modified files + 1 new file, +679/-357 riadkov
 
 ### Design system
@@ -211,7 +211,7 @@ Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 → done, Blo
 
 Trackované pre eventuálnu cleanup session:
 
-- **Test suite broken** — `organisationId` required field na 5 collections rozbilo direct-insert fixtures. Fix-uje sa v Phase C Blok 5 (per-test tenant provisioning v test fixtures)
+- **apps/api integration test suite broken** — `organisationId` required field rozbilo direct-insert fixtures v `apps/api/tests/helpers/test-fixtures.ts`. Fix-uje sa v Phase C Blok 5 (per-test tenant provisioning). shared-types unit testy sú už zelené (`validAssetInput` + `validUserInput` dostali `organisationId` placeholder field)
 - **`PENDING_TENANT_ID` placeholder** v `users.service.ts` — JIT users dostávajú `'000000000000000000000000'` kým nepríde tenant resolution v Blok 3. Migrácia v Blok 4 nahradí real Inventario \_id
 - **UsersRepository + AuditLogRepository nie tenant-scoped** — zámerne nezmenené v Blok 2. Users JIT beží PRED tenant resolution, scoping pridáme v Blok 3 spolu s auth middleware. Audit `insert(record)` dostáva tenantId v record obsahu od service, žiadne signature changes netreba
 - **`audit.test.ts`** flaky timeout — beží občas 30s+ na Atlas. Treba zvýšiť timeout alebo singleFork
