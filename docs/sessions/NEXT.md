@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 3 — auth middleware tenant resolution + Organisations module)
+**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 4 — migration script + per-tenant indexes)
 
 ---
 
@@ -116,6 +116,15 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
   - **server.ts**: organisationsRoutes registered PRED usersRoutes (decorator order — loadCurrentUser potrebuje `fastify.organisationsService` decorator)
   - Typecheck zelený. 9 changed files (1 v shared-types, 8 v apps/api) + 3 nové súbory v organisations/. Commits: shared-types audit-log enum + api organisations module (separated)
   - apps/api integration testy stále broken (Blok 5 fix)
+- ✅ **Phase C Blok 4**: Migration script + per-tenant unique indexes (2026-05-16)
+  - Nový skript `apps/api/scripts/migrate-organisation-id.ts` — idempotent, supports `--dry-run`, standalone (žiadny Fastify plugin chain — pure Mongo driver). Npm entry `pnpm --filter @inventario/api migrate:organisation-id`
+  - **Step 1**: Vytvorí default `inventario` tenant document (slug `inventario`, displayName `Inventario`, status ACTIVE, plan FREE, entraTenantId null). Idempotent — ak už existuje, reuse
+  - **Step 2**: Backfill `organisationId` na všetkých 5 tenant-scoped collections (users, assets, categories, locations, audit_logs) z `PENDING_TENANT_ID` placeholder na real `_id` defaultného tenanta. Single `updateMany` per collection
+  - **Step 3**: Drop 5 legacy single-field unique indexes (`users.email_unique`, `users.isActive_deletedAt`, `assets.inventoryNumber_unique`, `categories.slug_unique`, `locations.slug_unique`). Index list obsahuje aj alternatívne názvy `_1` z auto-gen Mongo formy pre kolekcie vytvorené v rôznych dobách. Race-condition tolerantné. Nové composite indexes vytvorí každý repository `ensureIndexes()` pri ďalšom server bootu
+  - **Dev DB tested**: dry-run reportoval 0 PENDING rows + 5 legacy indexes na drop. Real run vytvoril Inventario tenant (\_id `6a088128a0922e418181d257`), dropped 5 indexes. Druhý dry-run potvrdil idempotency — 0 zmien
+  - **tsconfig.eslint.json**: pridaný `scripts/**/*.ts` do `include` aby skript bol covered cez project typecheck
+  - **Production pripravenosť**: skript zostáva runnable proti production DB — stačí dočasne prepnúť `MONGO_URI` v `.env.local` na production cluster. Operátor je audit trail (žiadny audit log write v skripte zámerne)
+  - 3 changed files (1 new + 2 modified). Typecheck zelený
 
 ### Design system
 
@@ -148,28 +157,18 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ## 🎯 Next session — výber tém
 
-Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 → done, Blok 2 → done, Blok 3 → done, Blok 4-5 zostávajú).
+Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1-4 → done, Blok 5 zostáva).
 
-### 🅰️ Phase C Blok 4 — Migration script + per-tenant unique index (~1 hod) ⬅ **PRÍŠTÍ KROK**
+### 🅰️ Phase C Blok 5 — Cross-tenant isolation tests + milestone doc (~1-1.5 hod) ⬅ **PRÍŠTÍ KROK**
 
-**Cieľ: backfill production data ktorá vznikla pred Blok 3 (mali `PENDING_TENANT_ID` placeholder) a rebuilduj unique indexy na composite per-tenant tvar.**
-
-- Skript `apps/api/scripts/migrate-organisation-id.ts`
-  - Vytvorí default Inventario tenant document (slug `inventario`, displayName `Inventario`, FREE plan)
-  - Backfill `organisationId` na všetkých existujúcich documents s `PENDING_TENANT_ID` → real Inventario \_id
-  - Update všetky unique indexes z `{slug: 1}` na `{organisationId: 1, slug: 1}` (composite)
-  - Update `{inventoryNumber: 1}` na `{organisationId: 1, inventoryNumber: 1}` (slice #2b auto-increment per-tenant)
-  - Drop old single-field indexes
-- Note: Blok 3 JIT auto-provisioning už nepoužíva `PENDING_TENANT_ID` (nové row-y dostávajú real Entra-derived tenant), takže skript je iba pre **existujúce dáta zo Slice #2 - #3** ktoré vznikli pred Blok 3 deployom
-
-### 🅲 Phase C Blok 5 — Cross-tenant isolation tests + milestone doc (~1-1.5 hod)
+**Cieľ: dokončiť Phase C bezpečnostnou sieťou — testy ktoré garantujú že tenant A nemôže vidieť/editovať/mazať dáta tenanta B. Plus fix test fixtures + Phase C milestone doc.**
 
 - Nový file `apps/api/tests/integration/cross-tenant-isolation.test.ts`
   - ~10-15 testov: tenant A nemôže read/update/delete tenant B documents
   - 2 tenants seed, requests as user-A na assets-of-B → 404 not 403
   - Slug collision per-tenant tested
   - Audit log filtered by tenant
-- Update všetky existujúce integration testy: per-test tenant provisioning v test fixtures
+- Update všetky existujúce integration testy: per-test tenant provisioning v test fixtures (`apps/api/tests/helpers/test-fixtures.ts`)
 - Milestone doc `docs/milestones/slice-3.5-organisation-migration.md`
 - Update NEXT.md (Phase C complete, ďalej Phase D)
 
@@ -212,7 +211,7 @@ Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 → done, Blo
 Trackované pre eventuálnu cleanup session:
 
 - **apps/api integration test suite broken** — `organisationId` required field rozbilo direct-insert fixtures v `apps/api/tests/helpers/test-fixtures.ts`. Fix-uje sa v Phase C Blok 5 (per-test tenant provisioning). shared-types unit testy sú už zelené (`validAssetInput` + `validUserInput` dostali `organisationId` placeholder field)
-- **`PENDING_TENANT_ID` placeholder** stále existuje v `lib/organisation-scoping.ts` ako exported konštanta, ale od Blok 3 sa už nikdy nezapisuje do nových row-ov — Blok 3 JIT auto-provisioning resolved real tenant z JWT `tid`. Existujúce rows zo Slice #2 - #3 ktoré majú tento placeholder budú backfilled v Blok 4 migration script. Po Blok 4 možno konštantu úplne odstrániť (alebo nechať pre forensic queries — "ktoré rows boli pre-Blok-3")
+- **`PENDING_TENANT_ID` placeholder** stále existuje v `lib/organisation-scoping.ts` ako exported konštanta, ale od Blok 3 sa už nikdy nezapisuje do nových row-ov a Blok 4 migration script potvrdil že v dev DB nie sú žiadne PENDING rows. Po production migration je možné konštantu úplne odstrániť zo `src/lib/` (alebo nechať pre forensic queries — "ktoré rows boli pre-Blok-3"). Migration skript samotný (`scripts/migrate-organisation-id.ts`) konštantu duplikuje zámerne aby zostal runnable proti historickým dátam aj keď src exporty časom zmenia
 - **AuditLogRepository nie tenant-scoped** — zámerne nezmenené v Blok 2 a 3. Audit `insert(record)` dostáva tenantId v record obsahu od service (každý service prepáše `actor.organisationId` cez `auditLog.record(actor, ...)`), žiadne signature changes netreba. Read paths zatiaľ nemáme — keď príde admin audit endpoint v ďalšej fáze, vtedy doplníme tenant-scoping aj sem
 - **`audit.test.ts`** flaky timeout — beží občas 30s+ na Atlas. Treba zvýšiť timeout alebo singleFork
 - **`LOCATION_TYPE_VALUES`** export do `packages/shared-types/` (currently duplicated)
