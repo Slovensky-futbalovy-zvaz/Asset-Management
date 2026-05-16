@@ -15,31 +15,26 @@
  *   - Admins cannot deactivate / demote themselves
  *   - The last active ADMIN cannot be deactivated / demoted (would lock
  *     the system out of further admin actions)
+ *
+ * Phase C Blok 3 (multi-tenant):
+ *   JIT provisioning now takes an `organisation: Organisation` argument
+ *   resolved by the auth middleware before user lookup. The provisioned
+ *   user gets the real tenant id, no more PENDING_TENANT_ID placeholder.
+ *   Admin endpoints (`list`, `getById`, `update`) thread the actor's
+ *   tenant through every repository call so cross-tenant reads / writes
+ *   surface as 404.
  */
 
-import { AccountType, UserRole, type User } from '@inventario/shared-types';
+import { AccountType, UserRole, type Organisation, type User } from '@inventario/shared-types';
 
-import { PENDING_TENANT_ID } from '../../lib/organisation-scoping.js';
 import { BadRequestError, NotFoundError } from '../../plugins/error-handler.js';
 import { computeShallowDiff } from '../assets/assets-diff.js';
 
-import type { UsersRepository, UserUpdatePatch, ListUsersParams } from './users.repository.js';
+import type { UsersRepository, UserUpdatePatch } from './users.repository.js';
 import type { EntraClaims } from '../../plugins/auth.js';
 import type { AuditLogService } from '../audit/audit.service.js';
 import type { FastifyRequest } from 'fastify';
-import type { ClientSession, MongoClient, WithId } from 'mongodb';
-
-// ---------------------------------------------------------------------------
-// Placeholder tenant id used during JIT provisioning until the multi-tenant
-// resolution flow lands. See `lib/organisation-scoping.ts` for the canonical
-// definition of PENDING_TENANT_ID and the rationale.
-//
-// The migration script in the next block creates a default Inventario tenant
-// and replaces every PENDING_TENANT_ID it finds with that tenant's real _id.
-// After the auth middleware tenant resolution lands, the JIT path will
-// resolve the tenant from the JWT `tid` claim instead of writing this
-// placeholder.
-// ---------------------------------------------------------------------------
+import type { ClientSession, Filter, MongoClient, WithId } from 'mongodb';
 
 // ---------------------------------------------------------------------------
 // Public API types
@@ -53,6 +48,17 @@ export interface ListUsersResponse {
     skip: number;
     hasMore: boolean;
   };
+}
+
+/**
+ * Service-layer parameters for the `list` endpoint. Tenant scope is
+ * inferred from the actor and threaded through; callers pass
+ * pagination / filter knobs only.
+ */
+export interface ListUsersServiceParams {
+  limit?: number;
+  skip?: number;
+  filter?: Filter<User>;
 }
 
 /**
@@ -79,33 +85,48 @@ export class UsersService {
     private readonly mongoClient: MongoClient | null,
   ) {}
 
+  // -------------------------------------------------------------------------
+  // Auth-middleware path: JIT user provisioning
+  // -------------------------------------------------------------------------
+
   /**
    * Find an existing user by their Entra OID, or provision a new one
    * from the JWT claims if no match is found.
+   *
+   * **Tenant binding:** the caller (auth middleware) has already resolved
+   * the JWT `tid` claim to an Organisation document and passes it here.
+   * A newly-provisioned user is permanently bound to that tenant. If the
+   * user later authenticates through a different Entra tenant (e.g. a
+   * cross-tenant guest invitation), we will NOT re-provision under the
+   * new tenant — the existing row is returned as-is so the user retains
+   * their original tenant home.
    *
    * Concurrency note: between `findByEntraOid` and `insert`, another
    * request from the same user could attempt the same provisioning. We
    * rely on the `entraOid` unique index to make the second insert fail
    * with code 11000 (duplicate key); we catch that and re-query.
    */
-  async findOrProvision(claims: EntraClaims): Promise<WithId<User>> {
+  async findOrProvision(
+    claims: EntraClaims,
+    organisation: WithId<Organisation>,
+  ): Promise<WithId<User>> {
     const existing = await this.repo.findByEntraOid(claims.oid);
     if (existing) {
-      // Fire-and-forget: don't await `touchLastLogin` to keep auth latency
-      // low. Failures are logged inside the repository.
+      // Fire-and-forget: don't await `touchLastLogin` to keep auth
+      // latency low. Failures are logged inside the repository.
       void this.repo.touchLastLogin(claims.oid);
       return existing;
     }
 
-    const newUser = this.buildUserFromClaims(claims);
+    const newUser = this.buildUserFromClaims(claims, organisation);
 
     try {
-      return await this.repo.insert(newUser);
+      return await this.repo.insertNew(newUser);
     } catch (err) {
       // MongoDB error code 11000 = duplicate key. This happens if two
-      // concurrent requests for the same first-time user race to insert.
-      // The "loser" of the race should just re-fetch what the "winner"
-      // inserted.
+      // concurrent requests for the same first-time user race to
+      // insert. The "loser" of the race should just re-fetch what the
+      // "winner" inserted.
       if (isDuplicateKeyError(err)) {
         const existingAfterRace = await this.repo.findByEntraOid(claims.oid);
         if (existingAfterRace) {
@@ -121,18 +142,26 @@ export class UsersService {
   // -------------------------------------------------------------------------
 
   /**
-   * List users with pagination + optional filters. Soft-deleted users are
-   * always excluded.
+   * List users within the actor's tenant with pagination + optional
+   * filters. Soft-deleted users are always excluded.
    *
-   * The route layer is responsible for translating query params into the
-   * filter shape — the service just applies them. See `users.routes.ts`
-   * for the supported query params (`role`, `isActive`, `q`).
+   * The route layer is responsible for translating query params into
+   * the filter shape — the service just applies them. See
+   * `users.routes.ts` for the supported query params (`role`,
+   * `isActive`, `q`).
    */
-  async list(params: ListUsersParams): Promise<ListUsersResponse> {
+  async list(params: ListUsersServiceParams, actor: WithId<User>): Promise<ListUsersResponse> {
+    const tenantId = String(actor.organisationId);
     const limit = params.limit ?? 50;
     const skip = params.skip ?? 0;
+    const filter = params.filter ?? {};
 
-    const { items, total } = await this.repo.list({ ...params, limit, skip });
+    const { items, total } = await this.repo.list({
+      organisationId: tenantId,
+      limit,
+      skip,
+      filter,
+    });
 
     return {
       data: items.map(toApiShape),
@@ -145,8 +174,9 @@ export class UsersService {
     };
   }
 
-  async getById(id: string): Promise<Record<string, unknown>> {
-    const doc = await this.repo.findById(id);
+  async getById(id: string, actor: WithId<User>): Promise<Record<string, unknown>> {
+    const tenantId = String(actor.organisationId);
+    const doc = await this.repo.findById(tenantId, id);
     if (!doc) {
       throw new NotFoundError('User', id);
     }
@@ -158,24 +188,31 @@ export class UsersService {
   // -------------------------------------------------------------------------
 
   /**
-   * Admin update of a user. Records role-change and (de)activation events
-   * to the audit log alongside the patch, in a single transaction.
+   * Admin update of a user within the actor's tenant. Records role-
+   * change and (de)activation events to the audit log alongside the
+   * patch, in a single transaction.
    *
    * Guardrails enforced here (route schema validates shape; service
    * validates business invariants):
    *   1. Admin cannot patch themselves to remove ADMIN role.
    *   2. Admin cannot deactivate themselves.
-   *   3. The patch must not leave zero active ADMINs in the system
+   *   3. The patch must not leave zero active ADMINs in the tenant
    *      (catches "I'm not removing myself but I'm demoting the last
    *      other admin" and "I'm not deactivating myself but I'm
-   *      deactivating the last admin").
+   *      deactivating the last admin"). Per-tenant counting — tenant A
+   *      having ADMINs does not protect tenant B.
+   *
+   * Cross-tenant access is blocked because every repo call is tenant-
+   * scoped: an admin from tenant A trying to PATCH a user in tenant B
+   * will get 404, not 403, so we do not leak the existence of the
+   * cross-tenant document.
    *
    * Audit events emitted (one transaction, possibly multiple events):
    *   - `USER_ROLE_GRANTED` — once per newly added role
    *   - `USER_ROLE_REVOKED` — once per removed role
    *   - `USER_DEACTIVATED` / `USER_REACTIVATED` — on isActive flip
    *   - `USER_UPDATED` — fallback for any other field change (name,
-   *     preferences, etc.); not used yet in K10 but ready for K10+ scope
+   *     preferences, etc.); not used yet in K10 but ready for K10+
    */
   async update(
     id: string,
@@ -185,8 +222,9 @@ export class UsersService {
   ): Promise<Record<string, unknown>> {
     if (!this.auditLog || !this.mongoClient) {
       // Programmer error: K10 admin write paths require both audit + tx
-      // helpers, which are wired up by users.routes.ts. JIT-only callers
-      // (auth flow during slice #2) construct the service without them.
+      // helpers, which are wired up by users.routes.ts. JIT-only
+      // callers (auth flow during slice #2) construct the service
+      // without them.
       throw new Error(
         'UsersService.update requires auditLog and mongoClient — ' +
           'instantiate the service via the routes plugin, not directly.',
@@ -200,10 +238,11 @@ export class UsersService {
     const auditLog = this.auditLog;
 
     const actorId = String(actor._id);
+    const tenantId = String(actor.organisationId);
 
     const updated = await this.runInTransaction(async (session) => {
-      // ----- Step 1: load target -----
-      const before = await this.repo.findById(id, session);
+      // ----- Step 1: load target within the tenant -----
+      const before = await this.repo.findById(tenantId, id, session);
       if (!before) {
         throw new NotFoundError('User', id);
       }
@@ -213,8 +252,8 @@ export class UsersService {
       // ----- Step 2: normalize roles for diff (dedupe + stable order) ---
       //
       // The route schema allows duplicate role entries. We canonicalize
-      // here so the diff doesn't show spurious "changes" caused by reorder
-      // or duplicate input.
+      // here so the diff doesn't show spurious "changes" caused by
+      // reorder or duplicate input.
       const rolesAfter: UserRole[] =
         patch.roles !== undefined
           ? [...new Set<UserRole>(patch.roles)].sort()
@@ -238,19 +277,21 @@ export class UsersService {
         throw new BadRequestError('User must have at least one role.');
       }
 
-      // Last-admin guardrail. Runs in the same transaction so a parallel
-      // demotion can't sneak past this check.
+      // Last-admin guardrail. Runs in the same transaction so a
+      // parallel demotion can't sneak past this check. Per-tenant scope
+      // (tenant A having ADMINs does not protect tenant B).
       //
-      // Trigger only if the target is CURRENTLY an active ADMIN and the
-      // patch either removes the ADMIN role or deactivates the account.
-      // In either case, the target stops counting toward active-admins,
-      // so we ask the repo whether any other admins remain.
+      // Trigger only if the target is CURRENTLY an active ADMIN and
+      // the patch either removes the ADMIN role or deactivates the
+      // account. In either case, the target stops counting toward
+      // active-admins, so we ask the repo whether any other admins
+      // remain in the tenant.
       const targetWasActiveAdmin = before.isActive && rolesBefore.includes(UserRole.ADMIN);
       const removesAdmin = !rolesAfter.includes(UserRole.ADMIN);
       const deactivates = patch.isActive === false;
 
       if (targetWasActiveAdmin && (removesAdmin || deactivates)) {
-        const remainingAdmins = await this.repo.countActiveAdminsExcluding(id, session);
+        const remainingAdmins = await this.repo.countActiveAdminsExcluding(tenantId, id, session);
         if (remainingAdmins === 0) {
           throw new BadRequestError(
             'Cannot remove the last active ADMIN. Promote another user to ADMIN first.',
@@ -266,18 +307,19 @@ export class UsersService {
         updatedBy: actorId,
       };
 
-      const after = await this.repo.update(id, fullPatch, session);
+      const after = await this.repo.update(tenantId, id, fullPatch, session);
       if (!after) {
-        // Lost-update race: target was soft-deleted between the load and
-        // the update. Surface as 404 to be consistent with the load check.
+        // Lost-update race: target was soft-deleted between the load
+        // and the update. Surface as 404 to be consistent with the
+        // load check.
         throw new NotFoundError('User', id);
       }
 
       // ----- Step 5: emit audit events -----
       //
-      // We emit specific events per business action (role grants/revokes,
-      // activation flips) so the audit log is queryable and meaningful
-      // — not just a sea of generic USER_UPDATED entries.
+      // We emit specific events per business action (role grants /
+      // revokes, activation flips) so the audit log is queryable and
+      // meaningful — not just a sea of generic USER_UPDATED entries.
 
       // Role changes: one event per added role, one per removed role.
       if (rolesChanged) {
@@ -343,9 +385,10 @@ export class UsersService {
         );
       }
 
-      // Fallback: any OTHER changed field gets a USER_UPDATED with diff.
-      // Not exercised in K10 (route only allows roles + isActive) but
-      // wired up so a future K10+ extension doesn't need to revisit.
+      // Fallback: any OTHER changed field gets a USER_UPDATED with
+      // diff. Not exercised in K10 (route only allows roles +
+      // isActive) but wired up so a future K10+ extension doesn't
+      // need to revisit.
       const changes = computeShallowDiff(before, after, [
         'updatedAt',
         'updatedBy',
@@ -386,9 +429,9 @@ export class UsersService {
   // -------------------------------------------------------------------------
 
   /**
-   * Convert the public service input into the narrower repository patch.
-   * Roles are passed in pre-canonicalized (deduped + sorted) so the
-   * stored array is stable for diffing.
+   * Convert the public service input into the narrower repository
+   * patch. Roles are passed in pre-canonicalized (deduped + sorted) so
+   * the stored array is stable for diffing.
    */
   private buildRepoPatch(
     input: UpdateUserInput,
@@ -436,15 +479,20 @@ export class UsersService {
   }
 
   /**
-   * Constructs a `User` document from validated Entra ID claims.
+   * Constructs a `User` document from validated Entra ID claims and
+   * the resolved tenant Organisation.
    *
-   * Email is required for provisioning — if the token lacks both `email`
-   * and `preferred_username`, we cannot satisfy the unique-email constraint.
-   * In that case we throw, which surfaces as a 401 to the caller. The fix
-   * is for the tenant admin to add `email` to the optional claims of the
-   * API app registration (see Azure setup, Krok 5).
+   * Email is required for provisioning — if the token lacks both
+   * `email` and `preferred_username`, we cannot satisfy the unique-
+   * email constraint. In that case we throw, which surfaces as a 401
+   * to the caller. The fix is for the tenant admin to add `email` to
+   * the optional claims of the API app registration (see Azure setup,
+   * Krok 5).
    */
-  private buildUserFromClaims(claims: EntraClaims): Omit<User, '_id'> {
+  private buildUserFromClaims(
+    claims: EntraClaims,
+    organisation: WithId<Organisation>,
+  ): Omit<User, '_id'> {
     const email = claims.email ?? claims.preferred_username;
     if (!email) {
       throw new Error(
@@ -457,7 +505,7 @@ export class UsersService {
     const now = new Date().toISOString();
 
     return {
-      organisationId: PENDING_TENANT_ID,
+      organisationId: String(organisation._id),
       email: email.toLowerCase(),
       firstName,
       lastName,
@@ -478,10 +526,10 @@ export class UsersService {
         emailNotifications: true,
         pushNotifications: false,
       },
-      // Audit fields: the user is "creating themselves" on first login,
-      // so createdBy points at their own (yet-to-be-assigned) _id. We don't
-      // know it until after insert — so use SYSTEM here. This is a
-      // documented convention for JIT-provisioned users.
+      // Audit fields: the user is "creating themselves" on first
+      // login, so createdBy points at their own (yet-to-be-assigned)
+      // _id. We don't know it until after insert — so use SYSTEM here.
+      // This is a documented convention for JIT-provisioned users.
       createdAt: now,
       updatedAt: now,
       createdBy: 'SYSTEM',

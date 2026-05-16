@@ -31,6 +31,7 @@ import auditPlugin from './modules/audit/audit.plugin.js';
 import categoriesRoutes from './modules/categories/categories.routes.js';
 import healthRoutes from './modules/health/health.routes.js';
 import locationsRoutes from './modules/locations/locations.routes.js';
+import organisationsRoutes from './modules/organisations/organisations.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
 import authPlugin from './plugins/auth.js';
 import configPlugin from './plugins/config.js';
@@ -119,6 +120,10 @@ export async function buildServer(
 
   // --- Domain routes -------------------------------------------------------
   await app.register(healthRoutes);
+  // OrganisationsRoutes must come before usersRoutes so the
+  // organisationsService decorator is available to the auth middleware
+  // when loadCurrentUser resolves the tenant from the JWT tid claim.
+  await app.register(organisationsRoutes);
   await app.register(usersRoutes);
   await app.register(assetsRoutes);
   await app.register(categoriesRoutes);

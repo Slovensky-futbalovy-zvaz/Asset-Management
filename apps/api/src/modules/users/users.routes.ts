@@ -168,14 +168,15 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
   app.get(
     '/v1/me',
     {
-      preHandler: fastify.requireAuth,
+      preHandler: [fastify.requireAuth, fastify.loadCurrentUser],
       schema: {
         tags: ['Users'],
         summary: 'Get the currently authenticated user',
         description:
           'Returns the user record corresponding to the JWT bearer. ' +
           'Creates a new user record on first call (JIT provisioning) with the default ' +
-          '`EMPLOYEE` role. Subsequent calls return the existing record and update `lastLoginAt`.',
+          '`EMPLOYEE` role and binds it to the tenant resolved from the JWT `tid` ' +
+          'claim. Subsequent calls return the existing record and update `lastLoginAt`.',
         security: [{ bearerAuth: [] }],
         response: {
           200: MeResponseSchema,
@@ -183,7 +184,13 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request) => {
-      const user = await service.findOrProvision(request.entraClaims);
+      // /v1/me uses requireAuth + loadCurrentUser chain because we now
+      // need the resolved tenant before JIT-provisioning the user. The
+      // loadCurrentUser middleware does the heavy lifting (resolve
+      // tenant from JWT tid, JIT-provision Organisation if needed,
+      // resolve / JIT-provision User in that tenant), so the route
+      // handler just returns the result.
+      const user = request.currentUser;
 
       return {
         _id: String(user._id),
@@ -252,7 +259,7 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
         ];
       }
 
-      return service.list({ limit, skip, filter: filterObj as Filter<User> });
+      return service.list({ limit, skip, filter: filterObj as Filter<User> }, request.currentUser);
     },
   );
 
@@ -274,7 +281,7 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request) => {
-      return service.getById(request.params.id);
+      return service.getById(request.params.id, request.currentUser);
     },
   );
 

@@ -40,7 +40,7 @@ import {
 
 import { ForbiddenError, UnauthorizedError } from './error-handler.js';
 
-import type { User, UserRole } from '@inventario/shared-types';
+import type { Organisation, User, UserRole } from '@inventario/shared-types';
 import type { FastifyPluginAsync, FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
 import type { WithId } from 'mongodb';
 
@@ -96,6 +96,28 @@ declare module 'fastify' {
      * to defensively check for `undefined`).
      */
     entraClaims: EntraClaims;
+
+    /**
+     * Tenant Organisation document for the current request, resolved
+     * from the JWT `tid` claim by `loadCurrentUser`.
+     *
+     * Only populated on routes that include `loadCurrentUser` in the
+     * preHandler chain. JIT-provisioned during the first authenticated
+     * request from a new Entra tenant.
+     *
+     * SUSPENDED and ARCHIVED tenants are rejected with 401 before this
+     * field is set, so handlers can assume the tenant is ACTIVE.
+     */
+    organisation: WithId<Organisation>;
+
+    /**
+     * Convenience accessor: the current tenant's `_id` as a string.
+     *
+     * Mirrors `request.organisation._id` but matches the type used
+     * everywhere else (services, repositories, schemas) where
+     * organisationId is a 24-hex string rather than a Mongo ObjectId.
+     */
+    organisationId: string;
 
     /**
      * Current user document from the `users` collection.
@@ -474,12 +496,22 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   // loadCurrentUser preHandler
   // -------------------------------------------------------------------------
   //
-  // Loads the User document from the database (JIT-provisioning if first time).
+  // Resolves the request's tenant + user from the verified JWT claims.
   // Must run AFTER requireAuth (depends on request.entraClaims).
   //
-  // Lazy lookup of fastify.usersService: this plugin is registered BEFORE the
-  // users routes plugin (which decorates usersService onto the instance). At
-  // registration time the decorator does not exist; at request time it does.
+  // The order matters:
+  //   1. Resolve the tenant from JWT `tid` (JIT-provision a new
+  //      Organisation row on first contact for an unknown Entra tenant).
+  //   2. Refuse to load users for SUSPENDED or ARCHIVED tenants.
+  //   3. Resolve the user from JWT `oid`, passing the resolved tenant
+  //      so first-time users are bound to the right Organisation
+  //      (replacing the PENDING_TENANT_ID placeholder from Blok 1-2).
+  //   4. Refuse to load deactivated users.
+  //
+  // Lazy lookup of fastify.usersService / fastify.organisationsService:
+  // this plugin is registered BEFORE the users + organisations routes
+  // plugins (which decorate those services onto the instance). At
+  // registration time the decorators do not exist; at request time they do.
   fastify.decorate('loadCurrentUser', async (request: FastifyRequest) => {
     if (!request.entraClaims) {
       // Programmer error: route forgot to chain requireAuth before this.
@@ -488,7 +520,31 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       );
     }
 
-    const user = await fastify.usersService.findOrProvision(request.entraClaims);
+    // ----- Step 1: resolve tenant from JWT `tid` claim -----
+    const claims = request.entraClaims;
+    const organisation = await fastify.organisationsService.findOrProvisionByEntraTenantId({
+      entraTenantId: claims.tid,
+      displayNameHint: claims.name ?? null,
+    });
+
+    if (!organisation) {
+      // Tenant exists but is soft-deleted. Reject with 401 — the tenant
+      // is no longer permitted to use the platform, regardless of how
+      // valid the user's individual token is.
+      throw new UnauthorizedError('Tenant unavailable.');
+    }
+
+    if (organisation.status !== 'ACTIVE') {
+      // SUSPENDED or ARCHIVED. The tenant has been frozen by a platform
+      // admin; users cannot log in until status is restored.
+      throw new UnauthorizedError(`Tenant is ${organisation.status.toLowerCase()}.`);
+    }
+
+    request.organisation = organisation;
+    request.organisationId = String(organisation._id);
+
+    // ----- Step 2: resolve user, JIT-provisioning if needed -----
+    const user = await fastify.usersService.findOrProvision(claims, organisation);
 
     if (!user.isActive) {
       // Deactivated users still have valid Entra tokens (we cannot revoke
@@ -498,7 +554,15 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     }
 
     request.currentUser = user;
-    request.log.debug({ userId: String(user._id), roles: user.roles }, 'Current user loaded');
+    request.log.debug(
+      {
+        userId: String(user._id),
+        roles: user.roles,
+        organisationId: request.organisationId,
+        organisationSlug: organisation.slug,
+      },
+      'Current user + tenant loaded',
+    );
   });
 
   // -------------------------------------------------------------------------
