@@ -6,6 +6,7 @@ import {
   BaseDocumentSchema,
   EmailSchema,
   ObjectIdSchema,
+  OrganisationScopedSchema,
   PhoneSchema,
   SoftDeleteSchema,
   TimestampSchema,
@@ -22,89 +23,91 @@ import {
  * Bezpečnostné polia (`passwordHash`, `passwordSalt`, `mfaSecret`) sa NIKDY
  * neserializujú do API response — repository vrstva ich odfiltruje cez projekcie.
  */
-export const UserSchema = BaseDocumentSchema.merge(SoftDeleteSchema).extend({
-  /** Primárny e-mail (unique, lowercase, normalizovaný). */
-  email: EmailSchema,
+export const UserSchema = BaseDocumentSchema.merge(SoftDeleteSchema)
+  .merge(OrganisationScopedSchema)
+  .extend({
+    /** Primárny e-mail (unique, lowercase, normalizovaný). */
+    email: EmailSchema,
 
-  /** Krstné meno. */
-  firstName: z
-    .string()
-    .min(1, 'Meno je povinné.')
-    .max(100, 'Meno je príliš dlhé (max 100 znakov).')
-    .trim(),
+    /** Krstné meno. */
+    firstName: z
+      .string()
+      .min(1, 'Meno je povinné.')
+      .max(100, 'Meno je príliš dlhé (max 100 znakov).')
+      .trim(),
 
-  /** Priezvisko. */
-  lastName: z
-    .string()
-    .min(1, 'Priezvisko je povinné.')
-    .max(100, 'Priezvisko je príliš dlhé (max 100 znakov).')
-    .trim(),
+    /** Priezvisko. */
+    lastName: z
+      .string()
+      .min(1, 'Priezvisko je povinné.')
+      .max(100, 'Priezvisko je príliš dlhé (max 100 znakov).')
+      .trim(),
 
-  /** Display name — celé meno, pre UI. */
-  displayName: z.string().min(1).max(200).trim(),
+    /** Display name — celé meno, pre UI. */
+    displayName: z.string().min(1).max(200).trim(),
 
-  /** Telefón. Voliteľný, ale silne odporúčaný (pre notifikácie). */
-  phone: PhoneSchema.optional(),
+    /** Telefón. Voliteľný, ale silne odporúčaný (pre notifikácie). */
+    phone: PhoneSchema.optional(),
 
-  /** Typ účtu — určuje spôsob autentifikácie. */
-  accountType: z.enum(
-    Object.values(AccountType) as [string, ...string[]],
-  ) as z.ZodType<AccountType>,
+    /** Typ účtu — určuje spôsob autentifikácie. */
+    accountType: z.enum(
+      Object.values(AccountType) as [string, ...string[]],
+    ) as z.ZodType<AccountType>,
 
-  /** Microsoft Entra ID Object ID — povinné pre ENTRA_ID účty, null pre LOCAL. */
-  entraOid: z.string().uuid().nullable().default(null),
+    /** Microsoft Entra ID Object ID — povinné pre ENTRA_ID účty, null pre LOCAL. */
+    entraOid: z.string().uuid().nullable().default(null),
 
-  /** Hash hesla (bcrypt/argon2). Len pre LOCAL účty. NIKDY do API response. */
-  passwordHash: z.string().nullable().default(null),
+    /** Hash hesla (bcrypt/argon2). Len pre LOCAL účty. NIKDY do API response. */
+    passwordHash: z.string().nullable().default(null),
 
-  /** Roly používateľa. Používateľ môže mať viacero rolí naraz. */
-  roles: z
-    .array(z.enum(Object.values(UserRole) as [string, ...string[]]) as z.ZodType<UserRole>)
-    .min(1, 'Používateľ musí mať aspoň jednu rolu.'),
+    /** Roly používateľa. Používateľ môže mať viacero rolí naraz. */
+    roles: z
+      .array(z.enum(Object.values(UserRole) as [string, ...string[]]) as z.ZodType<UserRole>)
+      .min(1, 'Používateľ musí mať aspoň jednu rolu.'),
 
-  /** ID organizačnej jednotky / útvaru SFZ (alebo klubu pre EXTERNAL). */
-  organizationalUnit: z
-    .object({
-      id: ObjectIdSchema,
-      name: z.string().min(1).max(200),
-      type: z.enum(['SFZ_DEPARTMENT', 'NATIONAL_TEAM', 'CLUB', 'EXTERNAL_ORG']),
-    })
-    .nullable()
-    .default(null),
+    /** ID organizačnej jednotky / útvaru SFZ (alebo klubu pre EXTERNAL). */
+    organizationalUnit: z
+      .object({
+        id: ObjectIdSchema,
+        name: z.string().min(1).max(200),
+        type: z.enum(['SFZ_DEPARTMENT', 'NATIONAL_TEAM', 'CLUB', 'EXTERNAL_ORG']),
+      })
+      .nullable()
+      .default(null),
 
-  /** Tímy, ktorých je členom (pre TEAM_MANAGER). */
-  teams: z
-    .array(
-      z.object({
-        teamId: ObjectIdSchema,
-        teamName: z.string().min(1).max(200),
-        role: z.enum(['MEMBER', 'MANAGER', 'COACH', 'ASSISTANT']),
-      }),
-    )
-    .default([]),
+    /** Tímy, ktorých je členom (pre TEAM_MANAGER). */
+    teams: z
+      .array(
+        z.object({
+          teamId: ObjectIdSchema,
+          teamName: z.string().min(1).max(200),
+          role: z.enum(['MEMBER', 'MANAGER', 'COACH', 'ASSISTANT']),
+        }),
+      )
+      .default([]),
 
-  /** Či je účet aktívny (povolený prihlásiť sa). */
-  isActive: z.boolean().default(true),
+    /** Či je účet aktívny (povolený prihlásiť sa). */
+    isActive: z.boolean().default(true),
 
-  /** Posledné prihlásenie. */
-  lastLoginAt: TimestampSchema.nullable().default(null),
+    /** Posledné prihlásenie. */
+    lastLoginAt: TimestampSchema.nullable().default(null),
 
-  /** Posledné odoslanie aktivačného e-mailu (pre LOCAL účty). */
-  invitationSentAt: TimestampSchema.nullable().default(null),
+    /** Posledné odoslanie aktivačného e-mailu (pre LOCAL účty). */
+    invitationSentAt: TimestampSchema.nullable().default(null),
 
-  /** Či musí používateľ pri ďalšom prihlásení zmeniť heslo (pre LOCAL). */
-  mustChangePassword: z.boolean().default(false),
+    /** Či musí používateľ pri ďalšom prihlásení zmeniť heslo (pre LOCAL). */
+    mustChangePassword: z.boolean().default(false),
 
-  /** Preferencie používateľa. */
-  preferences: z
-    .object({
-      language: z.enum(['sk', 'en']).default('sk'),
-      timezone: z.string().default('Europe/Bratislava'),
-      emailNotifications: z.boolean().default(true),
-      pushNotifications: z.boolean().default(false),
-    })
-    .default({}),
-});
+    /** Preferencie používateľa. */
+    preferences: z
+      .object({
+        language: z.enum(['sk', 'en']).default('sk'),
+        timezone: z.string().default('Europe/Bratislava'),
+        emailNotifications: z.boolean().default(true),
+        pushNotifications: z.boolean().default(false),
+      })
+      .default({}),
+  });
 
 export type User = z.infer<typeof UserSchema>;
 
@@ -114,6 +117,7 @@ export type User = z.infer<typeof UserSchema>;
  */
 export const CreateUserSchema = UserSchema.omit({
   _id: true,
+  organisationId: true, // Server-provided from authenticated context
   createdAt: true,
   updatedAt: true,
   createdBy: true,
@@ -135,6 +139,7 @@ export type CreateUserInput = z.infer<typeof CreateUserSchema>;
  */
 export const UpdateUserSchema = UserSchema.omit({
   _id: true,
+  organisationId: true, // Tenant scope is immutable
   email: true, // E-mail sa nemení (alebo cez special flow)
   createdAt: true,
   updatedAt: true,

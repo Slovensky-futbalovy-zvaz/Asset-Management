@@ -14,7 +14,7 @@
 
 import { ObjectId } from 'mongodb';
 
-import type { Location } from '@sfz/shared-types';
+import type { Location } from '@inventario/shared-types';
 import type { ClientSession, Collection, Db, Filter, FindOptions, WithId } from 'mongodb';
 
 export interface ListLocationsParams {

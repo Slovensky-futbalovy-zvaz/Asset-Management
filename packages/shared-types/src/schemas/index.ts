@@ -7,4 +7,5 @@ export * from './loan.js';
 export * from './loan-protocol.js';
 export * from './location.js';
 export * from './notification.js';
+export * from './organisation.js';
 export * from './user.js';

@@ -20,7 +20,7 @@
  *   the API for setup, failures point exactly at the SUT.
  */
 
-import { UserRole, AccountType, type User } from '@sfz/shared-types';
+import { UserRole, AccountType, type User } from '@inventario/shared-types';
 
 import type { SignTestTokenInput } from './test-jwt.js';
 import type { FastifyInstance } from 'fastify';

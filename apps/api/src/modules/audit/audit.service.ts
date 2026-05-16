@@ -20,7 +20,7 @@
  */
 
 import type { AuditLogRepository } from './audit.repository.js';
-import type { AuditLog, User } from '@sfz/shared-types';
+import type { AuditLog, User } from '@inventario/shared-types';
 import type { FastifyRequest } from 'fastify';
 import type { ClientSession, WithId } from 'mongodb';
 
@@ -66,6 +66,7 @@ export class AuditLogService {
     session?: ClientSession,
   ): Promise<void> {
     const record: Omit<AuditLog, '_id'> = {
+      organisationId: String(user.organisationId),
       at: new Date().toISOString(),
       actor: {
         userId: String(user._id),

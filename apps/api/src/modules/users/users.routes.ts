@@ -26,14 +26,14 @@
  *     - a future admin extension when a concrete use case lands.
  */
 
-import { USER_ROLE_VALUES } from '@sfz/shared-types';
+import { USER_ROLE_VALUES } from '@inventario/shared-types';
 import fp from 'fastify-plugin';
 import { z } from 'zod';
 
 import { UsersRepository } from './users.repository.js';
 import { UsersService } from './users.service.js';
 
-import type { User } from '@sfz/shared-types';
+import type { User } from '@inventario/shared-types';
 import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { Filter } from 'mongodb';

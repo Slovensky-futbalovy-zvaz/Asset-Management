@@ -44,7 +44,7 @@ import type {
 } from './locations.repository.js';
 import type { AssetsRepository } from '../assets/assets.repository.js';
 import type { AuditLogService } from '../audit/audit.service.js';
-import type { CreateLocationInput, Location, User } from '@sfz/shared-types';
+import type { CreateLocationInput, Location, User } from '@inventario/shared-types';
 import type { FastifyRequest } from 'fastify';
 import type { ClientSession, MongoClient, WithId } from 'mongodb';
 
@@ -158,6 +158,7 @@ export class LocationsService {
       const now = new Date().toISOString();
       const doc: Omit<Location, '_id'> = {
         ...input,
+        organisationId: String(user.organisationId),
         slug: resolvedSlug,
         createdAt: now,
         updatedAt: now,

@@ -20,7 +20,7 @@
  *     can use it directly without further transformation.
  */
 
-import type { AuditLog } from '@sfz/shared-types';
+import type { AuditLog } from '@inventario/shared-types';
 import type { WithId } from 'mongodb';
 
 /**

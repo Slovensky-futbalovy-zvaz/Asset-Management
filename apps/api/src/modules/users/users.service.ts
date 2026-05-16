@@ -17,7 +17,7 @@
  *     the system out of further admin actions)
  */
 
-import { AccountType, UserRole, type User } from '@sfz/shared-types';
+import { AccountType, UserRole, type User } from '@inventario/shared-types';
 
 import { BadRequestError, NotFoundError } from '../../plugins/error-handler.js';
 import { computeShallowDiff } from '../assets/assets-diff.js';
@@ -27,6 +27,22 @@ import type { EntraClaims } from '../../plugins/auth.js';
 import type { AuditLogService } from '../audit/audit.service.js';
 import type { FastifyRequest } from 'fastify';
 import type { ClientSession, MongoClient, WithId } from 'mongodb';
+
+// ---------------------------------------------------------------------------
+// Placeholder tenant id used during JIT provisioning until the multi-tenant
+// resolution flow lands (planned for the next migration block, see ADR-0010).
+//
+// Today, the JIT path runs before any Organisation document exists in the
+// database, so we cannot assign a real organisationId here. The migration
+// script in the next block creates a default Inventario tenant and replaces
+// every PENDING_TENANT_ID it finds with that tenant's real _id. After the
+// next block lands, the JIT path will resolve the tenant from the JWT `tid`
+// claim instead of writing this placeholder.
+//
+// Format: 24 hex zeros — a valid ObjectIdSchema string that cannot be
+// confused with a real tenant id and is trivially greppable.
+// ---------------------------------------------------------------------------
+const PENDING_TENANT_ID = '000000000000000000000000';
 
 // ---------------------------------------------------------------------------
 // Public API types
@@ -444,6 +460,7 @@ export class UsersService {
     const now = new Date().toISOString();
 
     return {
+      organisationId: PENDING_TENANT_ID,
       email: email.toLowerCase(),
       firstName,
       lastName,

@@ -15,7 +15,7 @@
  * change) must use the dedicated `findByEmailWithCredentials` method.
  */
 
-import { UserRole, type User } from '@sfz/shared-types';
+import { UserRole, type User } from '@inventario/shared-types';
 import {
   ObjectId,
   type ClientSession,

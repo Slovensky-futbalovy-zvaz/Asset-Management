@@ -74,7 +74,7 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^5.1.0
         version: 5.2.6
-      '@sfz/shared-types':
+      '@inventario/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
       fastify:

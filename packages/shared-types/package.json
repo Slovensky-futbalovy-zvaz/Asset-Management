@@ -1,8 +1,8 @@
 {
-  "name": "@sfz/shared-types",
-  "version": "0.1.0",
+  "name": "@inventario/shared-types",
+  "version": "0.2.0",
   "private": true,
-  "description": "Zdrojové Zod schémy pre celý SFZ Asset Management — single source of truth pre dátové štruktúry. Z týchto schém sa generujú: TypeScript typy, JSON Schema (pre Mongo $jsonSchema validátory), OpenAPI komponenty, frontend form validation.",
+  "description": "Inventario — zdrojové Zod schémy pre celý backend a frontend. Single source of truth pre dátový model. Z týchto schém sa generujú: TypeScript typy, JSON Schema (pre Mongo $jsonSchema validátory), OpenAPI komponenty, frontend form validation.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -48,13 +48,14 @@
     "vitest": "^2.1.2"
   },
   "keywords": [
-    "sfz",
+    "inventario",
     "zod",
     "schema",
     "types",
-    "json-schema"
+    "json-schema",
+    "multi-tenant"
   ],
-  "license": "MIT",
+  "license": "EUPL-1.2",
   "publishConfig": {
     "access": "restricted"
   }

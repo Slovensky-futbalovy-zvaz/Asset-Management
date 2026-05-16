@@ -19,6 +19,9 @@ export const AuditLogSchema = z.object({
   /** MongoDB _id. */
   _id: ObjectIdSchema,
 
+  /** Tenant scope. Audit log entries always belong to exactly one tenant. */
+  organisationId: ObjectIdSchema,
+
   /** Kedy sa udalosť stala (server time, UTC). */
   at: TimestampSchema,
 

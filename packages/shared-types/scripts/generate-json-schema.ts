@@ -2,7 +2,7 @@
  * Generuje JSON Schema z Zod schém pre použitie v Mongo `$jsonSchema` validátoroch.
  *
  * Spustenie:
- *   pnpm --filter @sfz/shared-types run generate:json-schema
+ *   pnpm --filter @inventario/shared-types run generate:json-schema
  *
  * Výstup:
  *   packages/shared-types/generated/json-schema.json
@@ -16,9 +16,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import type { ZodTypeAny } from 'zod';
 
 import * as schemas from '../src/schemas/index.js';
+
+import type { ZodTypeAny } from 'zod';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = resolve(__dirname, '..', 'generated', 'json-schema.json');
@@ -38,6 +39,7 @@ const SCHEMAS_TO_GENERATE: Record<string, ZodTypeAny> = {
   LoanRequest: schemas.LoanRequestSchema,
   Location: schemas.LocationSchema,
   Notification: schemas.NotificationSchema,
+  Organisation: schemas.OrganisationSchema,
   User: schemas.UserSchema,
 
   // Create/Update input schémy (pre API request validáciu — síce backend ich
@@ -52,6 +54,8 @@ const SCHEMAS_TO_GENERATE: Record<string, ZodTypeAny> = {
   ReturnLoan: schemas.ReturnLoanSchema,
   CreateCategory: schemas.CreateCategorySchema,
   CreateLocation: schemas.CreateLocationSchema,
+  CreateOrganisation: schemas.CreateOrganisationSchema,
+  UpdateOrganisation: schemas.UpdateOrganisationSchema,
   CreateAttachment: schemas.CreateAttachmentSchema,
   CreateAuditLog: schemas.CreateAuditLogSchema,
   CreateNotification: schemas.CreateNotificationSchema,

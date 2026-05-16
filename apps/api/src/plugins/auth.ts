@@ -40,7 +40,7 @@ import {
 
 import { ForbiddenError, UnauthorizedError } from './error-handler.js';
 
-import type { User, UserRole } from '@sfz/shared-types';
+import type { User, UserRole } from '@inventario/shared-types';
 import type { FastifyPluginAsync, FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
 import type { WithId } from 'mongodb';
 

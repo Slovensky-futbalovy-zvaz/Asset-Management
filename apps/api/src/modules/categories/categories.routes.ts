@@ -22,7 +22,7 @@
  *   will gain a tree traversal up to a max-depth limit.
  */
 
-import { ASSET_TYPE_VALUES, type AssetType } from '@sfz/shared-types';
+import { ASSET_TYPE_VALUES, type AssetType } from '@inventario/shared-types';
 import { z } from 'zod';
 
 import { AssetsRepository } from '../assets/assets.repository.js';

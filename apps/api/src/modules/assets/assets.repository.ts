@@ -17,7 +17,7 @@
 
 import { ObjectId } from 'mongodb';
 
-import type { Asset } from '@sfz/shared-types';
+import type { Asset } from '@inventario/shared-types';
 import type { ClientSession, Collection, Db, Filter, FindOptions, WithId } from 'mongodb';
 
 export interface ListAssetsParams {

@@ -66,6 +66,25 @@ export const SoftDeleteSchema = z.object({
 export type SoftDelete = z.infer<typeof SoftDeleteSchema>;
 
 /**
+ * Multi-tenant scoping mixin.
+ *
+ * Every domain document (asset, category, location, user, audit log)
+ * carries an `organisationId` referencing exactly one Organisation.
+ * Backend repositories filter on this field automatically via
+ * `OrganisationScopedRepository`, so no query can accidentally span
+ * tenants. See ADR-0010 for the multi-tenant rationale.
+ *
+ * The `Organisation` collection itself does NOT use this mixin — it is
+ * the root of the tenancy graph and has no parent tenant.
+ */
+export const OrganisationScopedSchema = z.object({
+  /** ID of the tenant this document belongs to. Required on every domain document. */
+  organisationId: ObjectIdSchema,
+});
+
+export type OrganisationScoped = z.infer<typeof OrganisationScopedSchema>;
+
+/**
  * Slovenský telefón vo formáte +421 9XX XXX XXX alebo 09XX XXX XXX.
  *
  * Normalizácia na +421 formát sa robí v parsovacej fáze (pre konzistenciu v DB).

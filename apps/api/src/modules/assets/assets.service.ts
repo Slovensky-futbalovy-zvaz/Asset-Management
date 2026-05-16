@@ -33,7 +33,7 @@ import type { AssetsRepository, AssetUpdatePatch, ListAssetsParams } from './ass
 import type { AuditLogService } from '../audit/audit.service.js';
 import type { CategoriesRepository } from '../categories/categories.repository.js';
 import type { LocationsRepository } from '../locations/locations.repository.js';
-import type { Asset, CreateAssetInput, UpdateAssetInput, User } from '@sfz/shared-types';
+import type { Asset, CreateAssetInput, UpdateAssetInput, User } from '@inventario/shared-types';
 import type { FastifyRequest } from 'fastify';
 import type { ClientSession, MongoClient, WithId } from 'mongodb';
 
@@ -158,6 +158,7 @@ export class AssetsService {
         ...(assetData as Omit<
           Asset,
           | '_id'
+          | 'organisationId'
           | 'inventoryNumber'
           | 'createdAt'
           | 'updatedAt'
@@ -167,6 +168,7 @@ export class AssetsService {
           | 'deletedBy'
           | 'currentLoanId'
         >),
+        organisationId: String(user.organisationId),
         inventoryNumber,
         currentLoanId: null,
         createdAt: now,

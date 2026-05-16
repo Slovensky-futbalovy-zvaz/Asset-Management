@@ -59,7 +59,7 @@ import type {
 } from './categories.repository.js';
 import type { AssetsRepository } from '../assets/assets.repository.js';
 import type { AuditLogService } from '../audit/audit.service.js';
-import type { Category, CreateCategoryInput, User } from '@sfz/shared-types';
+import type { Category, CreateCategoryInput, User } from '@inventario/shared-types';
 import type { FastifyRequest } from 'fastify';
 import type { ClientSession, MongoClient, WithId } from 'mongodb';
 
@@ -199,6 +199,7 @@ export class CategoriesService {
       const now = new Date().toISOString();
       const doc: Omit<Category, '_id'> = {
         ...input,
+        organisationId: String(user.organisationId),
         slug: resolvedSlug,
         createdAt: now,
         updatedAt: now,

@@ -20,7 +20,7 @@
  *   transforms input → service input.
  */
 
-import { UpdateAssetSchema } from '@sfz/shared-types';
+import { UpdateAssetSchema } from '@inventario/shared-types';
 import { z } from 'zod';
 
 import { CategoriesRepository } from '../categories/categories.repository.js';

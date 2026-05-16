@@ -14,7 +14,7 @@
 
 import { ObjectId } from 'mongodb';
 
-import type { Category } from '@sfz/shared-types';
+import type { Category } from '@inventario/shared-types';
 import type { ClientSession, Collection, Db, Filter, FindOptions, WithId } from 'mongodb';
 
 export interface ListCategoriesParams {

@@ -19,7 +19,7 @@
  * `changes`, or `metadata` — those are read-on-demand only.
  */
 
-import type { AuditLog } from '@sfz/shared-types';
+import type { AuditLog } from '@inventario/shared-types';
 import type { ClientSession, Collection, Db } from 'mongodb';
 
 // ---------------------------------------------------------------------------

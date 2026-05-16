@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 
 import { computeShallowDiff, shallowEqual } from '../../src/modules/assets/assets-diff.js';
 
-import type { Asset } from '@sfz/shared-types';
+import type { Asset } from '@inventario/shared-types';
 import type { WithId } from 'mongodb';
 
 // ---------------------------------------------------------------------------
