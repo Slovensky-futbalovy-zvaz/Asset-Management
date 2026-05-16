@@ -8,7 +8,19 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-16 (po dokončení Slice #3 K10 + K11)
+**Aktualizované**: 2026-05-16 (po dokončení Phase B — design tokens refactor)
+
+---
+
+## 🎯 Stratégia: B → C → D → E → A
+
+Frontend (Slice #4) je posledný **zámerne**, aby sa minimalizovali prerábky. Logika:
+
+- 🅱 **Design tokens** → definovať vizuálny jazyk **pred** tým, než ho frontend začne používať ✅ **DONE**
+- 🅲 **OrganisationId migration** → stabilný API contract s tenant scoping **pred** frontend integráciou
+- 🅳 **EU compliance** (OpenAPI export, SBOM, WCAG) → fundamenty pre type generation a verejný sektor
+- 🅴 **Tech debt cleanup** → posledný refresh pred veľkým kusom
+- 🅰 **Slice #4 frontend** → na zelenú lúku s čistým API, tokens, multi-tenancy in place
 
 ---
 
@@ -40,6 +52,12 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 │   ├── mcp-server/                  → MCP for AI (future)
 │   └── web/                         → frontend (slice #4, neexistuje)
 ├── packages/
+│   ├── design-tokens/               → @inventario/design-tokens (post-pivot v0.2.0)
+│   │   ├── tokens.json              → W3C source of truth
+│   │   ├── src/index.ts             → TypeScript exports
+│   │   ├── src/tokens.css           → CSS vars (--inv-* prefix)
+│   │   ├── src/tailwind-preset.js   → Tailwind preset
+│   │   └── src/brand-kit.schema.json → per-tenant brand kit schema
 │   └── shared-types/                → TypeScript types
 ├── docs/
 │   ├── marketing-site/              → Static HTML marketing (LIVE)
@@ -69,6 +87,18 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 - ✅ **Slice #3 K10**: Users admin module — GET /v1/users, GET /:id, PATCH /:id (2026-05-16, +53 testov)
 - ✅ **Slice #3 K11**: Milestone doc `slice-3-categories-locations-users.md` (2026-05-16, 310 testov total, ~168s)
 
+### Design system
+
+- ✅ **Phase B — Design tokens refactor** (2026-05-16) — `@inventario/design-tokens` v0.2.0
+  - 3-vrstvová architektúra: Primitive → Semantic → Brand
+  - Post-pivot Inventario brand (Navy/Blue/Paper/Steel + status colors)
+  - CSS custom properties s `--inv-` prefix
+  - Dark mode v1 (opt-in cez `data-theme="dark"`)
+  - TypeScript exports s plnou type safety
+  - Tailwind preset (`@inventario/design-tokens/tailwind`)
+  - JSON schema pre per-tenant brand kit
+  - Multi-tenant override pattern `:root[data-tenant='X']`
+
 ### Frontend marketing + demo
 
 - ✅ Marketing site (6 stránok) LIVE na inventario.sportup.sk
@@ -88,52 +118,29 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ## 🎯 Next session — výber tém
 
-Vyber jednu z týchto **alebo iné podľa toho čo dňom prichytí**:
+Podľa stratégie hore je ďalší krok 🅰 OrganisationId migration, ale berie sa ohľad aj na energiu a kontext dňom.
 
-### 🅰️ Backend Slice #4 — Frontend (apps/web) — multi-day projekt
+### 🅰️ OrganisationId migration — multi-tenant data isolation (~2 hod) ⬅ **PRÍŠTÍ KROK**
 
-**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je
-production-ready a čaká na konzumenta.**
-
-- Stack: Next.js 15 + TanStack Query + shadcn/ui + Tailwind
-- 6 P0 stránok podľa mockupov v `docs/design/screens/`
-- Microsoft Entra ID SSO login flow
-- API integration s `apps/api`
-- WCAG 2.1 AA accessibility v plánoch
-- Sub-tasks: bootstrap → auth → assets list → asset detail → loan workflow → polish
-
-### 🅱️ Phase B — Design tokens refactor (~1-2 hod)
-
-**Reorganizácia design systému z `docs/design/`.**
-
-- Primitives → Semantic → Brand layers
-- Dark mode tokens
-- Export pipeline:
-  - CSS custom properties (`tokens.css`)
-  - Tailwind config (`tailwind.config.ts`)
-  - Flutter theme (`tokens.dart`) pre future mobile
-- Brand kit JSON pre tenant customization API
-
-### 🅲 OrganisationId migration — multi-tenant data isolation (~2 hod)
-
-**Per ADR-0010, treba pridať tenant scoping do všetkých collections.**
+**Per ADR-0010, treba pridať tenant scoping do všetkých collections. Robíme to PRED frontend, aby UI nemuselo prerábať API calls neskôr.**
 
 - Pridať `organisationId: ObjectId` field do: `users`, `assets`, `categories`, `locations`, `loans`, `audit_logs`
 - Update všetky repositories aby filtrovali by `organisationId`
 - Migration script existing data → default tenant
 - Update auth middleware → extract `organisationId` z JWT claim
-- Update tests (~40 zmenených)
+- Update tests (~40 zmenených z 310)
+- ADR upgrade alebo nový ADR-0011 pre execution detaily
 
-### 🅳 EU compliance roadmap items
+### 🅱️ EU compliance roadmap items
 
-Voľne pickable:
+Voľne pickable. **OpenAPI 3.1 export je užitočný PRED frontend** (umožní auto-generate TypeScript klienta).
 
+- **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod) — useful for Slice #4 type generation
 - **SBOM CycloneDX export** v CI (~30 min) — pre EU verejné súťaže
-- **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod)
 - **WCAG 2.1 AA audit** marketing site (~30 min) — Lighthouse + axe
 - **GDPR Article 30 audit log hardening** (~1-2 hod)
 
-### 🅴 Tech debt cleanup session (~1-2 hod)
+### 🅲 Tech debt cleanup session (~1-2 hod)
 
 **Quick wins z technical debt sekcie nižšie. Dobrý "lite" deň ak nemáš
 energiu na veľký feature work.**
@@ -142,6 +149,22 @@ energiu na veľký feature work.**
 - Export `LOCATION_TYPE_VALUES`, `UpdateCategorySchema`, `UpdateLocationSchema` do shared-types — ~30 min
 - `audit.test.ts` flaky timeout investigation — ~30-60 min
 - Marketing footer link cleanup — ~10 min
+- Root `package.json` cleanup — stále "SFZ Asset Management", author "Slovenský futbalový zväz", MIT license (apps/docs už EUPL-1.2). Mismatch s pivotom.
+
+### 🅳 Slice #4 — Frontend (apps/web) — multi-day projekt 🏁 **FINÁLNY KROK**
+
+**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je
+production-ready a čaká na konzumenta. Robíme posledný — design tokens, tenant scoping
+aj OpenAPI export už budú hotové.**
+
+- Stack: Next.js 15 + TanStack Query + shadcn/ui + Tailwind
+- Tailwind preset z `@inventario/design-tokens/tailwind` (ready ✅)
+- 6 P0 stránok podľa mockupov v `docs/design/screens/`
+- Microsoft Entra ID SSO login flow
+- API integration s `apps/api` (cez auto-generated TS klient z OpenAPI)
+- Multi-tenant data-tenant root attribute (ready ✅)
+- WCAG 2.1 AA accessibility v plánoch
+- Sub-tasks: bootstrap → auth → assets list → asset detail → loan workflow → polish
 
 ---
 
@@ -155,6 +178,8 @@ Trackované pre eventuálnu cleanup session:
 - **`categories.routes.ts isActive` query param** — rovnaký `z.coerce.boolean()` bug ako bol v K10 users (string `"false"` interpretovaný ako `true`). Fix: replace s `z.enum(['true','false','1','0']).transform(...)` pattern
 - **Marketing footer link** `../decisions/0010-multi-tenant-white-label.md` — broken na production (decisions sa nedeployujú do marketing bundli)
 - **`apps/docs/vercel.json`** — momentálne len headers, buildCommand riešené UI override (cleaner to mať v `vercel.json` raz keď zistíme správny pattern pre monorepo)
+- **Root `package.json`** post-pivot cleanup — name `sfz-asset-management`, author `Slovenský futbalový zväz`, license `MIT`, repository `jletko/Asset-Management` (správne má byť `Slovensky-futbalovy-zvaz/Asset-Management`). Mismatch s `apps/docs` ktoré už má EUPL-1.2 a Inventario brand
+- **Marketing-site `shared.css`** & **`docs/design/screens/`** — používajú inline `--brand-*` CSS vars namiesto `@inventario/design-tokens/tokens.css`. Cleanup migration ich premostí na nový package (žiadny breaking change, len konsolidácia source of truth)
 
 ---
 
@@ -171,15 +196,16 @@ Trackované pre eventuálnu cleanup session:
 
 ## 📚 Kde nájsť konkrétne info
 
-| Téma                          | Súbor                                                             |
-| ----------------------------- | ----------------------------------------------------------------- |
-| Multi-tenant architecture     | `docs/decisions/0010-multi-tenant-white-label.md`                 |
-| Brand identity                | `BRAND.md` (root)                                                 |
-| Roadmap                       | `ROADMAP.md` (root)                                               |
-| Pricing strategy              | `docs/sessions/2026-05-15-pricing-strategy.md`                    |
-| Design pivot history          | `docs/sessions/2026-05-15-design-pivot.md`                        |
-| Yesterday's progress          | `docs/sessions/2026-05-16-day-summary.md`                         |
-| Vercel docs deploy guide      | `infra/vercel/DOCS-DEPLOYMENT.md`                                 |
-| All Vercel projects           | `infra/vercel/README.md`                                          |
-| Backend slice completion logs | `docs/milestones/`                                                |
-| Latest milestone (Slice #3)   | `docs/milestones/slice-3-categories-locations-users.md` ← **NEW** |
+| Téma                          | Súbor                                                   |
+| ----------------------------- | ------------------------------------------------------- |
+| Multi-tenant architecture     | `docs/decisions/0010-multi-tenant-white-label.md`       |
+| Brand identity                | `BRAND.md` (root)                                       |
+| Design tokens package         | `packages/design-tokens/README.md` ← **NEW**            |
+| Roadmap                       | `ROADMAP.md` (root)                                     |
+| Pricing strategy              | `docs/sessions/2026-05-15-pricing-strategy.md`          |
+| Design pivot history          | `docs/sessions/2026-05-15-design-pivot.md`              |
+| Yesterday's progress          | `docs/sessions/2026-05-16-day-summary.md`               |
+| Vercel docs deploy guide      | `infra/vercel/DOCS-DEPLOYMENT.md`                       |
+| All Vercel projects           | `infra/vercel/README.md`                                |
+| Backend slice completion logs | `docs/milestones/`                                      |
+| Latest milestone (Slice #3)   | `docs/milestones/slice-3-categories-locations-users.md` |
