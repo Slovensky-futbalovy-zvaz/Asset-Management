@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @sfz/shared-types build",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @inventario/shared-types build",
   "outputDirectory": ".",
   "functions": {
     "api/index.ts": {
