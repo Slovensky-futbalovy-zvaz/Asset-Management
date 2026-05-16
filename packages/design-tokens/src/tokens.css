@@ -1,95 +1,242 @@
-/**
- * SFZ Design Tokens — CSS Custom Properties
+/*
+ * SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+ * SPDX-License-Identifier: EUPL-1.2
  *
- * Zdroj: SFZ Design Manual 2024-01 (Codes Brand House)
+ * Inventario Design Tokens — CSS Custom Properties
  *
- * Použitie:
- *   @import '@sfz/design-tokens/tokens.css';
+ * Zdroj hodnôt: ../tokens.json (W3C Design Tokens format) a BRAND.md v1.0.
  *
- *   .my-component {
- *     color: var(--sfz-color-brand-blue);
- *     padding: var(--sfz-spacing-4);
+ * Architektúra (3 vrstvy):
+ *   1. --inv-primitive-*  — raw hodnoty
+ *   2. --inv-semantic-*   — UI role
+ *   3. --inv-brand-*      — Inventario default, override-uje sa per-tenant
+ *
+ * Použitie v komponente:
+ *
+ *   .my-button {
+ *     background: var(--inv-brand-primary);
+ *     color: var(--inv-brand-primary-fg);
+ *     border-radius: var(--inv-radius-lg);
  *   }
  *
- * Prefix `--sfz-` zabráni konfliktom s inými design systémami (Tailwind, shadcn).
+ * Multi-tenant override (per BRAND.md §8):
+ *
+ *   :root[data-tenant='bratislava'] {
+ *     --inv-brand-primary: #003d7a;
+ *     --inv-brand-accent: #ffd700;
+ *   }
+ *
+ * Dark mode (opt-in cez data-theme):
+ *
+ *   <html data-theme="dark">  ...  </html>
+ *
+ * Prefix `--inv-` je krátky, unique, a nezachytáva sa s Tailwind/shadcn ktoré
+ * používajú vlastné prefixy.
  */
 
 :root {
-  /* === Brand colors === */
-  --sfz-color-brand-blue: #1450df;
-  --sfz-color-brand-red: #ec1c24;
-  --sfz-color-brand-black: #070504;
-  --sfz-color-brand-white: #ffffff;
+  /* =====================================================================
+   * PRIMITIVE LAYER
+   * Raw hodnoty. NIKDY ich nepoužívaj priamo v komponentoch — vždy cez
+   * semantic alebo brand vrstvu. Sú tu len aby semantic/brand mohli na
+   * ne referencovať.
+   * ===================================================================== */
 
-  /* === Neutral / Grey scale === */
-  --sfz-color-neutral-grey-30: #bbbdbf;
-  --sfz-color-neutral-grey-60: #808285;
+  /* Navy scale */
+  --inv-primitive-navy-50: #f0f2f6;
+  --inv-primitive-navy-100: #d8dde7;
+  --inv-primitive-navy-300: #7e8da7;
+  --inv-primitive-navy-500: #3e577a;
+  --inv-primitive-navy-700: #1a2d47;
+  --inv-primitive-navy-900: #0e1a2b;
 
-  /* === Accent colors (z dcérskych SFZ identít) === */
-  --sfz-color-accent-blue-light: #008aff;
-  --sfz-color-accent-green: #29ba2e;
-  --sfz-color-accent-yellow: #ffda00;
-  --sfz-color-accent-yellow-warm: #f9b214;
-  --sfz-color-accent-teal: #27cbd5;
-  --sfz-color-accent-gold: #a9883c;
+  /* Blue scale */
+  --inv-primitive-blue-50: #eaf3fa;
+  --inv-primitive-blue-100: #c5dff0;
+  --inv-primitive-blue-300: #7dbae0;
+  --inv-primitive-blue-500: #388fc3;
+  --inv-primitive-blue-700: #1f6fa0;
+  --inv-primitive-blue-900: #103a55;
 
-  /* === Semantic colors === */
-  --sfz-color-semantic-success: var(--sfz-color-accent-green);
-  --sfz-color-semantic-warning: var(--sfz-color-accent-yellow-warm);
-  --sfz-color-semantic-danger: var(--sfz-color-brand-red);
-  --sfz-color-semantic-info: var(--sfz-color-brand-blue);
+  /* Paper scale */
+  --inv-primitive-paper-50: #fdfcfa;
+  --inv-primitive-paper-100: #f8f6f1;
+  --inv-primitive-paper-200: #ecebe5;
 
-  /* === Asset status colors === */
-  --sfz-color-asset-available: var(--sfz-color-accent-green);
-  --sfz-color-asset-reserved: var(--sfz-color-accent-yellow);
-  --sfz-color-asset-borrowed: var(--sfz-color-brand-blue);
-  --sfz-color-asset-in-service: var(--sfz-color-accent-yellow-warm);
-  --sfz-color-asset-disposed: var(--sfz-color-neutral-grey-60);
-  --sfz-color-asset-lost: var(--sfz-color-brand-red);
+  /* Steel scale */
+  --inv-primitive-steel-300: #9aa5b5;
+  --inv-primitive-steel-500: #6b7a8d;
+  --inv-primitive-steel-700: #4a5566;
 
-  /* === Typography === */
-  --sfz-font-family-sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --sfz-font-family-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+  /* Neutrals */
+  --inv-primitive-white: #ffffff;
+  --inv-primitive-black: #070504;
+  --inv-primitive-gray-100: #f3f4f6;
+  --inv-primitive-gray-200: #e5e7eb;
+  --inv-primitive-gray-300: #d1d5db;
+  --inv-primitive-gray-500: #9ca3af;
+  --inv-primitive-gray-700: #4b5563;
 
-  --sfz-font-weight-regular: 400;
-  --sfz-font-weight-medium: 500;
-  --sfz-font-weight-semibold: 600;
-  --sfz-font-weight-bold: 700;
+  /* Status primitives */
+  --inv-primitive-emerald: #10b981;
+  --inv-primitive-amber: #f59e0b;
+  --inv-primitive-rose: #ef4444;
 
-  /* === Spacing (4px grid) === */
-  --sfz-spacing-0: 0;
-  --sfz-spacing-1: 0.25rem; /* 4px */
-  --sfz-spacing-2: 0.5rem; /* 8px */
-  --sfz-spacing-3: 0.75rem; /* 12px */
-  --sfz-spacing-4: 1rem; /* 16px */
-  --sfz-spacing-5: 1.25rem; /* 20px */
-  --sfz-spacing-6: 1.5rem; /* 24px */
-  --sfz-spacing-8: 2rem; /* 32px */
-  --sfz-spacing-10: 2.5rem; /* 40px */
-  --sfz-spacing-12: 3rem; /* 48px */
-  --sfz-spacing-16: 4rem; /* 64px */
+  /* Typography primitives */
+  --inv-font-family-sans: 'Poppins', system-ui, -apple-system, sans-serif;
+  --inv-font-family-mono: 'JetBrains Mono', 'Menlo', monospace;
 
-  /* === Border radius === */
-  --sfz-radius-none: 0;
-  --sfz-radius-sm: 0.25rem;
-  --sfz-radius-md: 0.5rem;
-  --sfz-radius-lg: 0.75rem;
-  --sfz-radius-xl: 1rem;
-  --sfz-radius-full: 9999px;
+  --inv-font-weight-regular: 400;
+  --inv-font-weight-medium: 500;
+  --inv-font-weight-semibold: 600;
+  --inv-font-weight-bold: 700;
+  --inv-font-weight-extrabold: 800;
 
-  /* === Shadows === */
-  --sfz-shadow-sm: 0 1px 2px 0 rgba(7, 5, 4, 0.05);
-  --sfz-shadow-md: 0 4px 6px -1px rgba(7, 5, 4, 0.1), 0 2px 4px -1px rgba(7, 5, 4, 0.06);
-  --sfz-shadow-lg: 0 10px 15px -3px rgba(7, 5, 4, 0.1), 0 4px 6px -2px rgba(7, 5, 4, 0.05);
+  /* Spacing (4px grid) */
+  --inv-spacing-0: 0;
+  --inv-spacing-1: 0.25rem;
+  --inv-spacing-2: 0.5rem;
+  --inv-spacing-3: 0.75rem;
+  --inv-spacing-4: 1rem;
+  --inv-spacing-5: 1.25rem;
+  --inv-spacing-6: 1.5rem;
+  --inv-spacing-8: 2rem;
+  --inv-spacing-10: 2.5rem;
+  --inv-spacing-12: 3rem;
+  --inv-spacing-16: 4rem;
+  --inv-spacing-20: 5rem;
+  --inv-spacing-24: 6rem;
+
+  /* Border radius (BRAND.md §2) */
+  --inv-radius-none: 0;
+  --inv-radius-sm: 0.25rem;
+  --inv-radius-md: 0.5rem;
+  --inv-radius-lg: 0.625rem; /* 10px — buttons & inputs */
+  --inv-radius-xl: 1rem; /* 16px — cards */
+  --inv-radius-full: 9999px;
+
+  /* Shadows (BRAND.md §2 — subtle navy-based) */
+  --inv-shadow-sm: 0 1px 2px 0 rgba(26, 45, 71, 0.06);
+  --inv-shadow-md: 0 2px 6px rgba(26, 45, 71, 0.12);
+  --inv-shadow-lg: 0 10px 30px -8px rgba(26, 45, 71, 0.12);
+  --inv-shadow-cta: 0 4px 14px color-mix(in srgb, var(--inv-brand-primary) 25%, transparent);
+
+  /* =====================================================================
+   * SEMANTIC LAYER
+   * UI roles. Komponent vždy číta semantic.* alebo brand.* — nikdy
+   * primitive.*. Tým že semantic referncuje primitive, dark mode mení
+   * iba semantic mapping a primitives ostávajú nemenné.
+   * ===================================================================== */
+
+  /* Text */
+  --inv-semantic-text-primary: var(--inv-primitive-navy-700);
+  --inv-semantic-text-secondary: var(--inv-primitive-steel-500);
+  --inv-semantic-text-muted: var(--inv-primitive-steel-300);
+  --inv-semantic-text-inverse: var(--inv-primitive-white);
+  --inv-semantic-text-link: var(--inv-primitive-blue-500);
+  --inv-semantic-text-link-hover: var(--inv-primitive-blue-700);
+
+  /* Surface */
+  --inv-semantic-surface-page: var(--inv-primitive-paper-100);
+  --inv-semantic-surface-card: var(--inv-primitive-white);
+  --inv-semantic-surface-elevated: var(--inv-primitive-white);
+  --inv-semantic-surface-subtle: var(--inv-primitive-paper-50);
+  --inv-semantic-surface-inverse: var(--inv-primitive-navy-700);
+
+  /* Border */
+  --inv-semantic-border-subtle: var(--inv-primitive-gray-200);
+  --inv-semantic-border-default: var(--inv-primitive-gray-300);
+  --inv-semantic-border-strong: var(--inv-primitive-steel-500);
+  --inv-semantic-border-focus: var(--inv-primitive-blue-500);
+
+  /* Status */
+  --inv-semantic-success-fg: var(--inv-primitive-emerald);
+  --inv-semantic-success-bg: color-mix(in srgb, var(--inv-primitive-emerald) 10%, transparent);
+  --inv-semantic-warning-fg: var(--inv-primitive-amber);
+  --inv-semantic-warning-bg: color-mix(in srgb, var(--inv-primitive-amber) 12%, transparent);
+  --inv-semantic-danger-fg: var(--inv-primitive-rose);
+  --inv-semantic-danger-bg: color-mix(in srgb, var(--inv-primitive-rose) 10%, transparent);
+  --inv-semantic-info-fg: var(--inv-primitive-blue-500);
+  --inv-semantic-info-bg: color-mix(in srgb, var(--inv-primitive-blue-500) 10%, transparent);
+
+  /* Asset status (mirror of backend AssetStatus enum) */
+  --inv-semantic-asset-available: var(--inv-primitive-emerald);
+  --inv-semantic-asset-reserved: var(--inv-primitive-amber);
+  --inv-semantic-asset-borrowed: var(--inv-primitive-blue-500);
+  --inv-semantic-asset-in-service: var(--inv-primitive-amber);
+  --inv-semantic-asset-disposed: var(--inv-primitive-steel-500);
+  --inv-semantic-asset-lost: var(--inv-primitive-rose);
+
+  /* =====================================================================
+   * BRAND LAYER
+   * TOTO je to čo sa override-uje per-tenant. Komponent siahne po
+   * brand.primary keď chce "naša primárna farba", po semantic.text-primary
+   * keď chce "primárny text". Tieto dve nikdy nesplývajú aj keď default
+   * Inventario brand má primary = navy.700 = semantic.text.primary.
+   * ===================================================================== */
+
+  --inv-brand-primary: var(--inv-primitive-navy-700);
+  --inv-brand-primary-fg: var(--inv-primitive-white);
+  --inv-brand-accent: var(--inv-primitive-blue-500);
+  --inv-brand-accent-fg: var(--inv-primitive-white);
+  --inv-brand-logo-dot: var(--inv-primitive-blue-500);
 }
 
-/* === Dark mode (optional override) === */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* V dark mode použijeme inverzný variant loga a upravené pozadia.
-       Brand farby (#1450df, #ec1c24) zostávajú rovnaké,
-       len sa mení ich kontext (na tmavom pozadí). */
+/* =======================================================================
+ * DARK MODE
+ *
+ * Opt-in cez `<html data-theme="dark">`. Mení iba semantic.* mapping —
+ * primitive.* zostáva nemenné, brand.* zostáva default (tenant si môže
+ * override-núť brand v oboch režimoch nezávisle).
+ *
+ * V1 scope: text, surface, border. Status farby a brand nemenné — fungujú
+ * korektne aj na tmavom pozadí (testované v BRAND.md §4 accessibility).
+ *
+ * TODO(v2): doladiť shadow tokeny pre dark mode (rgba navy je takmer
+ * neviditeľná na navy.900 surface). Možno --inv-shadow-md-dark scale.
+ * ======================================================================= */
 
-    /* TODO: definovať dark surface tokeny po finalizácii dark mode dizajnu */
-  }
+:root[data-theme='dark'] {
+  /* Text */
+  --inv-semantic-text-primary: var(--inv-primitive-paper-100);
+  --inv-semantic-text-secondary: var(--inv-primitive-steel-300);
+  --inv-semantic-text-muted: var(--inv-primitive-steel-500);
+  --inv-semantic-text-inverse: var(--inv-primitive-navy-700);
+
+  /* Surface */
+  --inv-semantic-surface-page: var(--inv-primitive-navy-900);
+  --inv-semantic-surface-card: var(--inv-primitive-navy-700);
+  --inv-semantic-surface-elevated: var(--inv-primitive-navy-500);
+  --inv-semantic-surface-subtle: var(--inv-primitive-navy-900);
+  --inv-semantic-surface-inverse: var(--inv-primitive-paper-100);
+
+  /* Border */
+  --inv-semantic-border-subtle: var(--inv-primitive-navy-500);
+  --inv-semantic-border-default: var(--inv-primitive-steel-700);
+  --inv-semantic-border-strong: var(--inv-primitive-steel-300);
+  /* border-focus zostáva blue.500 — kontrast je dobrý na oboch */
 }
+
+/* =======================================================================
+ * MULTI-TENANT OVERRIDE EXAMPLES
+ *
+ * Nasleduje len ako referencia (zakomentované). Reálne tenant overrides
+ * sa nikdy nezapisujú do tokens.css — pumpujú sa do <head> ako inline
+ * style alebo dynamicky generovaný CSS z brand-kit API (per ADR-0010).
+ *
+ * Pravidlo: override-uje sa IBA --inv-brand-* vrstva. Primitive a
+ * semantic vrstvy ostávajú stabilné aby UI komponenty fungovali
+ * konzistentne naprieč všetkými tenantmi.
+ * ======================================================================= */
+
+/*
+:root[data-tenant='bratislava'] {
+  --inv-brand-primary: #003d7a;
+  --inv-brand-accent: #ffd700;
+}
+
+:root[data-tenant='inter'] {
+  --inv-brand-primary: #1e3a8a;
+  --inv-brand-accent: #fbbf24;
+}
+*/
