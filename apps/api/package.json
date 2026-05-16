@@ -1,8 +1,8 @@
 {
-  "name": "@sfz/api",
+  "name": "@inventario/api",
   "version": "0.1.0",
   "private": true,
-  "description": "SFZ Asset Management — Fastify backend API. Deployed on Vercel Serverless Functions.",
+  "description": "Inventario — Fastify backend API. Multi-tenant asset management platform. Deployed on Vercel Serverless Functions.",
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {
@@ -43,10 +43,11 @@
     "node": ">=22.20.0"
   },
   "keywords": [
-    "sfz",
+    "inventario",
     "fastify",
     "backend",
-    "api"
+    "api",
+    "multi-tenant"
   ],
-  "license": "MIT"
+  "license": "EUPL-1.2"
 }

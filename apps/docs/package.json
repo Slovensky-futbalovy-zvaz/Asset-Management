@@ -1,5 +1,5 @@
 {
-  "name": "@sfz/docs",
+  "name": "@inventario/docs",
   "version": "0.1.0",
   "private": true,
   "description": "Inventario · Dokumentačný web (docs.inventario.sportup.sk). Postavený na Nextra v4 + Next.js 15.",
