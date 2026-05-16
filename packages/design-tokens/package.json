@@ -1,8 +1,9 @@
 {
-  "name": "@sfz/design-tokens",
+  "name": "@inventario/design-tokens",
   "version": "0.1.0",
   "private": true,
-  "description": "Design tokens pre SFZ Asset Management — single source of truth pre brand farby, typografiu a spacing.",
+  "description": "Inventario design tokens — single source of truth pre brand farby, typografiu, spacing a multi-tenant white-label overrides.",
+  "license": "EUPL-1.2",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -14,11 +15,15 @@
       "default": "./dist/index.js"
     },
     "./tokens.json": "./tokens.json",
-    "./tokens.css": "./src/tokens.css"
+    "./tokens.css": "./src/tokens.css",
+    "./tailwind": "./src/tailwind-preset.js",
+    "./brand-kit.schema.json": "./src/brand-kit.schema.json"
   },
   "files": [
     "dist",
     "src/tokens.css",
+    "src/tailwind-preset.js",
+    "src/brand-kit.schema.json",
     "tokens.json",
     "README.md"
   ],
@@ -31,12 +36,13 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "keywords": [
-    "sfz",
+    "inventario",
     "design-tokens",
-    "brand",
-    "design-system"
+    "design-system",
+    "multi-tenant",
+    "white-label",
+    "brand"
   ],
-  "license": "MIT",
   "publishConfig": {
     "access": "restricted"
   }
