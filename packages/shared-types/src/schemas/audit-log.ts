@@ -53,6 +53,11 @@ export const AuditLogSchema = z.object({
     'USER_ROLE_GRANTED',
     'USER_ROLE_REVOKED',
 
+    // Organisation (tenant lifecycle — admin only)
+    'ORGANISATION_CREATED',
+    'ORGANISATION_UPDATED',
+    'ORGANISATION_DELETED',
+
     // Asset
     'ASSET_CREATED',
     'ASSET_UPDATED',
@@ -99,6 +104,7 @@ export const AuditLogSchema = z.object({
     .object({
       entityType: z.enum([
         'User',
+        'Organisation',
         'Asset',
         'Loan',
         'LoanRequest',
