@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 4 — migration script + per-tenant indexes)
+**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 5 — cross-tenant isolation tests + partial-filter indexes — **CELÁ PHASE C COMPLETE**)
 
 ---
 
@@ -125,6 +125,16 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
   - **tsconfig.eslint.json**: pridaný `scripts/**/*.ts` do `include` aby skript bol covered cez project typecheck
   - **Production pripravenosť**: skript zostáva runnable proti production DB — stačí dočasne prepnúť `MONGO_URI` v `.env.local` na production cluster. Operátor je audit trail (žiadny audit log write v skripte zámerne)
   - 3 changed files (1 new + 2 modified). Typecheck zelený
+- ✅ **Phase C Blok 5**: Cross-tenant isolation tests + partial-filter indexes (2026-05-16)
+  - Nový file `apps/api/tests/integration/cross-tenant-isolation.test.ts` — **17 testov** pokrývajúcich isoláciu cez všetky 4 tenant-scoped resources (assets, categories, locations, users) + audit log scope. Kontrakt: GET list iba tenant A rows, GET/PATCH/DELETE cross-tenant id → **404 (nie 403)**, slug/email/inventoryNumber per-tenant unikatné
+  - **Test fixtures multi-tenant aware**: pridané `resolveTestTenantId(app)` (lazy-resolve JIT tenant z TEST_ENTRA_TENANT_ID slug-u, alebo inline-create ak chyba) + `seedTestTenant(app, opts)` (vytvori druhý tenant pre cross-tenant testy). Všetky `insertTestX` helpers dostali optional `organisationId` parameter s defaultom `await resolveTestTenantId(app)`
+  - **3 inline insert fixes** v existujúcich test súboroch (assets-patch, categories-patch, locations-patch "advances updatedAt to a newer timestamp" testy) ktoré obádzali fixture helpers a robili priame `db.collection().insertOne(...)` bez `organisationId`
+  - **auth.test.ts kontrakt update**: "deactivated user GET /v1/me" test prepisaný zo `200 isActive:false` na `401 deactivated`. Po Blok 3 `/v1/me` používa `[requireAuth, loadCurrentUser]` chain ktorý reject-uje deactivated users na všetkých endpointoch vřtane self-lookup
+  - **Partial-filter index fix** v `OrganisationsRepository`: `entraTenantId` a `customDomain` indexy migrated zo sparse na `partialFilterExpression: { $type: 'string' }`. Dôvod: Mongo sparse indexy v skutočnosti indexujú rows kde je hodnota explicitne `null` (len `missing` field je preskoceny). Náš Zod schema píše `null` ako default pre nullable fields, číže dvaja LOCAL tenanti s `customDomain: null` by kolidovali na sparse unique indexe
+  - **Migration script extension**: drop-uje aj obsolete `entraTenantId_unique_sparse` + `customDomain_unique_sparse` z `organisations` collection cez novú `dropLegacyOrganisationIndexes()` funkciu. Dev aj test DB migrated
+  - **All 327 tests green**: 310 existujúcich + 17 nových cross-tenant. Test suite duration ~5min (Atlas Flex)
+  - 7 modified files + 1 new file. Typecheck zelený
+- ✅ **Phase C COMPLETE** — Multi-tenant whitelabel backend ready. Milestone doc `docs/milestones/phase-c-multi-tenant-migration.md`
 
 ### Design system
 
@@ -157,24 +167,13 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ## 🎯 Next session — výber tém
 
-Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1-4 → done, Blok 5 zostáva).
+Phase C OrganisationId migration je **COMPLETE** (Blok 1-5 všetko done). Ďalšie kroky:
 
-### 🅰️ Phase C Blok 5 — Cross-tenant isolation tests + milestone doc (~1-1.5 hod) ⬅ **PRÍŠTÍ KROK**
+### 🅳 Phase D — EU compliance (~half day) ⬅ **PRÍŠTÍ KROK**
 
-**Cieľ: dokončiť Phase C bezpečnostnou sieťou — testy ktoré garantujú že tenant A nemôže vidieť/editovať/mazať dáta tenanta B. Plus fix test fixtures + Phase C milestone doc.**
+**Cieľ: dokončiť EU-readiness fundamenty pred Slice #4 frontendom. Všetko čiše additive — žiadne breaking changes na API.**
 
-- Nový file `apps/api/tests/integration/cross-tenant-isolation.test.ts`
-  - ~10-15 testov: tenant A nemôže read/update/delete tenant B documents
-  - 2 tenants seed, requests as user-A na assets-of-B → 404 not 403
-  - Slug collision per-tenant tested
-  - Audit log filtered by tenant
-- Update všetky existujúce integration testy: per-test tenant provisioning v test fixtures (`apps/api/tests/helpers/test-fixtures.ts`)
-- Milestone doc `docs/milestones/slice-3.5-organisation-migration.md`
-- Update NEXT.md (Phase C complete, ďalej Phase D)
-
-### 🅳 Phase D — EU compliance (~half day, after Phase C complete)
-
-- **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod) — useful for Slice #4 type generation
+- **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod) — essential pre Slice #4 type generation
 - **SBOM CycloneDX export** v CI (~30 min) — pre EU verejné súťaže
 - **WCAG 2.1 AA audit** marketing site (~30 min) — Lighthouse + axe
 - **GDPR Article 30 audit log hardening** (~1-2 hod)
@@ -210,7 +209,6 @@ Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1-4 → done, B
 
 Trackované pre eventuálnu cleanup session:
 
-- **apps/api integration test suite broken** — `organisationId` required field rozbilo direct-insert fixtures v `apps/api/tests/helpers/test-fixtures.ts`. Fix-uje sa v Phase C Blok 5 (per-test tenant provisioning). shared-types unit testy sú už zelené (`validAssetInput` + `validUserInput` dostali `organisationId` placeholder field)
 - **`PENDING_TENANT_ID` placeholder** stále existuje v `lib/organisation-scoping.ts` ako exported konštanta, ale od Blok 3 sa už nikdy nezapisuje do nových row-ov a Blok 4 migration script potvrdil že v dev DB nie sú žiadne PENDING rows. Po production migration je možné konštantu úplne odstrániť zo `src/lib/` (alebo nechať pre forensic queries — "ktoré rows boli pre-Blok-3"). Migration skript samotný (`scripts/migrate-organisation-id.ts`) konštantu duplikuje zámerne aby zostal runnable proti historickým dátam aj keď src exporty časom zmenia
 - **AuditLogRepository nie tenant-scoped** — zámerne nezmenené v Blok 2 a 3. Audit `insert(record)` dostáva tenantId v record obsahu od service (každý service prepáše `actor.organisationId` cez `auditLog.record(actor, ...)`), žiadne signature changes netreba. Read paths zatiaľ nemáme — keď príde admin audit endpoint v ďalšej fáze, vtedy doplníme tenant-scoping aj sem
 - **`audit.test.ts`** flaky timeout — beží občas 30s+ na Atlas. Treba zvýšiť timeout alebo singleFork
@@ -250,4 +248,5 @@ Trackované pre eventuálnu cleanup session:
 | Vercel docs deploy guide      | `infra/vercel/DOCS-DEPLOYMENT.md`                       |
 | All Vercel projects           | `infra/vercel/README.md`                                |
 | Backend slice completion logs | `docs/milestones/`                                      |
-| Latest milestone (Slice #3)   | `docs/milestones/slice-3-categories-locations-users.md` |
+| Latest milestone (Phase C)    | `docs/milestones/phase-c-multi-tenant-migration.md`     |
+| Previous milestone (Slice #3) | `docs/milestones/slice-3-categories-locations-users.md` |
