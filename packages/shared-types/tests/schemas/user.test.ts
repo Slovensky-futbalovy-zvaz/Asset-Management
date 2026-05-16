@@ -5,6 +5,7 @@ import { CreateUserSchema, UpdateUserSchema, UserSchema } from '../../src/schema
 
 const validUserInput = {
   _id: '507f1f77bcf86cd799439011',
+  organisationId: '507f1f77bcf86cd799439020',
   createdAt: '2024-03-18T08:00:00.000Z',
   updatedAt: '2024-03-18T08:00:00.000Z',
   createdBy: 'SYSTEM' as const,
