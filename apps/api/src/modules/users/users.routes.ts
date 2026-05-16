@@ -1,38 +1,67 @@
 /**
  * Users routes — endpoints for user management.
  *
- * Slice #2 scope: just `GET /v1/me`, which doubles as the end-to-end
- * verification path for the entire auth stack. If `/v1/me` returns the
- * right shape with a valid token, we know JWKS fetching, signature
- * verification, claim validation, and JIT provisioning all work.
+ * Slice #2 scope: `GET /v1/me` — end-to-end verification of the auth
+ * stack and JIT provisioning.
  *
- * Later slices:
- *   - `GET /v1/users` (admin) — list all users
- *   - `PATCH /v1/users/:id` (admin) — change roles, deactivate, etc.
- *   - `POST /v1/users/invite` (admin) — invite external users with LOCAL accounts
+ * Slice #3 K10 scope: admin endpoints for user management.
+ *   - `GET    /v1/users`      ADMIN — paginated list with filters
+ *   - `GET    /v1/users/:id`  ADMIN — single user
+ *   - `PATCH  /v1/users/:id`  ADMIN — update roles + isActive
+ *
+ * RBAC matrix:
+ *   - `GET /v1/me`            any authenticated user (self)
+ *   - admin endpoints         ADMIN only
+ *
+ * Audit:
+ *   PATCH emits one or more of `USER_ROLE_GRANTED`, `USER_ROLE_REVOKED`,
+ *   `USER_DEACTIVATED`, `USER_REACTIVATED` per the diff between before
+ *   and after. See `users.service.ts` for the event-emission rules.
+ *
+ * Body schema notes:
+ *   The admin PATCH body intentionally exposes only the two fields K10
+ *   covers (`roles`, `isActive`). The service supports more (name,
+ *   preferences, organisation unit), but those wait for either:
+ *     - a self-service `PATCH /v1/me` endpoint, or
+ *     - a future admin extension when a concrete use case lands.
  */
 
+import { USER_ROLE_VALUES } from '@sfz/shared-types';
 import fp from 'fastify-plugin';
 import { z } from 'zod';
 
 import { UsersRepository } from './users.repository.js';
 import { UsersService } from './users.service.js';
 
+import type { User } from '@sfz/shared-types';
 import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+import type { Filter } from 'mongodb';
 
 // ---------------------------------------------------------------------------
-// Response schemas
+// Shared schemas
 // ---------------------------------------------------------------------------
+
+/**
+ * Path parameter for routes that take a user ID.
+ * Format: 24-char hex (MongoDB ObjectId).
+ */
+const UserIdParamsSchema = z.object({
+  id: z.string().regex(/^[a-f\d]{24}$/i, 'Neplatný formát ID (očakáva sa 24 hex znakov).'),
+});
+
+/**
+ * Permissive user response — we return the full (non-sensitive) user
+ * document. `passwordHash` is stripped at the repository layer; we use
+ * a record schema here to avoid having to enumerate every field at the
+ * route boundary. Validation lives on write paths.
+ */
+const UserResponseSchema = z.record(z.string(), z.unknown());
 
 /**
  * Shape of `GET /v1/me`. Intentionally narrower than the full `User`
  * schema — we never expose sensitive fields (passwordHash is already
  * stripped at the repo layer, but explicit is better than implicit).
- *
- * We use `z.record(z.string(), z.unknown())` for preferences and similar
- * nested objects to keep the response permissive on read. Validation
- * lives on write paths.
  */
 const MeResponseSchema = z.object({
   _id: z.string(),
@@ -49,6 +78,67 @@ const MeResponseSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
+// Admin: list / get schemas
+// ---------------------------------------------------------------------------
+
+const ListUsersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  skip: z.coerce.number().int().min(0).default(0),
+  /** Filter by role (one of the UserRole values). */
+  role: z.enum(USER_ROLE_VALUES as unknown as [string, ...string[]]).optional(),
+  /**
+   * Filter by active flag.
+   *
+   * NOTE: We DON'T use `z.coerce.boolean()` here because that maps via
+   * the JS `Boolean()` constructor — and `Boolean("false") === true`,
+   * which would silently invert the filter for any caller passing
+   * `?isActive=false`. Instead we accept the string form explicitly,
+   * enumerate the accepted truthy / falsy values, and transform.
+   */
+  isActive: z
+    .enum(['true', 'false', '1', '0'])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === 'true' || v === '1')),
+  /** Free-text search across email + displayName + firstName + lastName (case-insensitive). */
+  q: z.string().min(1).max(200).trim().optional(),
+});
+
+const ListUsersResponseSchema = z.object({
+  data: z.array(z.record(z.string(), z.unknown())),
+  pagination: z.object({
+    total: z.number().int().nonnegative(),
+    limit: z.number().int().positive(),
+    skip: z.number().int().nonnegative(),
+    hasMore: z.boolean(),
+  }),
+});
+
+// ---------------------------------------------------------------------------
+// Admin: PATCH body
+// ---------------------------------------------------------------------------
+
+/**
+ * Admin PATCH body. K10 exposes only `roles` and `isActive`. Both are
+ * optional; an empty body is a no-op (returns 200 with the existing user
+ * unchanged). The service enforces business rules (last-admin guardrail,
+ * self-deactivation, at-least-one-role).
+ */
+const UpdateUserBodySchema = z
+  .object({
+    /**
+     * One or more roles. The service deduplicates and normalises ordering
+     * before storing, so callers don't need to pre-canonicalise.
+     */
+    roles: z
+      .array(z.enum(USER_ROLE_VALUES as unknown as [string, ...string[]]))
+      .min(1, 'Používateľ musí mať aspoň jednu rolu.'),
+    /** Whether the account is permitted to authenticate. */
+    isActive: z.boolean(),
+  })
+  .partial()
+  .describe('Čiastočná aktualizácia používateľa (admin); roles + isActive.');
+
+// ---------------------------------------------------------------------------
 // Plugin
 // ---------------------------------------------------------------------------
 //
@@ -57,26 +147,22 @@ const MeResponseSchema = z.object({
 // this plugin's encapsulated scope. Without the wrap, `fastify.usersService`
 // would be undefined from any other plugin (e.g. `loadCurrentUser` in
 // auth.ts), even though it works from inside this file.
-//
-// Routes themselves don't care which scope they're in — but the decorator
-// must be globally visible.
 
 const usersRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
-  // Wire up dependencies.
+  // Wire up dependencies. Service gets full set: audit log + mongoClient
+  // for K10 admin write paths. JIT-provisioning (slice #2) still works
+  // with these wired up — they're only used on the admin update path.
   const repo = new UsersRepository(fastify.mongo.db);
-  const service = new UsersService(repo);
+  const service = new UsersService(repo, fastify.auditLog, fastify.mongo.client);
 
-  // Ensure indexes exist. Idempotent — safe to call at every plugin load.
-  // Failures here would prevent the server from starting, which is the
-  // right behavior: a misconfigured DB is a blocker, not a degraded mode.
   await repo.ensureIndexes();
 
-  // Expose service to other modules that need it (e.g. the auth flow can
-  // call it from a preHandler to attach the User document to the request).
-  // For now no one else needs it, but having it on the instance is cheap.
   fastify.decorate('usersService', service);
+
+  // RBAC pre-handlers.
+  const canAdmin = fastify.requireRole(['ADMIN']);
 
   // --- GET /v1/me ----------------------------------------------------------
   app.get(
@@ -114,6 +200,116 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
       };
     },
   );
+
+  // --- GET /v1/users -------------------------------------------------------
+  app.get(
+    '/v1/users',
+    {
+      preHandler: [fastify.requireAuth, fastify.loadCurrentUser, canAdmin],
+      schema: {
+        tags: ['Users'],
+        summary: 'List users (admin)',
+        description:
+          'Returns a paginated list of users sorted by displayName. Soft-deleted ' +
+          'users are always excluded. Optional filters: role, isActive, q (free-text ' +
+          'across email + displayName + firstName + lastName, case-insensitive). ' +
+          'Requires ADMIN role.',
+        security: [{ bearerAuth: [] }],
+        querystring: ListUsersQuerySchema,
+        response: {
+          200: ListUsersResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { limit, skip, role, isActive, q } = request.query;
+
+      // Build the filter as a plain record and cast at the end. Mongo's
+      // Filter<User> type is strict about array fields (roles) and the
+      // $or operator shape, and the three small assignments below are
+      // easier to reason about as a flat object than through a series
+      // of typed assignments.
+      const filterObj: Record<string, unknown> = {};
+      if (role !== undefined) {
+        // `roles` is an array column; the Mongo driver treats a single
+        // string here as "this value appears in the array".
+        filterObj['roles'] = role;
+      }
+      if (isActive !== undefined) {
+        filterObj['isActive'] = isActive;
+      }
+      if (q !== undefined) {
+        // Escape regex meta-characters so a search for "a.b" doesn't
+        // become a wildcard. Backslash escape on each meta char turns
+        // it into a literal in the resulting RegExp.
+        const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = { $regex: escaped, $options: 'i' };
+        filterObj['$or'] = [
+          { email: re },
+          { displayName: re },
+          { firstName: re },
+          { lastName: re },
+        ];
+      }
+
+      return service.list({ limit, skip, filter: filterObj as Filter<User> });
+    },
+  );
+
+  // --- GET /v1/users/:id ---------------------------------------------------
+  app.get(
+    '/v1/users/:id',
+    {
+      preHandler: [fastify.requireAuth, fastify.loadCurrentUser, canAdmin],
+      schema: {
+        tags: ['Users'],
+        summary: 'Get a single user by ID (admin)',
+        description:
+          'Returns one user by _id. 404 if not found or soft-deleted. Requires ADMIN role.',
+        security: [{ bearerAuth: [] }],
+        params: UserIdParamsSchema,
+        response: {
+          200: UserResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      return service.getById(request.params.id);
+    },
+  );
+
+  // --- PATCH /v1/users/:id -------------------------------------------------
+  app.patch(
+    '/v1/users/:id',
+    {
+      preHandler: [fastify.requireAuth, fastify.loadCurrentUser, canAdmin],
+      schema: {
+        tags: ['Users'],
+        summary: 'Update a user (admin)',
+        description:
+          'Partial update of a user. K10 exposes only `roles` and `isActive`. ' +
+          'Guardrails: admins cannot deactivate or demote themselves, and the ' +
+          'last active ADMIN cannot be deactivated or demoted (promote another ' +
+          'user to ADMIN first). Records per-action audit events ' +
+          '(USER_ROLE_GRANTED, USER_ROLE_REVOKED, USER_DEACTIVATED, ' +
+          'USER_REACTIVATED). Requires ADMIN role.',
+        security: [{ bearerAuth: [] }],
+        params: UserIdParamsSchema,
+        body: UpdateUserBodySchema,
+        response: {
+          200: UserResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      return service.update(
+        request.params.id,
+        request.body as Parameters<typeof service.update>[1],
+        request.currentUser,
+        request,
+      );
+    },
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -128,5 +324,5 @@ declare module 'fastify' {
 
 export default fp(usersRoutes, {
   name: 'users-routes',
-  dependencies: ['mongo', 'auth'],
+  dependencies: ['mongo', 'audit', 'auth'],
 });

@@ -7,28 +7,64 @@
  *   - create a new user record with sensible defaults
  *
  * Default role for JIT-provisioned users is `EMPLOYEE`. Admins promote
- * users to higher roles by editing the DB directly (slice #2b will add
- * a proper admin UI / endpoint).
+ * users to higher roles via the K10 admin endpoints (`PATCH /v1/users/:id`).
  *
- * Future slices will add:
- *   - Soft delete (deactivation)
- *   - Role management endpoints
- *   - LOCAL account creation (for external users without Entra accounts)
- *   - Organizational unit assignment
+ * Slice #3 K10 scope: admin endpoints for listing, fetching, and patching
+ * users — primarily role and isActive management with two safety
+ * guardrails:
+ *   - Admins cannot deactivate / demote themselves
+ *   - The last active ADMIN cannot be deactivated / demoted (would lock
+ *     the system out of further admin actions)
  */
 
 import { AccountType, UserRole, type User } from '@sfz/shared-types';
 
-import type { UsersRepository } from './users.repository.js';
+import { BadRequestError, NotFoundError } from '../../plugins/error-handler.js';
+import { computeShallowDiff } from '../assets/assets-diff.js';
+
+import type { UsersRepository, UserUpdatePatch, ListUsersParams } from './users.repository.js';
 import type { EntraClaims } from '../../plugins/auth.js';
-import type { WithId } from 'mongodb';
+import type { AuditLogService } from '../audit/audit.service.js';
+import type { FastifyRequest } from 'fastify';
+import type { ClientSession, MongoClient, WithId } from 'mongodb';
+
+// ---------------------------------------------------------------------------
+// Public API types
+// ---------------------------------------------------------------------------
+
+export interface ListUsersResponse {
+  data: Record<string, unknown>[];
+  pagination: {
+    total: number;
+    limit: number;
+    skip: number;
+    hasMore: boolean;
+  };
+}
+
+/**
+ * Service-layer input for updating a user.
+ *
+ * Mirrors the writable subset of `UserUpdatePatch` from the repository
+ * but without the `updatedAt` / `updatedBy` audit columns — those are
+ * controlled by the service. The route layer narrows further (K10 only
+ * exposes `roles` and `isActive`; other fields are reserved for future
+ * self-service / admin extensions).
+ */
+export type UpdateUserInput = {
+  [K in keyof Omit<UserUpdatePatch, 'updatedAt' | 'updatedBy'>]?: UserUpdatePatch[K] | undefined;
+};
 
 // ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
 
 export class UsersService {
-  constructor(private readonly repo: UsersRepository) {}
+  constructor(
+    private readonly repo: UsersRepository,
+    private readonly auditLog: AuditLogService | null,
+    private readonly mongoClient: MongoClient | null,
+  ) {}
 
   /**
    * Find an existing user by their Entra OID, or provision a new one
@@ -68,8 +104,323 @@ export class UsersService {
   }
 
   // -------------------------------------------------------------------------
+  // K10 admin endpoints — read paths (no transaction)
+  // -------------------------------------------------------------------------
+
+  /**
+   * List users with pagination + optional filters. Soft-deleted users are
+   * always excluded.
+   *
+   * The route layer is responsible for translating query params into the
+   * filter shape — the service just applies them. See `users.routes.ts`
+   * for the supported query params (`role`, `isActive`, `q`).
+   */
+  async list(params: ListUsersParams): Promise<ListUsersResponse> {
+    const limit = params.limit ?? 50;
+    const skip = params.skip ?? 0;
+
+    const { items, total } = await this.repo.list({ ...params, limit, skip });
+
+    return {
+      data: items.map(toApiShape),
+      pagination: {
+        total,
+        limit,
+        skip,
+        hasMore: skip + items.length < total,
+      },
+    };
+  }
+
+  async getById(id: string): Promise<Record<string, unknown>> {
+    const doc = await this.repo.findById(id);
+    if (!doc) {
+      throw new NotFoundError('User', id);
+    }
+    return toApiShape(doc);
+  }
+
+  // -------------------------------------------------------------------------
+  // K10 admin endpoints — write paths (transactional)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Admin update of a user. Records role-change and (de)activation events
+   * to the audit log alongside the patch, in a single transaction.
+   *
+   * Guardrails enforced here (route schema validates shape; service
+   * validates business invariants):
+   *   1. Admin cannot patch themselves to remove ADMIN role.
+   *   2. Admin cannot deactivate themselves.
+   *   3. The patch must not leave zero active ADMINs in the system
+   *      (catches "I'm not removing myself but I'm demoting the last
+   *      other admin" and "I'm not deactivating myself but I'm
+   *      deactivating the last admin").
+   *
+   * Audit events emitted (one transaction, possibly multiple events):
+   *   - `USER_ROLE_GRANTED` — once per newly added role
+   *   - `USER_ROLE_REVOKED` — once per removed role
+   *   - `USER_DEACTIVATED` / `USER_REACTIVATED` — on isActive flip
+   *   - `USER_UPDATED` — fallback for any other field change (name,
+   *     preferences, etc.); not used yet in K10 but ready for K10+ scope
+   */
+  async update(
+    id: string,
+    patch: UpdateUserInput,
+    actor: WithId<User>,
+    request: FastifyRequest,
+  ): Promise<Record<string, unknown>> {
+    if (!this.auditLog || !this.mongoClient) {
+      // Programmer error: K10 admin write paths require both audit + tx
+      // helpers, which are wired up by users.routes.ts. JIT-only callers
+      // (auth flow during slice #2) construct the service without them.
+      throw new Error(
+        'UsersService.update requires auditLog and mongoClient — ' +
+          'instantiate the service via the routes plugin, not directly.',
+      );
+    }
+
+    // Bind to a local so TypeScript narrowing survives across the async
+    // transaction callback below. Without this, every call to
+    // `this.auditLog.record(...)` inside the closure would re-widen to
+    // `AuditLogService | null` and trip TS2531.
+    const auditLog = this.auditLog;
+
+    const actorId = String(actor._id);
+
+    const updated = await this.runInTransaction(async (session) => {
+      // ----- Step 1: load target -----
+      const before = await this.repo.findById(id, session);
+      if (!before) {
+        throw new NotFoundError('User', id);
+      }
+
+      const isSelfPatch = String(before._id) === actorId;
+
+      // ----- Step 2: normalize roles for diff (dedupe + stable order) ---
+      //
+      // The route schema allows duplicate role entries. We canonicalize
+      // here so the diff doesn't show spurious "changes" caused by reorder
+      // or duplicate input.
+      const rolesAfter: UserRole[] =
+        patch.roles !== undefined
+          ? [...new Set<UserRole>(patch.roles)].sort()
+          : [...new Set<UserRole>(before.roles)].sort();
+      const rolesBefore: UserRole[] = [...new Set<UserRole>(before.roles)].sort();
+
+      const rolesChanged = patch.roles !== undefined && !arraysEqual(rolesBefore, rolesAfter);
+      const isActiveChanged = patch.isActive !== undefined && patch.isActive !== before.isActive;
+
+      // ----- Step 3: guardrails -----
+      this.assertNotLockingAdminOut({
+        target: before,
+        isSelfPatch,
+        rolesAfter,
+        nextIsActive: patch.isActive ?? before.isActive,
+      });
+
+      if (rolesAfter.length === 0) {
+        // shared-types schema requires at least one role. We catch this
+        // at the service so the error message is friendly.
+        throw new BadRequestError('User must have at least one role.');
+      }
+
+      // Last-admin guardrail. Runs in the same transaction so a parallel
+      // demotion can't sneak past this check.
+      //
+      // Trigger only if the target is CURRENTLY an active ADMIN and the
+      // patch either removes the ADMIN role or deactivates the account.
+      // In either case, the target stops counting toward active-admins,
+      // so we ask the repo whether any other admins remain.
+      const targetWasActiveAdmin = before.isActive && rolesBefore.includes(UserRole.ADMIN);
+      const removesAdmin = !rolesAfter.includes(UserRole.ADMIN);
+      const deactivates = patch.isActive === false;
+
+      if (targetWasActiveAdmin && (removesAdmin || deactivates)) {
+        const remainingAdmins = await this.repo.countActiveAdminsExcluding(id, session);
+        if (remainingAdmins === 0) {
+          throw new BadRequestError(
+            'Cannot remove the last active ADMIN. Promote another user to ADMIN first.',
+          );
+        }
+      }
+
+      // ----- Step 4: build patch with audit columns -----
+      const now = new Date().toISOString();
+      const fullPatch: UserUpdatePatch = {
+        ...this.buildRepoPatch(patch, rolesAfter),
+        updatedAt: now,
+        updatedBy: actorId,
+      };
+
+      const after = await this.repo.update(id, fullPatch, session);
+      if (!after) {
+        // Lost-update race: target was soft-deleted between the load and
+        // the update. Surface as 404 to be consistent with the load check.
+        throw new NotFoundError('User', id);
+      }
+
+      // ----- Step 5: emit audit events -----
+      //
+      // We emit specific events per business action (role grants/revokes,
+      // activation flips) so the audit log is queryable and meaningful
+      // — not just a sea of generic USER_UPDATED entries.
+
+      // Role changes: one event per added role, one per removed role.
+      if (rolesChanged) {
+        const added = rolesAfter.filter((r) => !rolesBefore.includes(r));
+        const removed = rolesBefore.filter((r) => !rolesAfter.includes(r));
+
+        for (const role of added) {
+          await auditLog.record(
+            actor,
+            request,
+            {
+              action: 'USER_ROLE_GRANTED',
+              target: {
+                entityType: 'User',
+                entityId: String(after._id),
+                snapshot: { email: after.email, displayName: after.displayName },
+              },
+              description: `Granted role ${role} to "${after.displayName}" (${after.email})`,
+              metadata: { role },
+            },
+            session,
+          );
+        }
+
+        for (const role of removed) {
+          await auditLog.record(
+            actor,
+            request,
+            {
+              action: 'USER_ROLE_REVOKED',
+              target: {
+                entityType: 'User',
+                entityId: String(after._id),
+                snapshot: { email: after.email, displayName: after.displayName },
+              },
+              description: `Revoked role ${role} from "${after.displayName}" (${after.email})`,
+              severity: 'WARNING',
+              metadata: { role },
+            },
+            session,
+          );
+        }
+      }
+
+      // Activation flip.
+      if (isActiveChanged) {
+        await auditLog.record(
+          actor,
+          request,
+          {
+            action: after.isActive ? 'USER_REACTIVATED' : 'USER_DEACTIVATED',
+            target: {
+              entityType: 'User',
+              entityId: String(after._id),
+              snapshot: { email: after.email, displayName: after.displayName },
+            },
+            description: after.isActive
+              ? `Reactivated user "${after.displayName}" (${after.email})`
+              : `Deactivated user "${after.displayName}" (${after.email})`,
+            severity: after.isActive ? 'INFO' : 'WARNING',
+          },
+          session,
+        );
+      }
+
+      // Fallback: any OTHER changed field gets a USER_UPDATED with diff.
+      // Not exercised in K10 (route only allows roles + isActive) but
+      // wired up so a future K10+ extension doesn't need to revisit.
+      const changes = computeShallowDiff(before, after, [
+        'updatedAt',
+        'updatedBy',
+        // Role / isActive changes have their own events above; don't
+        // duplicate them in the generic USER_UPDATED diff.
+        'roles',
+        'isActive',
+        // lastLoginAt mutates on every login as fire-and-forget; not a
+        // meaningful "admin updated this user" event.
+        'lastLoginAt',
+      ]);
+      if (changes.length > 0) {
+        await auditLog.record(
+          actor,
+          request,
+          {
+            action: 'USER_UPDATED',
+            target: {
+              entityType: 'User',
+              entityId: String(after._id),
+              snapshot: { email: after.email, displayName: after.displayName },
+            },
+            description: `Updated user "${after.displayName}" (${changes.length} field${changes.length === 1 ? '' : 's'} changed)`,
+            changes,
+          },
+          session,
+        );
+      }
+
+      return after;
+    });
+
+    return toApiShape(updated);
+  }
+
+  // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  /**
+   * Convert the public service input into the narrower repository patch.
+   * Roles are passed in pre-canonicalized (deduped + sorted) so the
+   * stored array is stable for diffing.
+   */
+  private buildRepoPatch(
+    input: UpdateUserInput,
+    canonicalRoles: UserRole[],
+  ): Omit<UserUpdatePatch, 'updatedAt' | 'updatedBy'> {
+    const patch: Omit<UserUpdatePatch, 'updatedAt' | 'updatedBy'> = {};
+
+    if (input.roles !== undefined) patch.roles = canonicalRoles;
+    if (input.isActive !== undefined) patch.isActive = input.isActive;
+    if (input.firstName !== undefined) patch.firstName = input.firstName;
+    if (input.lastName !== undefined) patch.lastName = input.lastName;
+    if (input.displayName !== undefined) patch.displayName = input.displayName;
+    if (input.organizationalUnit !== undefined) patch.organizationalUnit = input.organizationalUnit;
+    if (input.teams !== undefined) patch.teams = input.teams;
+    if (input.mustChangePassword !== undefined) patch.mustChangePassword = input.mustChangePassword;
+    if (input.preferences !== undefined) patch.preferences = input.preferences;
+
+    return patch;
+  }
+
+  /**
+   * Self-patch guardrails: an admin cannot lock themselves out by
+   * removing their own ADMIN role or deactivating themselves. Either
+   * action would require another admin to undo, and in the worst case
+   * (sole admin) is unrecoverable without DB access.
+   */
+  private assertNotLockingAdminOut(args: {
+    target: WithId<User>;
+    isSelfPatch: boolean;
+    rolesAfter: UserRole[];
+    nextIsActive: boolean;
+  }): void {
+    if (!args.isSelfPatch) return;
+
+    const stillHasAdmin = args.rolesAfter.includes(UserRole.ADMIN);
+    if (args.target.roles.includes(UserRole.ADMIN) && !stillHasAdmin) {
+      throw new BadRequestError(
+        'Admins cannot remove their own ADMIN role. Ask another admin to do it.',
+      );
+    }
+
+    if (args.target.isActive && !args.nextIsActive) {
+      throw new BadRequestError('Admins cannot deactivate themselves.');
+    }
+  }
 
   /**
    * Constructs a `User` document from validated Entra ID claims.
@@ -124,6 +475,26 @@ export class UsersService {
       deletedAt: null,
       deletedBy: null,
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // Transaction helper (mirrors CategoriesService / AssetsService)
+  // -------------------------------------------------------------------------
+
+  private async runInTransaction<T>(work: (session: ClientSession) => Promise<T>): Promise<T> {
+    if (!this.mongoClient) {
+      throw new Error('Transaction requested without mongoClient — wiring error.');
+    }
+    const session = this.mongoClient.startSession();
+    try {
+      let result: T | undefined;
+      await session.withTransaction(async () => {
+        result = await work(session);
+      });
+      return result as T;
+    } finally {
+      await session.endSession();
+    }
   }
 }
 
@@ -186,4 +557,16 @@ function isDuplicateKeyError(err: unknown): boolean {
     'code' in err &&
     (err as { code: unknown }).code === 11000
   );
+}
+
+function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
+
+function toApiShape(doc: WithId<User>): Record<string, unknown> {
+  return {
+    ...doc,
+    _id: String(doc._id),
+  };
 }

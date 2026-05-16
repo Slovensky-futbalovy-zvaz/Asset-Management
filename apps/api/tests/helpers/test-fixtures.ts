@@ -478,3 +478,115 @@ export function validCreateLocationBody(
     ...overrides,
   };
 }
+
+// ---------------------------------------------------------------------------
+// User fixtures — direct insert (for admin endpoint tests)
+// ---------------------------------------------------------------------------
+
+export interface InsertTestUserOptions {
+  /** Primary email. Defaults to a unique value based on millisecond timestamp. */
+  email?: string;
+  /** First name. Defaults to "Test". */
+  firstName?: string;
+  /** Last name. Defaults to "User". */
+  lastName?: string;
+  /** Display name. Defaults to firstName + lastName. */
+  displayName?: string;
+  /** Account type. Defaults to ENTRA_ID. */
+  accountType?: 'ENTRA_ID' | 'LOCAL';
+  /** Entra Object ID. Defaults to a unique UUID-shaped string for ENTRA_ID. */
+  entraOid?: string | null;
+  /** Roles array. Defaults to [EMPLOYEE]. */
+  roles?: UserRole[];
+  /** Active flag. Defaults to true. */
+  isActive?: boolean;
+  /** ID of the user who "created" this record. Defaults to "test-creator". */
+  createdBy?: string;
+}
+
+/**
+ * Insert a user directly into the `users` collection, bypassing the JIT
+ * service path. Returns the inserted document's _id, email, and roles.
+ *
+ * Why a direct-insert path (in addition to `provisionUserAs`):
+ *   `provisionUserAs` walks the full JIT flow, which is overkill (and
+ *   slower) when a test just needs a target user to PATCH or look up
+ *   by id. For admin-endpoint tests where the actor is the admin and
+ *   the target is a stranger, this helper is the right tool.
+ *
+ * The fixture sets sensible defaults for all required schema fields so
+ * the inserted document is shaped like a real user (no missing
+ * `preferences`, `teams`, etc.).
+ */
+export async function insertTestUser(
+  app: FastifyInstance,
+  options: InsertTestUserOptions = {},
+): Promise<{ _id: string; email: string; roles: UserRole[] }> {
+  const now = new Date().toISOString();
+  // Random hex stamp so concurrent inserts in the same tick get distinct
+  // emails / entraOids without colliding on either unique index.
+  const stamp = randomHex(12);
+
+  const firstName = options.firstName ?? 'Test';
+  const lastName = options.lastName ?? 'User';
+  const accountType = options.accountType ?? 'ENTRA_ID';
+  // For ENTRA_ID accounts the entraOid must be a non-null unique value
+  // matching the UUID v4 pattern from shared-types (`z.string().uuid()`).
+  // We construct one with the v4 sentinel byte and random hex in the
+  // node segment.
+  const defaultEntraOid = accountType === 'ENTRA_ID' ? `00000000-0000-4000-8000-${stamp}` : null;
+
+  const doc = {
+    email: options.email ?? `test-${stamp}@example.com`,
+    firstName,
+    lastName,
+    displayName: options.displayName ?? `${firstName} ${lastName}`,
+    accountType,
+    entraOid: options.entraOid !== undefined ? options.entraOid : defaultEntraOid,
+    passwordHash: null,
+    roles: options.roles ?? [UserRole.EMPLOYEE],
+    organizationalUnit: null,
+    teams: [],
+    isActive: options.isActive ?? true,
+    lastLoginAt: now,
+    invitationSentAt: null,
+    mustChangePassword: false,
+    preferences: {
+      language: 'sk',
+      timezone: 'Europe/Bratislava',
+      emailNotifications: true,
+      pushNotifications: false,
+    },
+    createdAt: now,
+    updatedAt: now,
+    createdBy: options.createdBy ?? 'test-creator',
+    updatedBy: options.createdBy ?? 'test-creator',
+    deletedAt: null,
+    deletedBy: null,
+  };
+
+  const insertResult = await app.mongo.db.collection('users').insertOne(doc);
+
+  return {
+    _id: String(insertResult.insertedId),
+    email: doc.email,
+    roles: doc.roles,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate `length` random lowercase hex characters. Used to fabricate
+ * unique entraOid suffixes and email local parts for test users.
+ */
+function randomHex(length: number): string {
+  const chars = '0123456789abcdef';
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+}
