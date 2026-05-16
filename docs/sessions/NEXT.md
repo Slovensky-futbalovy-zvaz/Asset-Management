@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-16 (po dokončení Phase B — design tokens refactor)
+**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 1 — Organisation schema + tenant scoping fields)
 
 ---
 
@@ -86,6 +86,15 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 - ✅ **Slice #3 K1-K9**: Categories + Locations + FK protection (2026-05-15, 257 testov, ~158s)
 - ✅ **Slice #3 K10**: Users admin module — GET /v1/users, GET /:id, PATCH /:id (2026-05-16, +53 testov)
 - ✅ **Slice #3 K11**: Milestone doc `slice-3-categories-locations-users.md` (2026-05-16, 310 testov total, ~168s)
+- ✅ **Phase C Blok 1**: Organisation schema + OrganisationScoped mixin + organisationId field na 5 collections (2026-05-16, commit `eab853a`)
+  - `@inventario/shared-types` package (rename z `@sfz/shared-types` v0.1.0 → v0.2.0, EUPL-1.2)
+  - `OrganisationSchema` + `OrganisationBrandKitSchema` + Create/Update variants
+  - `OrganisationScopedSchema` mixin merge-nutý do User/Asset/Category/Location
+  - `organisationId` direct field na AuditLogSchema
+  - JSON schema generator emits 26 schém (predtým 23)
+  - Services propaguju `organisationId` z aktora pri create paths
+  - JIT user provisioning používa `PENDING_TENANT_ID` placeholder (`'000000000000000000000000'`) kým nepríde tenant resolution v Blok 3
+  - **Test suite intentionally broken** — direct insert fixtures nemajú organisationId, fix-uje sa v Blok 2
 
 ### Design system
 
@@ -118,44 +127,87 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ## 🎯 Next session — výber tém
 
-Podľa stratégie hore je ďalší krok 🅰 OrganisationId migration, ale berie sa ohľad aj na energiu a kontext dňom.
+Phase C OrganisationId migration je rozdelená do 5 blokov (Blok 1 done, Blok 2-5 zostávajú).
 
-### 🅰️ OrganisationId migration — multi-tenant data isolation (~2 hod) ⬅ **PRÍŠTÍ KROK**
+### 🅰️ Phase C Blok 2 — OrganisationScopedRepository + repo refactor (~2 hod) ⬅ **PRÍŠTÍ KROK**
 
-**Per ADR-0010, treba pridať tenant scoping do všetkých collections. Robíme to PRED frontend, aby UI nemuselo prerábať API calls neskôr.**
+**Cieľ: každý read/write na 5 scoped kolekciách (assets, categories, locations, users, audit_logs) automaticky filtruje + injects `organisationId`. Po tomto bloku už nemôže žiadny query span-núť tenants.**
 
-- Pridať `organisationId: ObjectId` field do: `users`, `assets`, `categories`, `locations`, `loans`, `audit_logs`
-- Update všetky repositories aby filtrovali by `organisationId`
-- Migration script existing data → default tenant
-- Update auth middleware → extract `organisationId` z JWT claim
-- Update tests (~40 zmenených z 310)
-- ADR upgrade alebo nový ADR-0011 pre execution detaily
+- Vytvoriť `apps/api/src/lib/organisation-scoped-repository.ts` base class
+  - Constructor: `(collection, tenantContextProvider)`
+  - `tenantContextProvider`: closure ktorá vráti current `organisationId` (initially returns PENDING_TENANT_ID kým nepríde Blok 3)
+  - Auto-inject `organisationId` filter na všetkých read methods
+  - Auto-set `organisationId` field na všetkých write methods
+  - Strict mode: throw ak tenantContextProvider vráti null/undefined
+- Refactor 5 existing repositories aby extends:
+  - `AssetsRepository extends OrganisationScopedRepository<Asset>`
+  - `CategoriesRepository extends OrganisationScopedRepository<Category>`
+  - `LocationsRepository extends OrganisationScopedRepository<Location>`
+  - `UsersRepository extends OrganisationScopedRepository<User>`
+  - `AuditLogRepository extends OrganisationScopedRepository<AuditLog>` (s explicit `at` schema namiesto audit fields)
+- Update indexy aby zahŕňali `organisationId` (composite: `{organisationId: 1, slug: 1}` namiesto plain `{slug: 1}` lebo slug je unique-per-tenant)
+- Test fixtures aktualizovať aby injekcia tenant ID do `insertTestAsset`, `insertTestCategory`, `insertTestLocation`, `insertTestUser` fungovala s default tenant
 
-### 🅱️ EU compliance roadmap items
+**Po Blok 2**: typecheck zelený, testy zatiaľ stále padajú (lebo `currentOrganisationId` v test contexte ešte nie je real), runtime zatiaľ produkuje docs s PENDING_TENANT_ID.
 
-Voľne pickable. **OpenAPI 3.1 export je užitočný PRED frontend** (umožní auto-generate TypeScript klienta).
+### 🅱️ Phase C Blok 3 — Auth middleware tenant resolution + Organisations module (~2 hod)
+
+**Cieľ: auth middleware extrahuje JWT `tid` claim → resolvuje Organisation document → injekuje `request.organisation` + `request.organisationId`. Plus admin endpoints na Organisations.**
+
+- Nový modul `apps/api/src/modules/organisations/`
+  - `OrganisationsRepository` — standalone (Organisation collection NIE JE tenant-scoped, je root)
+  - `OrganisationsService` — JIT provision podľa `tid`, get-by-slug, get-by-entraTenantId
+  - `organisations.routes.ts` — admin CRUD (POST /v1/organisations, GET /v1/organisations/:id, PATCH)
+- Update `apps/api/src/plugins/auth.ts`
+  - Extract `tid` claim po verify
+  - `OrganisationsService.findOrProvisionByTid(tid)` → Organisation document
+  - Attach `request.organisation` + `request.organisationId` decorators
+  - Update `loadCurrentUser` aby workflow začínal organisationId resolution
+- Update `UsersService.findOrProvision` aby brala `organisation: Organisation` parameter (nie iba claims) a write-la real `organisationId` (nie PENDING_TENANT_ID)
+- Wire `OrganisationScopedRepository` tenantContextProvider na `request.organisationId`
+
+### 🅲 Phase C Blok 4 — Migration script + per-tenant unique index (~1 hod)
+
+- Skript `apps/api/scripts/migrate-organisation-id.ts`
+  - Vytvorí default Inventario tenant document
+  - Backfill `organisationId` na všetkých existujúcich documents s `PENDING_TENANT_ID` → real Inventario \_id
+  - Update všetky unique indexes z `{slug: 1}` na `{organisationId: 1, slug: 1}` (composite)
+  - Update `{inventoryNumber: 1}` na `{organisationId: 1, inventoryNumber: 1}` (slice #2b auto-increment per-tenant)
+  - Drop old single-field indexes
+
+### 🅳 Phase C Blok 5 — Cross-tenant isolation tests + milestone doc (~1-1.5 hod)
+
+- Nový file `apps/api/tests/integration/cross-tenant-isolation.test.ts`
+  - ~10-15 testov: tenant A nemôže read/update/delete tenant B documents
+  - 2 tenants seed, requests as user-A na assets-of-B → 404 not 403
+  - Slug collision per-tenant tested
+  - Audit log filtered by tenant
+- Update všetky existujúce integration testy: per-test tenant provisioning
+- Milestone doc `docs/milestones/slice-3.5-organisation-migration.md`
+- Update NEXT.md (Phase C complete, ďalej Phase D)
+
+### 🅴 Phase D — EU compliance (~half day, after Phase C complete)
 
 - **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod) — useful for Slice #4 type generation
 - **SBOM CycloneDX export** v CI (~30 min) — pre EU verejné súťaže
 - **WCAG 2.1 AA audit** marketing site (~30 min) — Lighthouse + axe
 - **GDPR Article 30 audit log hardening** (~1-2 hod)
 
-### 🅲 Tech debt cleanup session (~1-2 hod)
+### 🅵 Phase E — Tech debt cleanup (~1-2 hod, last before Slice #4)
 
-**Quick wins z technical debt sekcie nižšie. Dobrý "lite" deň ak nemáš
-energiu na veľký feature work.**
+**Quick wins z technical debt sekcie nižšie. Dobrý "lite" deň ak nemáš energiu na veľký feature work.**
 
 - `categories.routes.ts isActive` fix (rovnaký pattern ako K10) — ~15 min
 - Export `LOCATION_TYPE_VALUES`, `UpdateCategorySchema`, `UpdateLocationSchema` do shared-types — ~30 min
 - `audit.test.ts` flaky timeout investigation — ~30-60 min
 - Marketing footer link cleanup — ~10 min
-- Root `package.json` cleanup — stále "SFZ Asset Management", author "Slovenský futbalový zväz", MIT license (apps/docs už EUPL-1.2). Mismatch s pivotom.
+- Root `package.json` cleanup — name, author, license, repo URL
+- `apps/docs/vercel.json` migrate UI override → repo file
+- `marketing-site/shared.css` migrate `--brand-*` → `@inventario/design-tokens/tokens.css`
 
-### 🅳 Slice #4 — Frontend (apps/web) — multi-day projekt 🏁 **FINÁLNY KROK**
+### 🅶 Slice #4 — Frontend (apps/web) — multi-day projekt 🏁 **FINÁLNY KROK**
 
-**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je
-production-ready a čaká na konzumenta. Robíme posledný — design tokens, tenant scoping
-aj OpenAPI export už budú hotové.**
+**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je production-ready a čaká na konzumenta. Robíme posledný — design tokens, tenant scoping aj OpenAPI export už budú hotové.**
 
 - Stack: Next.js 15 + TanStack Query + shadcn/ui + Tailwind
 - Tailwind preset z `@inventario/design-tokens/tailwind` (ready ✅)
@@ -172,14 +224,17 @@ aj OpenAPI export už budú hotové.**
 
 Trackované pre eventuálnu cleanup session:
 
+- **Test suite broken** — `organisationId` required field na 5 collections rozbilo direct-insert fixtures. Fix-uje sa v Phase C Blok 2 (OrganisationScopedRepository) + Blok 5 (per-test tenant provisioning v test fixtures)
+- **`PENDING_TENANT_ID` placeholder** v `users.service.ts` — JIT users dostávajú `'000000000000000000000000'` kým nepríde tenant resolution v Blok 3. Migrácia v Blok 4 nahradí real Inventario \_id
 - **`audit.test.ts`** flaky timeout — beží občas 30s+ na Atlas. Treba zvýšiť timeout alebo singleFork
 - **`LOCATION_TYPE_VALUES`** export do `packages/shared-types/` (currently duplicated)
 - **`UpdateCategorySchema`** + **`UpdateLocationSchema`** → presunúť do `packages/shared-types/`
 - **`categories.routes.ts isActive` query param** — rovnaký `z.coerce.boolean()` bug ako bol v K10 users (string `"false"` interpretovaný ako `true`). Fix: replace s `z.enum(['true','false','1','0']).transform(...)` pattern
 - **Marketing footer link** `../decisions/0010-multi-tenant-white-label.md` — broken na production (decisions sa nedeployujú do marketing bundli)
-- **`apps/docs/vercel.json`** — momentálne len headers, buildCommand riešené UI override (cleaner to mať v `vercel.json` raz keď zistíme správny pattern pre monorepo)
+- **`apps/docs/vercel.json`** — momentálne len headers, buildCommand riešené UI override (cleaner to mať v `vercel.json` raz keď zistíme správny pattern pre monorepo). Po Phase C overený rename na `@inventario/docs`
 - **Root `package.json`** post-pivot cleanup — name `sfz-asset-management`, author `Slovenský futbalový zväz`, license `MIT`, repository `jletko/Asset-Management` (správne má byť `Slovensky-futbalovy-zvaz/Asset-Management`). Mismatch s `apps/docs` ktoré už má EUPL-1.2 a Inventario brand
 - **Marketing-site `shared.css`** & **`docs/design/screens/`** — používajú inline `--brand-*` CSS vars namiesto `@inventario/design-tokens/tokens.css`. Cleanup migration ich premostí na nový package (žiadny breaking change, len konsolidácia source of truth)
+- **AssetUpdatePatch / CategoryUpdatePatch / LocationUpdatePatch types** — sú `Partial<Omit<X, '_id' | ...>>` ktoré stále obsahujú `organisationId` ako mutable. Schema layer blokuje (Body schema má `omit({organisationId})`), takže prakticky to nie je exploit, ale stojí za to type-narrow neskôr cez `Pick` ako v UsersRepository
 
 ---
 
