@@ -1,23 +1,33 @@
 /**
- * Categories repository — thin wrapper around MongoDB `categories` collection.
+ * Categories repository — thin wrapper around MongoDB `categories`
+ * collection.
  *
  * Mirrors `AssetsRepository` patterns:
  *   - Repository returns raw docs (with _id as ObjectId)
  *   - Service is responsible for API response shape conversion
- *   - All write methods accept optional ClientSession for transactional use
+ *   - All write methods accept optional ClientSession for transactional
+ *     use
+ *   - Every read/write takes `organisationId` as the first parameter
+ *     and the repository enforces tenant scoping via the shared
+ *     `tenantFilter` / `requireTenantId` utilities
  *
- * Categories form a hierarchy via `parentId` (nullable). The repository
- * does NOT enforce hierarchy invariants — that's the service's job
- * (cycle detection, max depth). The repository's responsibility is
- * mechanical CRUD + a few index-supported queries.
+ * Categories form a hierarchy via `parentId` (nullable) within a
+ * single tenant. The repository does NOT enforce hierarchy invariants
+ * — that's the service's job (cycle detection, max depth). The
+ * repository's responsibility is mechanical CRUD + a few index-
+ * supported queries.
  */
 
 import { ObjectId } from 'mongodb';
+
+import { requireTenantId, tenantFilter } from '../../lib/organisation-scoping.js';
 
 import type { Category } from '@inventario/shared-types';
 import type { ClientSession, Collection, Db, Filter, FindOptions, WithId } from 'mongodb';
 
 export interface ListCategoriesParams {
+  /** Tenant scope. Required. */
+  organisationId: string;
   limit?: number;
   skip?: number;
   filter?: Filter<Category>;
@@ -30,13 +40,18 @@ export interface ListCategoriesResult {
 }
 
 /**
- * Patch shape for `update`. All fields optional; repository writes only
- * what's provided. Caller (service) adds `updatedAt`/`updatedBy`.
+ * Patch shape for `update`. All fields optional; repository writes
+ * only what's provided. Caller (service) adds `updatedAt`/`updatedBy`.
  *
- * `slug` is mutable because rename of a category may need to regenerate
- * the slug; service is responsible for collision check.
+ * `slug` is mutable because rename of a category may need to
+ * regenerate the slug; service is responsible for collision check.
+ *
+ * `organisationId` is excluded because tenant scope is immutable post
+ * creation.
  */
-export type CategoryUpdatePatch = Partial<Omit<Category, '_id' | 'createdAt' | 'createdBy'>>;
+export type CategoryUpdatePatch = Partial<
+  Omit<Category, '_id' | 'organisationId' | 'createdAt' | 'createdBy'>
+>;
 
 export class CategoriesRepository {
   private readonly collection: Collection<Category>;
@@ -48,37 +63,52 @@ export class CategoriesRepository {
   /**
    * Creates indexes if they don't exist. Idempotent.
    *
-   * Index rationale:
-   *   - `slug_unique` — slugs must be unique (URL routing depends on it)
-   *   - `parentId` — common filter for "list children of X"
-   *   - `assetType` — filter categories by asset type (IT/SPORT/etc)
-   *   - `isActive` — common filter for active-only category pickers
+   * Index rationale (all composite with organisationId leading):
+   *   - `organisationId_slug_unique` — slugs are unique per tenant
+   *     (URL routing scopes to tenant). Two tenants can each have a
+   *     "it-vybavenie" slug without colliding.
+   *   - `organisationId_parentId` — "list children of X within tenant"
+   *   - `organisationId_assetType` — filter categories by asset type
+   *     within tenant
+   *   - `organisationId_isActive` — common filter for active-only
+   *     pickers within tenant
    *   - `deletedAt` — soft-delete filter applied to every list query
    */
   async ensureIndexes(): Promise<void> {
     await Promise.all([
-      this.collection.createIndex({ slug: 1 }, { unique: true, name: 'slug_unique' }),
-      this.collection.createIndex({ parentId: 1 }, { name: 'parentId' }),
-      this.collection.createIndex({ assetType: 1 }, { name: 'assetType' }),
-      this.collection.createIndex({ isActive: 1 }, { name: 'isActive' }),
+      this.collection.createIndex(
+        { organisationId: 1, slug: 1 },
+        { unique: true, name: 'organisationId_slug_unique' },
+      ),
+      this.collection.createIndex(
+        { organisationId: 1, parentId: 1 },
+        { name: 'organisationId_parentId' },
+      ),
+      this.collection.createIndex(
+        { organisationId: 1, assetType: 1 },
+        { name: 'organisationId_assetType' },
+      ),
+      this.collection.createIndex(
+        { organisationId: 1, isActive: 1 },
+        { name: 'organisationId_isActive' },
+      ),
       this.collection.createIndex({ deletedAt: 1 }, { name: 'deletedAt' }),
     ]);
   }
 
   /**
    * List categories matching the given filter, with pagination.
-   * Soft-deleted are excluded by default.
+   * Tenant-scoped. Soft-deleted are excluded by default.
    */
   async list({
+    organisationId,
     limit = 50,
     skip = 0,
     filter = {},
     sort = { sortOrder: 1, name: 1 },
   }: ListCategoriesParams): Promise<ListCategoriesResult> {
-    const effectiveFilter: Filter<Category> = {
-      ...filter,
-      ...(filter.deletedAt === undefined ? { deletedAt: null } : {}),
-    };
+    const tenantId = requireTenantId(organisationId);
+    const effectiveFilter = tenantFilter<Category>(tenantId, filter);
 
     const [items, total] = await Promise.all([
       this.collection.find(effectiveFilter, { limit, skip, sort }).toArray(),
@@ -89,35 +119,49 @@ export class CategoriesRepository {
   }
 
   /**
-   * Find a category by its `_id`. Returns null if not found or soft-deleted.
+   * Find a category by its `_id`. Returns null if not found, soft-
+   * deleted, or in a different tenant.
    */
-  async findById(id: string, session?: ClientSession): Promise<WithId<Category> | null> {
+  async findById(
+    organisationId: string,
+    id: string,
+    session?: ClientSession,
+  ): Promise<WithId<Category> | null> {
+    const tenantId = requireTenantId(organisationId);
     if (!ObjectId.isValid(id)) return null;
 
     return this.collection.findOne(
-      {
+      tenantFilter<Category>(tenantId, {
         _id: new ObjectId(id) as unknown as Category['_id'],
-        deletedAt: null,
-      } as Filter<Category>,
+      } as Filter<Category>),
       session ? { session } : undefined,
     );
   }
 
   /**
-   * Find a category by its slug. Returns null if not found or soft-deleted.
-   * Used for slug-uniqueness check and slug-based routing.
+   * Find a category by its slug within the tenant. Returns null if
+   * not found or soft-deleted. Used for slug-uniqueness check and
+   * slug-based routing.
    */
-  async findBySlug(slug: string, session?: ClientSession): Promise<WithId<Category> | null> {
+  async findBySlug(
+    organisationId: string,
+    slug: string,
+    session?: ClientSession,
+  ): Promise<WithId<Category> | null> {
+    const tenantId = requireTenantId(organisationId);
     return this.collection.findOne(
-      { slug, deletedAt: null } as Filter<Category>,
+      tenantFilter<Category>(tenantId, { slug } as Filter<Category>),
       session ? { session } : undefined,
     );
   }
 
   /**
    * Insert a new category. Returns the inserted document.
-   * Caller is responsible for setting all required fields including slug,
-   * audit fields, and ensuring schema compliance.
+   *
+   * Caller is responsible for setting all required fields including
+   * `organisationId`, slug, audit fields, and ensuring schema
+   * compliance. The service sets `organisationId` from the actor's
+   * tenant before calling.
    */
   async insert(
     category: Omit<Category, '_id'>,
@@ -143,21 +187,23 @@ export class CategoriesRepository {
   }
 
   /**
-   * Apply a partial update. Returns updated doc or null if not found/deleted.
-   * Caller is responsible for setting `updatedAt`/`updatedBy` in the patch.
+   * Apply a partial update. Returns updated doc or null if not found,
+   * soft-deleted, or in a different tenant. Caller is responsible for
+   * setting `updatedAt`/`updatedBy` in the patch.
    */
   async update(
+    organisationId: string,
     id: string,
     patch: CategoryUpdatePatch,
     session?: ClientSession,
   ): Promise<WithId<Category> | null> {
+    const tenantId = requireTenantId(organisationId);
     if (!ObjectId.isValid(id)) return null;
 
     const result = await this.collection.findOneAndUpdate(
-      {
+      tenantFilter<Category>(tenantId, {
         _id: new ObjectId(id) as unknown as Category['_id'],
-        deletedAt: null,
-      } as Filter<Category>,
+      } as Filter<Category>),
       { $set: patch },
       {
         returnDocument: 'after',
@@ -169,23 +215,25 @@ export class CategoriesRepository {
   }
 
   /**
-   * Soft-delete a category. Returns the document with deletedAt populated,
-   * or null if not found / already deleted.
+   * Soft-delete a category. Returns the document with deletedAt
+   * populated, or null if not found, already deleted, or in a
+   * different tenant.
    */
   async softDelete(
+    organisationId: string,
     id: string,
     deletedBy: string,
     session?: ClientSession,
   ): Promise<WithId<Category> | null> {
+    const tenantId = requireTenantId(organisationId);
     if (!ObjectId.isValid(id)) return null;
 
     const now = new Date().toISOString();
 
     const result = await this.collection.findOneAndUpdate(
-      {
+      tenantFilter<Category>(tenantId, {
         _id: new ObjectId(id) as unknown as Category['_id'],
-        deletedAt: null,
-      } as Filter<Category>,
+      } as Filter<Category>),
       {
         $set: {
           deletedAt: now,
@@ -204,16 +252,23 @@ export class CategoriesRepository {
   }
 
   /**
-   * Count direct children (categories with parentId = this id).
-   * Used by delete to prevent removing a category that has descendants.
+   * Count direct children (categories with parentId = this id) within
+   * the tenant. Used by delete to prevent removing a category that
+   * has descendants.
    *
-   * NOTE: parentId is stored as a 24-hex string (per ObjectIdSchema), not
-   * as a BSON ObjectId. This matches the convention used for asset.categoryId,
-   * asset.locationId, etc. The unique-index lookup is still fast on string.
+   * NOTE: parentId is stored as a 24-hex string (per ObjectIdSchema),
+   * not as a BSON ObjectId. This matches the convention used for
+   * asset.categoryId, asset.locationId, etc. The composite-index
+   * lookup is still fast on string.
    */
-  async countChildren(parentId: string, session?: ClientSession): Promise<number> {
+  async countChildren(
+    organisationId: string,
+    parentId: string,
+    session?: ClientSession,
+  ): Promise<number> {
+    const tenantId = requireTenantId(organisationId);
     return this.collection.countDocuments(
-      { parentId, deletedAt: null } as Filter<Category>,
+      tenantFilter<Category>(tenantId, { parentId } as Filter<Category>),
       session ? { session } : undefined,
     );
   }

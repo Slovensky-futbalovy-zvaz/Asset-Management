@@ -159,7 +159,7 @@ const assetsRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request) => {
       const { limit, skip } = request.query;
-      return service.list({ limit, skip });
+      return service.list({ limit, skip }, request.currentUser);
     },
   );
 
@@ -180,7 +180,7 @@ const assetsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request) => {
-      return service.getById(request.params.id);
+      return service.getById(request.params.id, request.currentUser);
     },
   );
 

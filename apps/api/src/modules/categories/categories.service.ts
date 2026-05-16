@@ -7,13 +7,21 @@
  *   - Wrap state-changing ops in transactions (category write + audit atomic)
  *   - Reject slug collisions on create and on slug-changing patches
  *
+ * Phase C Blok 2 changes:
+ *   Every repository call now takes `organisationId` as the first
+ *   argument. The service threads it through from `actor.organisationId`
+ *   so the repository can enforce tenant scoping in filters and unique
+ *   indexes. Slug uniqueness becomes per-tenant: two tenants can each
+ *   have a category with slug "it-vybavenie" without collision.
+ *
  * Slug handling (K3 scope):
  *   POST: slug is OPTIONAL in the request body. The service derives one
  *   from `name` via the slugify utility (diacritics stripped, lowercased,
  *   non-alphanumeric runs collapsed to hyphens). If the derived slug
- *   already exists, the service tries `slug-2`, `slug-3`, ... until it
- *   finds one that's free. This auto-suffixing is silent — the client
- *   never sees a collision error for auto-generated slugs.
+ *   already exists within the tenant, the service tries `slug-2`,
+ *   `slug-3`, ... until it finds one that's free. This auto-suffixing
+ *   is silent — the client never sees a collision error for auto-
+ *   generated slugs.
  *
  *   If the client DOES supply a slug explicitly, it's used as-is. A
  *   collision then throws 400 (client must resolve, the server doesn't
@@ -23,8 +31,8 @@
  *   Renaming via `name` does NOT regenerate the slug — URLs stay stable.
  *
  * Hierarchy handling (K4 scope):
- *   `parentId` forms a tree. Both POST and PATCH check:
- *     - parent existence (if non-null)
+ *   `parentId` forms a tree within a tenant. Both POST and PATCH check:
+ *     - parent existence (if non-null) within the same tenant
  *     - max depth (root + 4 nested = 5 total levels via MAX_HIERARCHY_DEPTH)
  *     - cycle prevention on PATCH (the proposed parent must not have the
  *       edited category in its ancestor chain)
@@ -35,11 +43,6 @@
  *   isolation. The service wires it up by passing a session-aware
  *   ParentLookup callback that calls `repo.findById` inside the
  *   transaction.
- *
- * Why no inventoryNumber-style server generation here:
- *   Categories don't have a sequence. Slug is the URL key but it derives
- *   from the human-given name, so the human supplies it (or, after K3,
- *   the server derives it deterministically from name).
  */
 
 import {
@@ -52,16 +55,12 @@ import { isValidSlug, slugify, slugWithSuffix } from '../../lib/slugify.js';
 import { BadRequestError, NotFoundError } from '../../plugins/error-handler.js';
 import { computeShallowDiff } from '../assets/assets-diff.js';
 
-import type {
-  CategoriesRepository,
-  CategoryUpdatePatch,
-  ListCategoriesParams,
-} from './categories.repository.js';
+import type { CategoriesRepository, CategoryUpdatePatch } from './categories.repository.js';
 import type { AssetsRepository } from '../assets/assets.repository.js';
 import type { AuditLogService } from '../audit/audit.service.js';
 import type { Category, CreateCategoryInput, User } from '@inventario/shared-types';
 import type { FastifyRequest } from 'fastify';
-import type { ClientSession, MongoClient, WithId } from 'mongodb';
+import type { ClientSession, Filter, MongoClient, WithId } from 'mongodb';
 
 // ---------------------------------------------------------------------------
 // Public API types
@@ -75,6 +74,17 @@ export interface ListCategoriesResponse {
     skip: number;
     hasMore: boolean;
   };
+}
+
+/**
+ * Service-layer parameters for the `list` endpoint. Tenant scope is
+ * inferred from the actor and threaded through; callers pass pagination
+ * and filter knobs only.
+ */
+export interface ListCategoriesServiceParams {
+  limit?: number;
+  skip?: number;
+  filter?: Filter<Category>;
 }
 
 /**
@@ -95,6 +105,9 @@ export type CreateCategoryServiceInput = Omit<CreateCategoryInput, 'slug'> & {
  * if we had one in shared-types; for now we accept a partial of the writable
  * fields, omitting audit + identity columns the service controls.
  *
+ * `organisationId` is intentionally excluded from this surface — tenant
+ * scope is immutable post creation.
+ *
  * Note on `| undefined` in each field type: with TS `exactOptionalPropertyTypes`
  * enabled, `{ name?: string }` and `{ name?: string | undefined }` are
  * distinct types. The Zod `.partial()` schema produces the latter; the
@@ -103,7 +116,14 @@ export type CreateCategoryServiceInput = Omit<CreateCategoryInput, 'slug'> & {
 export type UpdateCategoryInput = {
   [K in keyof Omit<
     Category,
-    '_id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'deletedAt' | 'deletedBy'
+    | '_id'
+    | 'organisationId'
+    | 'createdAt'
+    | 'updatedAt'
+    | 'createdBy'
+    | 'updatedBy'
+    | 'deletedAt'
+    | 'deletedBy'
   >]?: Category[K] | undefined;
 };
 
@@ -123,11 +143,21 @@ export class CategoriesService {
   // Read paths (no transaction)
   // -------------------------------------------------------------------------
 
-  async list(params: ListCategoriesParams): Promise<ListCategoriesResponse> {
+  async list(
+    params: ListCategoriesServiceParams,
+    actor: WithId<User>,
+  ): Promise<ListCategoriesResponse> {
+    const tenantId = String(actor.organisationId);
     const limit = params.limit ?? 50;
     const skip = params.skip ?? 0;
+    const filter = params.filter ?? {};
 
-    const { items, total } = await this.repo.list({ ...params, limit, skip });
+    const { items, total } = await this.repo.list({
+      organisationId: tenantId,
+      limit,
+      skip,
+      filter,
+    });
 
     return {
       data: items.map(toApiShape),
@@ -140,8 +170,9 @@ export class CategoriesService {
     };
   }
 
-  async getById(id: string): Promise<Record<string, unknown>> {
-    const doc = await this.repo.findById(id);
+  async getById(id: string, actor: WithId<User>): Promise<Record<string, unknown>> {
+    const tenantId = String(actor.organisationId);
+    const doc = await this.repo.findById(tenantId, id);
     if (!doc) {
       throw new NotFoundError('Category', id);
     }
@@ -153,19 +184,22 @@ export class CategoriesService {
   // -------------------------------------------------------------------------
 
   /**
-   * Create a new category.
+   * Create a new category within the actor's tenant.
    *
    * Slug resolution (see service docstring for full semantics):
-   *   - If `input.slug` is provided, validate format, then enforce uniqueness
-   *     strictly (throw 400 on collision).
-   *   - If `input.slug` is absent, derive from `input.name` via slugify().
-   *     If the derived base collides, try `${base}-2`, `${base}-3`, ...
-   *     transparently. If the name slugifies to an empty string (e.g. all
-   *     non-Latin script), throw 400 — client must supply a slug.
+   *   - If `input.slug` is provided, validate format, then enforce
+   *     uniqueness within the tenant (throw 400 on collision).
+   *   - If `input.slug` is absent, derive from `input.name` via
+   *     slugify(). If the derived base collides within the tenant, try
+   *     `${base}-2`, `${base}-3`, ... transparently. If the name
+   *     slugifies to an empty string (e.g. all non-Latin script), throw
+   *     400 — client must supply a slug.
    *
-   * Parent existence is checked if `parentId` is non-null.
+   * Parent existence is checked if `parentId` is non-null. Cross-tenant
+   * parent references return 400 "parent does not exist" because the
+   * findById call passes tenantId.
    *
-   * Records an `CATEGORY_CREATED` audit event atomically with the insert.
+   * Records a `CATEGORY_CREATED` audit event atomically with the insert.
    */
   async create(
     input: CreateCategoryServiceInput,
@@ -173,14 +207,15 @@ export class CategoriesService {
     request: FastifyRequest,
   ): Promise<Record<string, unknown>> {
     const userId = String(user._id);
+    const tenantId = String(user.organisationId);
 
     const inserted = await this.runInTransaction(async (session) => {
       // ----- Step 1: resolve slug (client-provided OR auto-derived) -----
-      const resolvedSlug = await this.resolveSlugForCreate(input, session);
+      const resolvedSlug = await this.resolveSlugForCreate(tenantId, input, session);
 
       // ----- Step 2: parent existence check (if applicable) -----
       if (input.parentId !== null) {
-        const parent = await this.repo.findById(input.parentId, session);
+        const parent = await this.repo.findById(tenantId, input.parentId, session);
         if (!parent) {
           throw new BadRequestError(`Parent category ${input.parentId} does not exist.`);
         }
@@ -190,7 +225,7 @@ export class CategoriesService {
         const hierarchyResult = await checkHierarchyOnReparent(
           null, // editedId = null on create
           input.parentId,
-          this.makeParentLookup(session),
+          this.makeParentLookup(tenantId, session),
         );
         this.assertHierarchyOk(hierarchyResult);
       }
@@ -199,7 +234,7 @@ export class CategoriesService {
       const now = new Date().toISOString();
       const doc: Omit<Category, '_id'> = {
         ...input,
-        organisationId: String(user.organisationId),
+        organisationId: tenantId,
         slug: resolvedSlug,
         createdAt: now,
         updatedAt: now,
@@ -238,21 +273,23 @@ export class CategoriesService {
   }
 
   /**
-   * Resolve which slug to store on insert.
+   * Resolve which slug to store on insert. Tenant-scoped: collisions
+   * are checked within the actor's tenant only.
    *
    * Strategy:
-   *   - Client provided slug: must be valid format and unique. Collision
-   *     surfaces as 400 so the caller knows their input was used as-is.
+   *   - Client provided slug: must be valid format and unique within
+   *     the tenant. Collision surfaces as 400.
    *   - Client omitted slug: derive `slugify(name)` as the base. Probe
-   *     base, base-2, base-3, ... until a free slug is found. Stops at 100
-   *     attempts to avoid infinite loops on pathological inputs.
+   *     base, base-2, base-3, ... within the tenant until a free slug
+   *     is found. Stops at 100 attempts to avoid infinite loops.
    *
-   * Runs inside the caller's transaction so the read-then-write window is
-   * protected against concurrent inserts. (If another transaction commits
-   * the same slug between our findBySlug and our insert, the unique index
-   * will reject our insert and the driver retries the whole transaction.)
+   * Runs inside the caller's transaction so the read-then-write window
+   * is protected against concurrent inserts. The unique index is
+   * composite (`{organisationId, slug}`) so two tenants can each have
+   * a "free" slug without contention.
    */
   private async resolveSlugForCreate(
+    tenantId: string,
     input: CreateCategoryServiceInput,
     session: ClientSession,
   ): Promise<string> {
@@ -266,7 +303,7 @@ export class CategoriesService {
         );
       }
 
-      const collision = await this.repo.findBySlug(input.slug, session);
+      const collision = await this.repo.findBySlug(tenantId, input.slug, session);
       if (collision) {
         throw new BadRequestError(
           `Slug "${input.slug}" already exists (category ${String(collision._id)}).`,
@@ -287,7 +324,7 @@ export class CategoriesService {
     const MAX_ATTEMPTS = 100;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const candidate = attempt === 0 ? base : slugWithSuffix(base, attempt + 1);
-      const collision = await this.repo.findBySlug(candidate, session);
+      const collision = await this.repo.findBySlug(tenantId, candidate, session);
       if (!collision) return candidate;
     }
 
@@ -297,17 +334,19 @@ export class CategoriesService {
   }
 
   /**
-   * Update an existing category.
+   * Update an existing category within the actor's tenant.
    *
    * Validations:
-   *   - Category must exist and not be soft-deleted.
-   *   - If slug changes, the new slug must not collide with another category.
-   *   - If parentId changes to a non-null value, that parent must exist.
-   *     (Cycle detection lands in K4 — for K1 we accept that misuse here
-   *     could create orphan cycles. K4 closes the gap.)
+   *   - Category must exist within the tenant and not be soft-deleted.
+   *     Cross-tenant access surfaces as 404 (we deliberately do not
+   *     leak the existence of cross-tenant documents).
+   *   - If slug changes, the new slug must not collide with another
+   *     category in the same tenant.
+   *   - If parentId changes to a non-null value, that parent must
+   *     exist in the same tenant. Hierarchy cycle + depth checks run.
    *
-   * Records `CATEGORY_UPDATED` with per-field diff. No-op patches don't
-   * write an audit entry.
+   * Records `CATEGORY_UPDATED` with per-field diff. No-op patches
+   * don't write an audit entry.
    */
   async update(
     id: string,
@@ -316,17 +355,18 @@ export class CategoriesService {
     request: FastifyRequest,
   ): Promise<Record<string, unknown>> {
     const userId = String(user._id);
+    const tenantId = String(user.organisationId);
 
     const updated = await this.runInTransaction(async (session) => {
       // ----- Step 1: load current doc -----
-      const before = await this.repo.findById(id, session);
+      const before = await this.repo.findById(tenantId, id, session);
       if (!before) {
         throw new NotFoundError('Category', id);
       }
 
       // ----- Step 2: slug collision check (only if slug is changing) -----
       if (patch.slug !== undefined && patch.slug !== before.slug) {
-        const slugCollision = await this.repo.findBySlug(patch.slug, session);
+        const slugCollision = await this.repo.findBySlug(tenantId, patch.slug, session);
         if (slugCollision && String(slugCollision._id) !== id) {
           throw new BadRequestError(
             `Slug "${patch.slug}" already exists (category ${String(slugCollision._id)}).`,
@@ -347,7 +387,7 @@ export class CategoriesService {
         if (patch.parentId === id) {
           throw new BadRequestError('A category cannot be its own parent.');
         }
-        const parent = await this.repo.findById(patch.parentId, session);
+        const parent = await this.repo.findById(tenantId, patch.parentId, session);
         if (!parent) {
           throw new BadRequestError(`Parent category ${patch.parentId} does not exist.`);
         }
@@ -355,7 +395,7 @@ export class CategoriesService {
         const hierarchyResult = await checkHierarchyOnReparent(
           id,
           patch.parentId,
-          this.makeParentLookup(session),
+          this.makeParentLookup(tenantId, session),
         );
         this.assertHierarchyOk(hierarchyResult);
       }
@@ -368,7 +408,7 @@ export class CategoriesService {
         updatedBy: userId,
       };
 
-      const after = await this.repo.update(id, fullPatch, session);
+      const after = await this.repo.update(tenantId, id, fullPatch, session);
       if (!after) {
         throw new NotFoundError('Category', id);
       }
@@ -403,26 +443,28 @@ export class CategoriesService {
   }
 
   /**
-   * Soft-delete a category.
+   * Soft-delete a category within the actor's tenant.
    *
-   * Defense in depth: refuses to delete if the category has any non-deleted
-   * direct children. (Asset FK check lands in K9 as a separate concern;
-   * for K1 we only protect the category tree from orphans.)
+   * Defense in depth: refuses to delete if the category has any non-
+   * deleted direct children within the tenant. Also refuses if any
+   * non-deleted assets within the tenant reference it (slice #3 K9 FK
+   * protection).
    *
    * Records `CATEGORY_DELETED` with severity WARNING.
    */
   async delete(id: string, user: WithId<User>, request: FastifyRequest): Promise<void> {
     const userId = String(user._id);
+    const tenantId = String(user.organisationId);
 
     await this.runInTransaction(async (session) => {
       // ----- Step 1: load -----
-      const existing = await this.repo.findById(id, session);
+      const existing = await this.repo.findById(tenantId, id, session);
       if (!existing) {
         throw new NotFoundError('Category', id);
       }
 
-      // ----- Step 2: tree integrity — refuse if has children -----
-      const childCount = await this.repo.countChildren(id, session);
+      // ----- Step 2: tree integrity — refuse if has children within tenant -----
+      const childCount = await this.repo.countChildren(tenantId, id, session);
       if (childCount > 0) {
         throw new BadRequestError(
           `Cannot delete category "${existing.name}": ${childCount} child categor${childCount === 1 ? 'y' : 'ies'} would be orphaned. Reparent or delete children first.`,
@@ -435,7 +477,7 @@ export class CategoriesService {
       // would leave those assets pointing at a deleted document. We block
       // the delete with a count surfaced in the message so admins can find
       // and reassign the affected assets first.
-      const assetCount = await this.assetsRepo.countByCategory(id, session);
+      const assetCount = await this.assetsRepo.countByCategory(tenantId, id, session);
       if (assetCount > 0) {
         throw new BadRequestError(
           `Cannot delete category "${existing.name}": ${assetCount} asset${assetCount === 1 ? '' : 's'} reference${assetCount === 1 ? 's' : ''} it. Reassign or delete those assets first.`,
@@ -443,7 +485,7 @@ export class CategoriesService {
       }
 
       // ----- Step 3: soft-delete -----
-      const deleted = await this.repo.softDelete(id, userId, session);
+      const deleted = await this.repo.softDelete(tenantId, id, userId, session);
       if (!deleted) {
         throw new NotFoundError('Category', id);
       }
@@ -475,22 +517,24 @@ export class CategoriesService {
   // -------------------------------------------------------------------------
 
   /**
-   * Build a `ParentLookup` closure that resolves a category's parentId by
-   * id, using `repo.findById` inside the given transaction session.
+   * Build a `ParentLookup` closure that resolves a category's parentId
+   * by id within the given tenant, using `repo.findById` inside the
+   * given transaction session.
    *
    * Returns:
    *   - the parent id (as a string) when the node has a parent
    *   - null when the node is a root
-   *   - undefined when the node doesn't exist (treated as a terminating
-   *     walk by checkHierarchyOnReparent)
+   *   - undefined when the node doesn't exist in the tenant (treated
+   *     as a terminating walk by checkHierarchyOnReparent)
    *
-   * Why a closure: the hierarchy utility is generic and doesn't know about
-   * MongoDB sessions. We bind the session here so the traversal reads see
-   * the same transactional snapshot as the rest of the write.
+   * Why a closure: the hierarchy utility is generic and doesn't know
+   * about MongoDB sessions or tenancy. We bind the session AND tenant
+   * here so the traversal reads see the same transactional snapshot
+   * scoped to the same tenant as the rest of the write.
    */
-  private makeParentLookup(session: ClientSession): ParentLookup {
+  private makeParentLookup(tenantId: string, session: ClientSession): ParentLookup {
     return async (id: string) => {
-      const doc = await this.repo.findById(id, session);
+      const doc = await this.repo.findById(tenantId, id, session);
       if (!doc) return undefined;
       return doc.parentId;
     };

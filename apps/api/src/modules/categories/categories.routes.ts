@@ -208,7 +208,7 @@ const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
         filter['isActive'] = isActive;
       }
 
-      return service.list({ limit, skip, filter });
+      return service.list({ limit, skip, filter }, request.currentUser);
     },
   );
 
@@ -229,7 +229,7 @@ const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request) => {
-      return service.getById(request.params.id);
+      return service.getById(request.params.id, request.currentUser);
     },
   );
 
