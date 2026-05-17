@@ -3,6 +3,8 @@
 
 import './globals.css';
 
+import { AppProviders } from './providers';
+
 import type { Metadata, Viewport } from 'next';
 import type { JSX, ReactNode } from 'react';
 
@@ -54,7 +56,7 @@ export default function RootLayout({ children }: { children: ReactNode }): JSX.E
         <a href="#main" className="skip-link">
           Preskočiť na hlavný obsah
         </a>
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

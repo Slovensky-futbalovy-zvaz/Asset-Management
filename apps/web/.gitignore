@@ -4,6 +4,11 @@ out/
 build/
 next-env.d.ts
 
+# Auto-generated from apps/api/openapi.json via `pnpm generate:api-types`.
+# Re-run after every backend API change so types stay in sync. Don't
+# commit it — it can be regenerated deterministically and clutters diffs.
+src/lib/api-types.ts
+
 # Production
 *.tsbuildinfo
 

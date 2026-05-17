@@ -12,9 +12,12 @@
     "lint": "eslint src --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "echo 'TODO: vitest + react-testing-library' && exit 0",
+    "generate:api-types": "openapi-typescript ../api/openapi.json -o src/lib/api-types.ts",
     "clean": "rm -rf .next .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.10.1",
+    "@azure/msal-react": "^5.4.1",
     "@inventario/design-tokens": "workspace:*",
     "@inventario/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
