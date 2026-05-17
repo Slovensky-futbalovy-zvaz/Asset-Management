@@ -1,6 +1,6 @@
-# @sfz/api — SFZ Asset Management Backend
+# @inventario/api — Inventario Backend
 
-Fastify-based REST API serving the SFZ Asset Management system. Deployed on Vercel Serverless Functions.
+Fastify-based REST API serving Inventario — a multi-tenant, white-label asset management platform. Deployed on Vercel Serverless Functions.
 
 See [ADR-0009](../../docs/decisions/0009-backend-fastify.md) for the architectural rationale.
 
@@ -158,9 +158,27 @@ See `src/plugins/mongo.ts` and the [Vercel deployment section in ADR-0009](../..
 
 ### OpenAPI
 
-OpenAPI 3.1 spec is auto-generated from Fastify route schemas via `@fastify/swagger` + `fastify-type-provider-zod`. The Zod schemas are pulled directly from `@sfz/shared-types`.
+OpenAPI 3.1 spec is auto-generated from Fastify route schemas via `@fastify/swagger` + `fastify-type-provider-zod`. The Zod schemas are pulled directly from `@inventario/shared-types`.
 
 In development, Swagger UI is available at `/docs`. In production, set `ENABLE_SWAGGER=false` to disable.
+
+#### Static export (`openapi.json`)
+
+The live OpenAPI document is exported to [`openapi.json`](./openapi.json) at the apps/api root. This file is committed to git and is the canonical contract for downstream consumers:
+
+- **`apps/web` (Slice #4)** — generates a typed HTTP client from this file (planned via `openapi-typescript` + `openapi-fetch`).
+- **External integration partners** — third parties can read the spec without booting the API server.
+- **EU procurement / interoperability** — a static OpenAPI 3.1 artefact is a checkbox item in many public-sector tenders (European Interoperability Framework, ISA²).
+
+Regenerate the file after any route or schema change:
+
+```bash
+pnpm --filter @inventario/api openapi:export
+git add apps/api/openapi.json
+git commit -m "chore(api): refresh openapi.json"
+```
+
+CI fails the `OpenAPI Spec Freshness` job (`pnpm openapi:export -- --check`) if the committed file is stale, so any API change that forgets to regenerate is caught before merge.
 
 ### Auth (Entra ID)
 

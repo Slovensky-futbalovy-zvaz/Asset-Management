@@ -124,8 +124,52 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # ──────────────────────────────────────────────────────────────
+  # Job 3: OpenAPI freshness check — the openapi.json committed to git
+  # must match what `pnpm openapi:export` would produce from the current
+  # source. Catches API changes where someone forgot to regenerate.
+  # ──────────────────────────────────────────────────────────────
+  openapi:
+    name: OpenAPI Spec Freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dependencies
+        run: pnpm --filter @inventario/shared-types build
+
+      - name: Check openapi.json is up to date
+        run: pnpm --filter @inventario/api openapi:export -- --check
+        env:
+          NODE_ENV: test
+          # Same Atlas / Entra credentials as the test job — the export
+          # script boots the real server (which connects to Mongo) and
+          # then dumps the OpenAPI document. We can't avoid the DB
+          # connection without a deeper refactor of the swagger plugin.
+          MONGO_URI: ${{ secrets.MONGO_URI_TEST }}
+          ENTRA_API_CLIENT_ID: ${{ secrets.ENTRA_API_CLIENT_ID_TEST }}
+          ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID_TEST }}
+
   # ─────────────────────────────────────────────────────────────────
-  # Job 3: Commitlint — overiť, že commit messages spĺňajú konvenciu
+  # Job 4: Commitlint — overiť, že commit messages spĺňajú konvenciu
   # (len pre PR, na main commity sa už nedá vrátiť)
   # ─────────────────────────────────────────────────────────────────
   commitlint:

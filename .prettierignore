@@ -11,3 +11,8 @@ pnpm-lock.yaml
 # Generated
 **/generated/**
 **/*.generated.*
+
+# Auto-generated OpenAPI spec — produced by `pnpm --filter @inventario/api openapi:export`
+# with deterministic 2-space JSON.stringify formatting. Prettier would reformat
+# multi-line strings inside `description` fields and break the CI freshness check.
+apps/api/openapi.json

@@ -28,27 +28,56 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
     openapi: {
       openapi: '3.1.0',
       info: {
-        title: 'SFZ Asset Management API',
+        title: 'Inventario API',
         description:
-          'REST API for managing physical assets, loans, and inventory at Slovenský futbalový zväz (SFZ).',
+          'REST API for Inventario — a multi-tenant, white-label asset management platform ' +
+          'for sports federations, municipalities, schools, and clubs. Open-source under EUPL-1.2.',
         version: '0.1.0',
         contact: {
-          name: 'SFZ IT Team',
-          url: 'https://github.com/Slovensky-futbalovy-zvaz/Asset-Management',
+          name: 'Inventario · LTK Solutions',
+          url: 'https://inventario.sportup.sk',
+          email: 'inventario@sportup.sk',
         },
         license: {
-          name: 'MIT',
-          url: 'https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/blob/main/LICENSE',
+          name: 'EUPL-1.2',
+          url: 'https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12',
         },
       },
       servers: [
         { url: `http://localhost:${fastify.config.PORT}`, description: 'Local dev' },
-        // Production server URL will be auto-set by Vercel
+        {
+          url: 'https://api.inventario.sportup.sk',
+          description: 'Production (planned Q3 2026)',
+        },
       ],
       tags: [
         { name: 'Health', description: 'Liveness and readiness probes' },
-        { name: 'Users', description: 'User accounts and current-user lookup' },
-        { name: 'Assets', description: 'Physical asset inventory' },
+        {
+          name: 'Organisations',
+          description:
+            'Tenant lifecycle management. Each Organisation is a tenant boundary; ' +
+            'all other resources are scoped to exactly one Organisation.',
+        },
+        {
+          name: 'Users',
+          description:
+            'User accounts and current-user lookup. JIT-provisioned on first login via ' +
+            'Microsoft Entra ID. Tenant-scoped per Organisation.',
+        },
+        {
+          name: 'Assets',
+          description: 'Physical asset inventory — devices, equipment, vehicles, supplies.',
+        },
+        {
+          name: 'Categories',
+          description:
+            'Hierarchical asset categorisation per tenant. Slugs are unique within an Organisation.',
+        },
+        {
+          name: 'Locations',
+          description:
+            'Hierarchical physical location tree per tenant. Slugs are unique within an Organisation.',
+        },
       ],
       components: {
         securitySchemes: {
@@ -57,10 +86,15 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify) => {
             scheme: 'bearer',
             bearerFormat: 'JWT',
             description:
-              'Microsoft Entra ID access token (v2.0). Obtain via device code flow ' +
-              'using the CLI app registration — see apps/api/README.md.',
+              'Microsoft Entra ID access token (v2.0). Multi-tenant: the JWT `tid` claim ' +
+              'resolves the Organisation; the `oid` claim resolves the User. ' +
+              'See apps/api/README.md for the device code flow.',
           },
         },
+      },
+      externalDocs: {
+        description: 'Inventario documentation',
+        url: 'https://docs.inventario.sportup.sk',
       },
     },
     transform: jsonSchemaTransform,

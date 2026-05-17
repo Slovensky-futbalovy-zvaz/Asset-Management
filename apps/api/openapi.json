@@ -1,0 +1,2428 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Inventario API",
+    "description": "REST API for Inventario — a multi-tenant, white-label asset management platform for sports federations, municipalities, schools, and clubs. Open-source under EUPL-1.2.",
+    "version": "0.1.0",
+    "contact": {
+      "name": "Inventario · LTK Solutions",
+      "url": "https://inventario.sportup.sk",
+      "email": "inventario@sportup.sk"
+    },
+    "license": {
+      "name": "EUPL-1.2",
+      "url": "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Microsoft Entra ID access token (v2.0). Multi-tenant: the JWT `tid` claim resolves the Organisation; the `oid` claim resolves the User. See apps/api/README.md for the device code flow."
+      }
+    },
+    "schemas": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Liveness probe",
+        "tags": [
+          "Health"
+        ],
+        "description": "Returns 200 if the API process is alive. Does not check dependencies.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "uptime": {
+                      "type": "number",
+                      "description": "Process uptime in seconds"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "uptime",
+                    "timestamp"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Readiness probe",
+        "tags": [
+          "Health"
+        ],
+        "description": "Returns 200 if the API can serve requests (DB reachable).",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready",
+                        "not_ready"
+                      ]
+                    },
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "mongo": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "fail"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mongo"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "checks",
+                    "timestamp"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready",
+                        "not_ready"
+                      ]
+                    },
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "mongo": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "fail"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "mongo"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "checks",
+                    "timestamp"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/organisations": {
+      "get": {
+        "summary": "List organisations (admin)",
+        "tags": [
+          "Organisations"
+        ],
+        "description": "Returns a paginated list of organisations sorted by displayName. Soft-deleted are excluded by default; pass `includeDeleted=true` to see them. Optional filters: status, plan. Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "skip",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "SUSPENDED",
+                "ARCHIVED"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "FREE",
+                "PRO",
+                "ENTERPRISE"
+              ]
+            },
+            "in": "query",
+            "name": "plan",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false",
+                "1",
+                "0"
+              ]
+            },
+            "in": "query",
+            "name": "includeDeleted",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
+                        },
+                        "skip": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "limit",
+                        "skip",
+                        "hasMore"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new organisation (admin onboarding)",
+        "tags": [
+          "Organisations"
+        ],
+        "description": "Onboards a new tenant before their first SSO login. Slug + entraTenantId must both be globally unique. The alternative workflow is JIT provisioning on first contact, but explicit creation lets admins configure branding and plan upfront. Requires ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40,
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$"
+                  },
+                  "entraTenantId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "customDomain": {
+                    "type": "string",
+                    "maxLength": 253,
+                    "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "SUSPENDED",
+                      "ARCHIVED"
+                    ],
+                    "default": "ACTIVE"
+                  },
+                  "plan": {
+                    "type": "string",
+                    "enum": [
+                      "FREE",
+                      "PRO",
+                      "ENTERPRISE"
+                    ],
+                    "default": "FREE"
+                  },
+                  "primaryContactEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "brandKit": {
+                    "type": "object",
+                    "properties": {
+                      "logoUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "faviconUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "primary": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "primaryFg": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "accent": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "accentFg": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "fontFamilySans": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "nullable": true,
+                        "default": null
+                      }
+                    },
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "settings": {
+                    "type": "object",
+                    "additionalProperties": {},
+                    "default": {}
+                  }
+                },
+                "required": [
+                  "displayName",
+                  "slug"
+                ],
+                "additionalProperties": false,
+                "description": "Telo pre vytvorenie organizácie (tenanta)."
+              }
+            }
+          },
+          "description": "Telo pre vytvorenie organizácie (tenanta)."
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/organisations/{id}": {
+      "get": {
+        "summary": "Get a single organisation by ID (admin)",
+        "tags": [
+          "Organisations"
+        ],
+        "description": "Returns one organisation by _id. 404 if not found or soft-deleted. Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update an organisation (admin)",
+        "tags": [
+          "Organisations"
+        ],
+        "description": "Partial update — only provided fields are changed. Slug and entraTenantId are NOT updatable (stable identifiers). Custom domain uniqueness is revalidated on change. Records an audit event with a per-field diff. Requires ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "customDomain": {
+                    "type": "string",
+                    "maxLength": 253,
+                    "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "SUSPENDED",
+                      "ARCHIVED"
+                    ]
+                  },
+                  "plan": {
+                    "type": "string",
+                    "enum": [
+                      "FREE",
+                      "PRO",
+                      "ENTERPRISE"
+                    ]
+                  },
+                  "primaryContactEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "nullable": true
+                  },
+                  "brandKit": {
+                    "type": "object",
+                    "properties": {
+                      "logoUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "faviconUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "primary": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "primaryFg": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "accent": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "accentFg": {
+                        "type": "string",
+                        "pattern": "^#[0-9a-fA-F]{6}$",
+                        "nullable": true,
+                        "default": null
+                      },
+                      "fontFamilySans": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "nullable": true,
+                        "default": null
+                      }
+                    },
+                    "additionalProperties": false,
+                    "nullable": true
+                  },
+                  "settings": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Čiastočná aktualizácia organizácie; všetky polia voliteľné."
+              }
+            }
+          },
+          "description": "Čiastočná aktualizácia organizácie; všetky polia voliteľné."
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft-delete an organisation (admin)",
+        "tags": [
+          "Organisations"
+        ],
+        "description": "Marks the organisation as deleted. Tenant data remains in place (soft-delete is a tombstone, not a purge), but no user from this tenant can log in. Records a WARNING-severity audit event. Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "enum": [
+                    "null"
+                  ],
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "summary": "Get the currently authenticated user",
+        "tags": [
+          "Users"
+        ],
+        "description": "Returns the user record corresponding to the JWT bearer. Creates a new user record on first call (JIT provisioning) with the default `EMPLOYEE` role and binds it to the tenant resolved from the JWT `tid` claim. Subsequent calls return the existing record and update `lastLoginAt`.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "_id": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "accountType": {
+                      "type": "string"
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "lastLoginAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "preferences": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "_id",
+                    "email",
+                    "firstName",
+                    "lastName",
+                    "displayName",
+                    "accountType",
+                    "roles",
+                    "isActive",
+                    "lastLoginAt",
+                    "preferences",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users": {
+      "get": {
+        "summary": "List users (admin)",
+        "tags": [
+          "Users"
+        ],
+        "description": "Returns a paginated list of users sorted by displayName. Soft-deleted users are always excluded. Optional filters: role, isActive, q (free-text across email + displayName + firstName + lastName, case-insensitive). Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "skip",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EMPLOYEE",
+                "TEAM_MANAGER",
+                "ASSET_MANAGER",
+                "ADMIN",
+                "EXTERNAL"
+              ]
+            },
+            "in": "query",
+            "name": "role",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false",
+                "1",
+                "0"
+              ]
+            },
+            "in": "query",
+            "name": "isActive",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "in": "query",
+            "name": "q",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
+                        },
+                        "skip": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "limit",
+                        "skip",
+                        "hasMore"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/users/{id}": {
+      "get": {
+        "summary": "Get a single user by ID (admin)",
+        "tags": [
+          "Users"
+        ],
+        "description": "Returns one user by _id. 404 if not found or soft-deleted. Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update a user (admin)",
+        "tags": [
+          "Users"
+        ],
+        "description": "Partial update of a user. K10 exposes only `roles` and `isActive`. Guardrails: admins cannot deactivate or demote themselves, and the last active ADMIN cannot be deactivated or demoted (promote another user to ADMIN first). Records per-action audit events (USER_ROLE_GRANTED, USER_ROLE_REVOKED, USER_DEACTIVATED, USER_REACTIVATED). Requires ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "EMPLOYEE",
+                        "TEAM_MANAGER",
+                        "ASSET_MANAGER",
+                        "ADMIN",
+                        "EXTERNAL"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Čiastočná aktualizácia používateľa (admin); roles + isActive."
+              }
+            }
+          },
+          "description": "Čiastočná aktualizácia používateľa (admin); roles + isActive."
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/assets": {
+      "get": {
+        "summary": "List assets",
+        "tags": [
+          "Assets"
+        ],
+        "description": "Returns a paginated list of assets, sorted by creation date (newest first). Soft-deleted assets are excluded. Requires authentication.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "skip",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
+                        },
+                        "skip": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "limit",
+                        "skip",
+                        "hasMore"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new asset",
+        "tags": [
+          "Assets"
+        ],
+        "description": "Creates a new asset. The server generates `inventoryNumber` from `inventoryNumberPrefix` + current year + auto-increment sequence (e.g. prefix \"LT\" → \"LT-2026-001\"). Requires ASSET_MANAGER or ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "inventoryNumberPrefix": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{1,5}$",
+                    "description": "Prefix inventárneho čísla; server pripojí rok a poradie"
+                  },
+                  "serialNumber": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "categoryId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$"
+                  },
+                  "condition": {
+                    "type": "string"
+                  },
+                  "locationId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$"
+                  },
+                  "manufacturer": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "model": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "acquiredAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "acquisitionCost": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "warrantyUntil": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "specs": {
+                    "type": "object",
+                    "additionalProperties": {},
+                    "default": {}
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 50
+                    },
+                    "default": []
+                  },
+                  "imageIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-f\\d]{24}$"
+                    },
+                    "default": []
+                  },
+                  "internalNotes": {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "isLoanable": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "requiresApproval": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "required": [
+                  "inventoryNumberPrefix",
+                  "name",
+                  "type",
+                  "categoryId",
+                  "condition",
+                  "locationId",
+                  "acquiredAt"
+                ],
+                "additionalProperties": false,
+                "description": "Telo pre vytvorenie assetu; inventoryNumber sa generuje serverom"
+              }
+            }
+          },
+          "description": "Telo pre vytvorenie assetu; inventoryNumber sa generuje serverom"
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/assets/{id}": {
+      "get": {
+        "summary": "Get a single asset by ID",
+        "tags": [
+          "Assets"
+        ],
+        "description": "Returns one asset by its MongoDB `_id`. 404 if not found or soft-deleted.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update an existing asset",
+        "tags": [
+          "Assets"
+        ],
+        "description": "Partial update — only provided fields are changed. Cannot modify `inventoryNumber` (immutable post-creation). Records an audit event with a per-field diff. Requires ASSET_MANAGER or ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serialNumber": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "IT",
+                      "SPORTS_GEAR",
+                      "TRAINING_EQUIPMENT",
+                      "OFFICE_EQUIPMENT",
+                      "MEDIA",
+                      "COMMUNICATION",
+                      "OTHER"
+                    ]
+                  },
+                  "categoryId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "description": "MongoDB ObjectId (24 hex znakov)"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "AVAILABLE",
+                      "RESERVED",
+                      "BORROWED",
+                      "IN_SERVICE",
+                      "DISPOSED",
+                      "LOST"
+                    ]
+                  },
+                  "condition": {
+                    "type": "string",
+                    "enum": [
+                      "NEW",
+                      "EXCELLENT",
+                      "GOOD",
+                      "FAIR",
+                      "POOR",
+                      "UNUSABLE"
+                    ]
+                  },
+                  "locationId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "description": "MongoDB ObjectId (24 hex znakov)"
+                  },
+                  "currentLoanId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "description": "MongoDB ObjectId (24 hex znakov)",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "manufacturer": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "model": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "acquiredAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp v UTC"
+                  },
+                  "acquisitionCost": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "warrantyUntil": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp v UTC",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "specs": {
+                    "type": "object",
+                    "additionalProperties": {},
+                    "default": {}
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 50
+                    },
+                    "default": []
+                  },
+                  "imageIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-f\\d]{24}$",
+                      "description": "MongoDB ObjectId (24 hex znakov)"
+                    },
+                    "default": []
+                  },
+                  "internalNotes": {
+                    "type": "string",
+                    "maxLength": 5000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "isLoanable": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "requiresApproval": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft-delete an asset",
+        "tags": [
+          "Assets"
+        ],
+        "description": "Marks an asset as deleted (sets `deletedAt`/`deletedBy`). The record remains in the database for audit/recovery. Cannot delete an asset currently on loan — return the loan first. Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "enum": [
+                    "null"
+                  ],
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/categories": {
+      "get": {
+        "summary": "List categories",
+        "tags": [
+          "Categories"
+        ],
+        "description": "Returns a paginated list of categories, sorted by sortOrder then name. Soft-deleted categories are excluded. Optional filters: parentId, assetType, isActive.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "skip",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^([a-f\\d]{24}|null)$"
+            },
+            "in": "query",
+            "name": "parentId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "assetType",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "isActive",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
+                        },
+                        "skip": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "limit",
+                        "skip",
+                        "hasMore"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new category",
+        "tags": [
+          "Categories"
+        ],
+        "description": "Creates a new category. Slug must be unique. If parentId is supplied, the parent must exist. Requires ASSET_MANAGER or ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "slug": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "maxLength": 200
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "assetType": {
+                    "type": "string",
+                    "enum": [
+                      "IT",
+                      "SPORTS_GEAR",
+                      "TRAINING_EQUIPMENT",
+                      "OFFICE_EQUIPMENT",
+                      "MEDIA",
+                      "COMMUNICATION",
+                      "OTHER"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "icon": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "approverIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-f\\d]{24}$"
+                    },
+                    "default": []
+                  },
+                  "requiresApprovalByDefault": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "maxLoanDays": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0,
+                    "maximum": 3650,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "isActive": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                },
+                "required": [
+                  "name",
+                  "assetType"
+                ],
+                "additionalProperties": false,
+                "description": "Telo pre vytvorenie kategórie; slug je voliteľný (server odvodí z name)."
+              }
+            }
+          },
+          "description": "Telo pre vytvorenie kategórie; slug je voliteľný (server odvodí z name)."
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/categories/{id}": {
+      "get": {
+        "summary": "Get a single category by ID",
+        "tags": [
+          "Categories"
+        ],
+        "description": "Returns one category by its _id. 404 if not found or soft-deleted.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update an existing category",
+        "tags": [
+          "Categories"
+        ],
+        "description": "Partial update — only provided fields are changed. Slug uniqueness and parent existence are revalidated on change. Records an audit event with a per-field diff. Requires ASSET_MANAGER or ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "slug": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "maxLength": 200
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "nullable": true
+                  },
+                  "assetType": {
+                    "type": "string",
+                    "enum": [
+                      "IT",
+                      "SPORTS_GEAR",
+                      "TRAINING_EQUIPMENT",
+                      "OFFICE_EQUIPMENT",
+                      "MEDIA",
+                      "COMMUNICATION",
+                      "OTHER"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "nullable": true
+                  },
+                  "icon": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "nullable": true
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$",
+                    "nullable": true
+                  },
+                  "approverIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-f\\d]{24}$"
+                    }
+                  },
+                  "requiresApprovalByDefault": {
+                    "type": "boolean"
+                  },
+                  "maxLoanDays": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0,
+                    "maximum": 3650,
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "sortOrder": {
+                    "type": "integer"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Čiastočná aktualizácia kategórie; všetky polia voliteľné."
+              }
+            }
+          },
+          "description": "Čiastočná aktualizácia kategórie; všetky polia voliteľné."
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft-delete a category",
+        "tags": [
+          "Categories"
+        ],
+        "description": "Marks a category as deleted. Refuses deletion if the category has any non-deleted child categories (would orphan them), or if any non-deleted assets reference it. Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "enum": [
+                    "null"
+                  ],
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/locations": {
+      "get": {
+        "summary": "List locations",
+        "tags": [
+          "Locations"
+        ],
+        "description": "Returns a paginated list of locations, sorted by name. Soft-deleted locations are excluded. Optional filters: parentId, type, isActive.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "in": "query",
+            "name": "skip",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^([a-f\\d]{24}|null)$"
+            },
+            "in": "query",
+            "name": "parentId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "WAREHOUSE",
+                "OFFICE",
+                "STADIUM",
+                "TRAINING_CENTER",
+                "EXTERNAL",
+                "IN_TRANSIT"
+              ]
+            },
+            "in": "query",
+            "name": "type",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "isActive",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "limit": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "minimum": 0
+                        },
+                        "skip": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "limit",
+                        "skip",
+                        "hasMore"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new location",
+        "tags": [
+          "Locations"
+        ],
+        "description": "Creates a new location. Slug must be unique (or derived from name if omitted). If parentId is supplied, the parent must exist and the resulting depth must not exceed the hierarchy limit. Requires ASSET_MANAGER or ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "slug": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "maxLength": 200
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "WAREHOUSE",
+                      "OFFICE",
+                      "STADIUM",
+                      "TRAINING_CENTER",
+                      "EXTERNAL",
+                      "IN_TRANSIT"
+                    ]
+                  },
+                  "address": {
+                    "type": "object",
+                    "properties": {
+                      "street": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "city": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "country": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 2,
+                        "default": "SK"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "coordinates": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ],
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "nullable": true,
+                    "default": null
+                  },
+                  "managerId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "nullable": true,
+                    "default": null
+                  },
+                  "isActive": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "required": [
+                  "name",
+                  "type"
+                ],
+                "additionalProperties": false,
+                "description": "Telo pre vytvorenie lokality; slug je voliteľný (server odvodí z name)."
+              }
+            }
+          },
+          "description": "Telo pre vytvorenie lokality; slug je voliteľný (server odvodí z name)."
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/locations/{id}": {
+      "get": {
+        "summary": "Get a single location by ID",
+        "tags": [
+          "Locations"
+        ],
+        "description": "Returns one location by its _id. 404 if not found or soft-deleted.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update an existing location",
+        "tags": [
+          "Locations"
+        ],
+        "description": "Partial update — only provided fields are changed. Slug uniqueness, parent existence, and hierarchy invariants (cycle, depth) are revalidated on change. Records an audit event with a per-field diff. Requires ASSET_MANAGER or ADMIN role.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "slug": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                    "maxLength": 200
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "WAREHOUSE",
+                      "OFFICE",
+                      "STADIUM",
+                      "TRAINING_CENTER",
+                      "EXTERNAL",
+                      "IN_TRANSIT"
+                    ]
+                  },
+                  "address": {
+                    "type": "object",
+                    "properties": {
+                      "street": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "city": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "country": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 2,
+                        "default": "SK"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "nullable": true
+                  },
+                  "coordinates": {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng"
+                    ],
+                    "additionalProperties": false,
+                    "nullable": true
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "nullable": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "nullable": true
+                  },
+                  "managerId": {
+                    "type": "string",
+                    "pattern": "^[a-f\\d]{24}$",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Čiastočná aktualizácia lokality; všetky polia voliteľné."
+              }
+            }
+          },
+          "description": "Čiastočná aktualizácia lokality; všetky polia voliteľné."
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft-delete a location",
+        "tags": [
+          "Locations"
+        ],
+        "description": "Marks a location as deleted. Refuses deletion if the location has any non-deleted child locations (would orphan them), or if any non-deleted assets reference it. Requires ADMIN role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "enum": [
+                    "null"
+                  ],
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local dev"
+    },
+    {
+      "url": "https://api.inventario.sportup.sk",
+      "description": "Production (planned Q3 2026)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Liveness and readiness probes"
+    },
+    {
+      "name": "Organisations",
+      "description": "Tenant lifecycle management. Each Organisation is a tenant boundary; all other resources are scoped to exactly one Organisation."
+    },
+    {
+      "name": "Users",
+      "description": "User accounts and current-user lookup. JIT-provisioned on first login via Microsoft Entra ID. Tenant-scoped per Organisation."
+    },
+    {
+      "name": "Assets",
+      "description": "Physical asset inventory — devices, equipment, vehicles, supplies."
+    },
+    {
+      "name": "Categories",
+      "description": "Hierarchical asset categorisation per tenant. Slugs are unique within an Organisation."
+    },
+    {
+      "name": "Locations",
+      "description": "Hierarchical physical location tree per tenant. Slugs are unique within an Organisation."
+    }
+  ],
+  "externalDocs": {
+    "description": "Inventario documentation",
+    "url": "https://docs.inventario.sportup.sk"
+  }
+}
