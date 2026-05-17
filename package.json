@@ -30,6 +30,7 @@
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml,css}\"",
+    "sbom": "pnpm dlx @cyclonedx/cdxgen@^11 -r -t js -o sbom.cdx.json --spec-version 1.6 --no-babel",
     "prepare": "husky || true"
   },
   "devDependencies": {

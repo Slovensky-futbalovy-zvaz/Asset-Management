@@ -1,0 +1,114 @@
+name: SBOM
+
+# Phase D Blok 2 — Software Bill of Materials generation.
+#
+# Why this exists
+# ---------------
+# The EU Cyber Resilience Act (CRA, in force 2025, full obligations from
+# late 2027) requires manufacturers of products with digital elements to
+# maintain a machine-readable Software Bill of Materials covering the
+# top-level components and their direct dependencies. CycloneDX 1.6 is
+# the format the European Commission's reference architecture endorses
+# (alongside SPDX 3.0 as an alternative).
+#
+# Public-sector procurement in Slovakia and the wider EU increasingly
+# treats "SBOM available on request" as a tender checkbox. Generating it
+# in CI \u2014 instead of building it once and letting it drift \u2014 means the
+# document reflects the locked pnpm dependency graph at any commit.
+#
+# What it produces
+# ----------------
+#   - sbom.cdx.json        CycloneDX 1.6 JSON, root-level monorepo SBOM
+#                          including every workspace package, their direct
+#                          and transitive npm dependencies, and license
+#                          metadata extracted from each package.json
+#
+# The file is uploaded as a workflow artifact with 90-day retention.
+# That matches the EU Procurement minimum audit-trail window and gives
+# auditors enough time to fetch a historical SBOM if a vulnerability is
+# disclosed against one of our dependencies.
+#
+# Tooling
+# -------
+# `@cyclonedx/cdxgen` walks the pnpm workspace, resolves the lockfile,
+# and emits CycloneDX JSON. It supports the `--require-license` flag to
+# fail when a package is missing a SPDX license expression \u2014 useful but
+# we disable it here because some transitive deps still ship without
+# one and we don't want CI noise. The license field is captured when
+# present.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Týždenný regeneračný scan v nedeľu o 7:00 UTC. Zachytí prípady,
+    # keď sa zraniteľnosť odhalí v už zamknutej tranzitívnej závislosti
+    # — nový SBOM artifact dostaneme bez nutnosti nového commitu.
+    - cron: "0 7 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: sbom-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22.20.0"
+  PNPM_VERSION: "9.12.0"
+
+jobs:
+  generate:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate CycloneDX SBOM
+        run: pnpm sbom
+        env:
+          # cdxgen reads CDXGEN_DEBUG_MODE=verbose for richer logs when
+          # a generation step fails on a transitive dep. Cheap insurance
+          # against opaque CI failures.
+          CDXGEN_DEBUG_MODE: info
+
+      - name: Show SBOM summary
+        run: |
+          echo "## SBOM summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Format: CycloneDX $(jq -r '.specVersion' sbom.cdx.json)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Components: $(jq '.components | length' sbom.cdx.json)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- File size: $(du -h sbom.cdx.json | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Generated at: $(jq -r '.metadata.timestamp' sbom.cdx.json)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.cdx.json
+          # 90-day retention matches the minimum EU procurement audit
+          # window and gives auditors time to pull a historical SBOM
+          # when a vulnerability is disclosed against one of our deps.
+          retention-days: 90
+          if-no-files-found: error

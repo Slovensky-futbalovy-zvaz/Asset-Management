@@ -61,6 +61,11 @@ infra/data/
 *.p12
 secrets/
 
+# SBOM (generuje sa lokálne cez `pnpm sbom` a v CI ako artifact; never committed)
+sbom.cdx.json
+sbom.cdx.xml
+.cdxgen-cache/
+
 # Vercel
 .vercel/
 
