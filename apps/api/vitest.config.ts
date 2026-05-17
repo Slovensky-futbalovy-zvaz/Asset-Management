@@ -21,7 +21,8 @@
  *   per operation. A single CRUD test does 4-6 operations (POST + GET +
  *   PATCH + DELETE + audit log inserts), totaling 200-500ms. With the
  *   default 5s timeout, a slow network would cause flaky failures.
- *   10 seconds is comfortable headroom.
+ *   30 seconds covers the worst-case observed (audit.test.ts ~10s when
+ *   the network is contended) with comfortable headroom.
  */
 
 import { defineConfig } from 'vitest/config';
@@ -34,8 +35,9 @@ export default defineConfig({
     // Where to find test files
     include: ['tests/**/*.test.ts'],
 
-    // Atlas network latency makes 5s default tight; 10s is safer
-    testTimeout: 10_000,
+    // Atlas network latency makes 5s default tight; 30s covers worst-case
+    // multi-CRUD tests on a contended residential link.
+    testTimeout: 30_000,
     hookTimeout: 30_000, // beforeAll can take longer (DB cleanup, app boot)
 
     // Reporter — default is fine; verbose only on CI failures

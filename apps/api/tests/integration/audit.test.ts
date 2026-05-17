@@ -24,7 +24,7 @@
  *   before each test so audit log counts are exact.
  */
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { buildTestApp, cleanTestDatabase } from '../helpers/test-app.js';
 import {
@@ -94,9 +94,11 @@ describe('Audit log on /v1/assets operations', () => {
     fkLocationId = fk.locationId;
   });
 
-  afterEach(async () => {
-    await cleanTestDatabase(app);
-  });
+  // No afterEach cleanup needed — the next test's `beforeEach` does it.
+  // Running cleanup twice per test (before + after) doubled the Atlas
+  // round-trip count and pushed this file close to the 10s testTimeout
+  // on slow networks. Cleanup-on-entry is the only invariant required
+  // for test isolation; cleanup-on-exit was redundant.
 
   /**
    * Local convenience: build a valid POST body with the per-test FK refs.
