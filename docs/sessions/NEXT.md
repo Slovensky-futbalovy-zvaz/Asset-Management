@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-16 (po dokončení Phase C Blok 5 — cross-tenant isolation tests + partial-filter indexes — **CELÁ PHASE C COMPLETE**)
+**Aktualizované**: 2026-05-17 (po dokončení Phase D Blok 1-4 — OpenAPI export + SBOM + WCAG audit + GDPR Article 30 — **CELÁ PHASE D COMPLETE**)
 
 ---
 
@@ -17,9 +17,9 @@ SPDX-License-Identifier: CC-BY-4.0
 Frontend (Slice #4) je posledný **zámerne**, aby sa minimalizovali prerábky. Logika:
 
 - 🅱 **Design tokens** → definovať vizuálny jazyk **pred** tým, než ho frontend začne používať ✅ **DONE**
-- 🅲 **OrganisationId migration** → stabilný API contract s tenant scoping **pred** frontend integráciou
-- 🅳 **EU compliance** (OpenAPI export, SBOM, WCAG) → fundamenty pre type generation a verejný sektor
-- 🅴 **Tech debt cleanup** → posledný refresh pred veľkým kusom
+- 🅲 **OrganisationId migration** → stabilný API contract s tenant scoping **pred** frontend integráciou ✅ **DONE**
+- 🅳 **EU compliance** (OpenAPI export, SBOM, WCAG, GDPR) → fundamenty pre type generation a verejný sektor ✅ **DONE**
+- 🅴 **Tech debt cleanup** → posledný refresh pred veľkým kusom ⬅ **PRÍŠTÍ KROK**
 - 🅰 **Slice #4 frontend** → na zelenú lúku s čistým API, tokens, multi-tenancy in place
 
 ---
@@ -135,6 +135,29 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
   - **All 327 tests green**: 310 existujúcich + 17 nových cross-tenant. Test suite duration ~5min (Atlas Flex)
   - 7 modified files + 1 new file. Typecheck zelený
 - ✅ **Phase C COMPLETE** — Multi-tenant whitelabel backend ready. Milestone doc `docs/milestones/phase-c-multi-tenant-migration.md`
+- ✅ **Phase D Blok 1**: OpenAPI 3.1 export + Swagger re-branding (2026-05-17, commit `69d2092`)
+  - Swagger plugin: SFZ → Inventario, MIT → EUPL-1.2, tagy rozsahy z 3 → 6 (Health, Organisations, Users, Assets, Categories, Locations)
+  - Nový skript `apps/api/scripts/export-openapi.ts` — boot-uje server s pluginTimeout 30s, volá `app.swagger()`, zapíše deterministicky pretty JSON do `apps/api/openapi.json` (73 KiB, 14 paths, 27 endpoints). Flags `--check` (CI freshness) + `--output PATH`
+  - Nový CI job `openapi` v `.github/workflows/ci.yml` beží `pnpm openapi:export -- --check` proti Atlas + Entra secrets. Existing commitlint job renamed Job 3 → Job 4
+  - `apps/api/README.md` re-branded na @inventario/api + nová Static export sekcia s consumer-side workflow popisom
+  - `.prettierignore` exclude pre `openapi.json` (deterministic JSON.stringify formatting)
+- ✅ **Phase D Blok 2**: CycloneDX SBOM v CI (2026-05-17, commit `0dc6ea0`)
+  - Nový workflow `.github/workflows/sbom.yml` — trigger push/PR/weekly cron (ne 07:00 UTC)/workflow_dispatch. Generuje root-level monorepo SBOM cez `pnpm sbom`, upload ako 90-day artifact (matches EU procurement audit window)
+  - Root `pnpm sbom` script: `pnpm dlx @cyclonedx/cdxgen@^11 -r -t js -o sbom.cdx.json --spec-version 1.6 --no-babel`
+  - `.gitignore` exclude pre `sbom.cdx.json` + `.cdxgen-cache/`
+  - Compliance rationale: EU CRA Reg. 2024/2847 vyžaduje machine-readable SBOM od dec 2027. CycloneDX 1.6 je formát ktorý EU Commission reference architecture endorse-uje
+- ✅ **Phase D Blok 3**: WCAG 2.1 AA baseline audit (2026-05-17, commit `0e8ed9a`)
+  - Nový dokument `docs/compliance/wcag-2.1-aa-audit.md` — 30 in-scope kriterií pre WCAG 2.1 AA proti marketing site. 24 čistých, 3 P1 + 3 P2 nálezov
+  - P1: SVG/emoji bez `aria-hidden`, chýba `<main>` landmark, link color contrast 3.5:1 fails 4.5:1
+  - P2: chyba skip-link, anglické termíny bez `lang="en"`, demo bez `aria-live`
+  - Plan pre apps/web accessibility setup: `eslint-plugin-jsx-a11y` v CI, `@axe-core/react` v dev, `@axe-core/cli` proti deployed URL
+  - Nová zložka `docs/compliance/` ako hostiteľ buduúcich compliance artifactov
+- ✅ **Phase D Blok 4**: GDPR Article 30 hardening (2026-05-17, commit `d79233f`)
+  - `packages/shared-types/src/schemas/audit-log.ts` — 3 nové optional polia: `legalBasis` (enum mapping na čl. 6 ods. 1 GDPR), `dataCategories` (array kategórií os. údajov), `pseudonymizedAt` (timestamp retention job-u). `.optional()` namiesto `.default()` — spätne kompatibilné s pred-Phase-D rows, žiadna migration
+  - `apps/api/src/modules/audit/audit.service.ts` — `RecordEventInput` rozšírený o nové polia, service auto-fill cez `defaultLegalBasisFor()` + `defaultDataCategoriesFor()` helpers s hardcoded mapping pre 50+ action enum hodnôt
+  - Nový dokument `docs/compliance/gdpr-article-30.md` — Article 30 inventár pre 5 spracovateľských operácií, sub-processors s EU residency, rights implementation roadmap (Art. 15-22), tech + organizačné opatrenia (Art. 32), retention schedule
+  - Typecheck zelený na celom workspace, shared-types testy 54/54, openapi.json `--check` stále pass (audit log read API až v Slice #5)
+- ✅ **Phase D COMPLETE** — EU compliance foundations ready. Milestone doc `docs/milestones/phase-d-eu-compliance.md`
 
 ### Design system
 
@@ -167,50 +190,74 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ## 🎯 Next session — výber tém
 
-Phase C OrganisationId migration je **COMPLETE** (Blok 1-5 všetko done). Ďalšie kroky:
+Phase D EU compliance je **COMPLETE** (Blok 1-4 všetko done). Ďalej:
 
-### 🅳 Phase D — EU compliance (~half day) ⬅ **PRÍŠTÍ KROK**
+### 🅴 Phase E — Tech debt cleanup (~1-2 hod) ⬅ **PRÍŠTÍ KROK**
 
-**Cieľ: dokončiť EU-readiness fundamenty pred Slice #4 frontendom. Všetko čiše additive — žiadne breaking changes na API.**
+**Posledný refresh pred Slice #4. Quick wins z technical debt sekcie nižšie. Dobrý "lite" deň ak nemáš energiu na veľký feature work.**
 
-- **OpenAPI 3.1 export** z Zod schém → `apps/api/openapi.json` (~1 hod) — essential pre Slice #4 type generation
-- **SBOM CycloneDX export** v CI (~30 min) — pre EU verejné súťaže
-- **WCAG 2.1 AA audit** marketing site (~30 min) — Lighthouse + axe
-- **GDPR Article 30 audit log hardening** (~1-2 hod)
+Priority pre Phase E (zoradené od najsilňujších quick winov):
 
-### 🅴 Phase E — Tech debt cleanup (~1-2 hod, last before Slice #4)
-
-**Quick wins z technical debt sekcie nižšie. Dobrý "lite" deň ak nemáš energiu na veľký feature work.**
-
-- `categories.routes.ts isActive` fix (rovnaký pattern ako K10) — ~15 min
-- Export `LOCATION_TYPE_VALUES`, `UpdateCategorySchema`, `UpdateLocationSchema` do shared-types — ~30 min
-- `audit.test.ts` flaky timeout investigation — ~30-60 min
-- Marketing footer link cleanup — ~10 min
-- Root `package.json` cleanup — name, author, license, repo URL
-- `apps/docs/vercel.json` migrate UI override → repo file
-- `marketing-site/shared.css` migrate `--brand-*` → `@inventario/design-tokens/tokens.css`
+- **WCAG P1 marketing fixy** (~60-90 min) — z Phase D audit doc-u:
+  - `aria-hidden="true"` na dešekoratívne SVG/emoji v `index.html`, `use-cases.html`, `technology.html`, `pricing.html`, `interactive-demo.html`, `shared.js`
+  - Wrap content `<section>`-y do `<main id="main">` na všetkých 6 mar­ke­ting stránkach
+  - Pridanie `--brand-link: #1f6699` semantic token + override default `a { color }` v `shared.css`
+- **WCAG P2 fixy** (~30 min) — skip-link cez `shared.js`, `<span lang="en">` na 2 najfrequentnejšie termíny, `aria-live` v demo viewer mode-switch
+- **`audit.test.ts` flaky timeout** (~30-60 min) — investícia do `singleFork: false` per-test override alebo zvýšenie default timeoutu
+- **`categories.routes.ts isActive` fix** (~15 min) — rovnaký pattern ako K10 users, `z.coerce.boolean()` → `z.enum([...]).transform(...)`
+- **Shared-types exports** (~30 min) — `LOCATION_TYPE_VALUES`, `UpdateCategorySchema`, `UpdateLocationSchema` → `packages/shared-types/`
+- **Marketing footer link cleanup** (~10 min)
+- **Root `package.json` post-pivot cleanup** — name, author, license, repo URL
+- **`apps/docs/vercel.json`** migrate UI override → repo file
+- **`marketing-site/shared.css`** migrate `--brand-*` → `@inventario/design-tokens/tokens.css`
 
 ### 🅵 Slice #4 — Frontend (apps/web) — multi-day projekt 🏁 **FINÁLNY KROK**
 
-**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je production-ready a čaká na konzumenta. Robíme posledný — design tokens, tenant scoping aj OpenAPI export už budú hotové.**
+**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je production-ready a čaká na konzumenta. Robiíme posledný — design tokens, tenant scoping, OpenAPI export, GDPR audit log polia, WCAG plan — všetko už bude hotové.**
 
 - Stack: Next.js 15 + TanStack Query + shadcn/ui + Tailwind
 - Tailwind preset z `@inventario/design-tokens/tailwind` (ready ✅)
+- HTTP klient: `openapi-typescript` + `openapi-fetch` z `apps/api/openapi.json` (ready ✅)
 - 6 P0 stránok podľa mockupov v `docs/design/screens/`
 - Microsoft Entra ID SSO login flow
-- API integration s `apps/api` (cez auto-generated TS klient z OpenAPI)
-- Multi-tenant data-tenant root attribute (ready ✅)
-- WCAG 2.1 AA accessibility v plánoch
+- Multi-tenant `data-tenant` root attribute (ready ✅)
+- Accessibility: `eslint-plugin-jsx-a11y` + `@axe-core/react` + `@axe-core/cli` v CI (plan ✅ — viz `docs/compliance/wcag-2.1-aa-audit.md`)
 - Sub-tasks: bootstrap → auth → assets list → asset detail → loan workflow → polish
 
 ---
 
 ## 🐛 Technical debt
 
-Trackované pre eventuálnu cleanup session:
+Tracked pre eventuálnu cleanup session:
 
-- **`PENDING_TENANT_ID` placeholder** stále existuje v `lib/organisation-scoping.ts` ako exported konštanta, ale od Blok 3 sa už nikdy nezapisuje do nových row-ov a Blok 4 migration script potvrdil že v dev DB nie sú žiadne PENDING rows. Po production migration je možné konštantu úplne odstrániť zo `src/lib/` (alebo nechať pre forensic queries — "ktoré rows boli pre-Blok-3"). Migration skript samotný (`scripts/migrate-organisation-id.ts`) konštantu duplikuje zámerne aby zostal runnable proti historickým dátam aj keď src exporty časom zmenia
-- **AuditLogRepository nie tenant-scoped** — zámerne nezmenené v Blok 2 a 3. Audit `insert(record)` dostáva tenantId v record obsahu od service (každý service prepáše `actor.organisationId` cez `auditLog.record(actor, ...)`), žiadne signature changes netreba. Read paths zatiaľ nemáme — keď príde admin audit endpoint v ďalšej fáze, vtedy doplníme tenant-scoping aj sem
+### Z Phase D — WCAG marketing site fixy
+
+- **WCAG P1 — SVG/emoji `aria-hidden`** v 6 marketing HTML súboroch + `shared.js`. Dekoratívne SVG (chevron-right, GitHub logo) potrebujú `aria-hidden="true"`. Emoji ikony pre kategórie organizácií (`⚽`, `🏛️`, etc.) tiež
+- **WCAG P1 — chýba `<main>` landmark** všetky marketing stránky + interactive demo. Content `<section>`-y wrap-núť do `<main id="main">`
+- **WCAG P1 — link color contrast**. Default `a { color: var(--brand-accent #388fc3) }` na bielom má 3.5:1, fails AA 4.5:1. Pridanie `--brand-link: #1f6699` semantic token pre body-text linky, `--brand-accent` zachovať pre UI komponenty (badge, focus outline)
+- **WCAG P2 — skip-link** "Preskočiť na hlavný obsah" do `shared.js` ako prvý body element
+- **WCAG P2 — `<span lang="en">`** na 2-3 najfrequentnejšie anglické termíny ("vendor lock-in")
+- **WCAG P2 — `aria-live`** region v `interactive-demo.html` pre status announcements pri mode/tenant switch
+
+Detailný plan v `docs/compliance/wcag-2.1-aa-audit.md`.
+
+### Z Phase D — GDPR retention infra (Slice #5)
+
+- **Audit log retention job** — automatická pseudonymizácia po 24/60/84 mesiacoch. Vercel cron entry + script ktorý rewritne `actor.userId/displayName/ipAddress` na `'PSEUDONYMIZED'` placeholder a vyplne `pseudonymizedAt`
+- **Audit log read API** — ADMIN-only `/v1/audit-logs` endpoint pre tenant adminátorov. Tenant-scoped (`AuditLogRepository` už nemá read paths, treba doplniť). Filtre na `action`, `severity`, `actor.userId`, time range, `legalBasis`, `dataCategories`
+- **DSAR endpointy** — `GET /v1/me/export` (Art. 15 + 20), `DELETE /v1/me` self-service (Art. 17 s 30-day grace period)
+- **Audit log backfill skript** — volitený, doplne `legalBasis` + `dataCategories` na pred-Phase-D rows. Použije ten istý `defaultLegalBasisFor()` + `defaultDataCategoriesFor()` mapping ako service layer
+
+### Z Phase D — EU compliance docs
+
+- **DPIA template** `docs/compliance/dpia-template.md` pre municipálne tenants pred prvým produkcným launchom
+- **Threat model (STRIDE)** `docs/compliance/threat-model.md`
+- **Conformity assessment** (CE marking pod CRA) keď zaintegrujeme AI features (MCP server s Claude)
+
+### Pre-Phase-D debt (stále platný)
+
+- **`PENDING_TENANT_ID` placeholder** stále existuje v `lib/organisation-scoping.ts` ako exported konštanta, ale od Blok 3 sa už nikdy nezapisuje do nových row-ov a Blok 4 migration script potvrdil že v dev DB nie sú žiadne PENDING rows. Po production migration je možné konštantu úplne odstrániť zo `src/lib/` (alebo nechať pre forensic queries — "ktoré rows boli pre-Blok-3")
+- **AuditLogRepository nie tenant-scoped** — zámerne nezmenené v Blok 2 a 3. Read paths zatiaľ nemáme — keď príde admin audit endpoint v Slice #5, vtedy doplne tenant-scoping aj sem
 - **`audit.test.ts`** flaky timeout — beží občas 30s+ na Atlas. Treba zvýšiť timeout alebo singleFork
 - **`LOCATION_TYPE_VALUES`** export do `packages/shared-types/` (currently duplicated)
 - **`UpdateCategorySchema`** + **`UpdateLocationSchema`** → presunúť do `packages/shared-types/`
@@ -236,17 +283,21 @@ Trackované pre eventuálnu cleanup session:
 
 ## 📚 Kde nájsť konkrétne info
 
-| Téma                          | Súbor                                                   |
-| ----------------------------- | ------------------------------------------------------- |
-| Multi-tenant architecture     | `docs/decisions/0010-multi-tenant-white-label.md`       |
-| Brand identity                | `BRAND.md` (root)                                       |
-| Design tokens package         | `packages/design-tokens/README.md` ← **NEW**            |
-| Roadmap                       | `ROADMAP.md` (root)                                     |
-| Pricing strategy              | `docs/sessions/2026-05-15-pricing-strategy.md`          |
-| Design pivot history          | `docs/sessions/2026-05-15-design-pivot.md`              |
-| Yesterday's progress          | `docs/sessions/2026-05-16-day-summary.md`               |
-| Vercel docs deploy guide      | `infra/vercel/DOCS-DEPLOYMENT.md`                       |
-| All Vercel projects           | `infra/vercel/README.md`                                |
-| Backend slice completion logs | `docs/milestones/`                                      |
-| Latest milestone (Phase C)    | `docs/milestones/phase-c-multi-tenant-migration.md`     |
-| Previous milestone (Slice #3) | `docs/milestones/slice-3-categories-locations-users.md` |
+| Téma                           | Súbor                                                   |
+| ------------------------------ | ------------------------------------------------------- |
+| Multi-tenant architecture      | `docs/decisions/0010-multi-tenant-white-label.md`       |
+| Brand identity                 | `BRAND.md` (root)                                       |
+| Design tokens package          | `packages/design-tokens/README.md`                      |
+| OpenAPI spec                   | `apps/api/openapi.json` ← **NEW (Phase D)**             |
+| WCAG 2.1 AA audit              | `docs/compliance/wcag-2.1-aa-audit.md` ← **NEW**        |
+| GDPR Article 30 inventory      | `docs/compliance/gdpr-article-30.md` ← **NEW**          |
+| Roadmap                        | `ROADMAP.md` (root)                                     |
+| Pricing strategy               | `docs/sessions/2026-05-15-pricing-strategy.md`          |
+| Design pivot history           | `docs/sessions/2026-05-15-design-pivot.md`              |
+| Yesterday's progress (Phase C) | `docs/sessions/2026-05-16-day-summary.md`               |
+| Vercel docs deploy guide       | `infra/vercel/DOCS-DEPLOYMENT.md`                       |
+| All Vercel projects            | `infra/vercel/README.md`                                |
+| Backend slice completion logs  | `docs/milestones/`                                      |
+| Latest milestone (Phase D)     | `docs/milestones/phase-d-eu-compliance.md` ← **NEW**    |
+| Previous milestone (Phase C)   | `docs/milestones/phase-c-multi-tenant-migration.md`     |
+| Slice #3                       | `docs/milestones/slice-3-categories-locations-users.md` |
