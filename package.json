@@ -1,18 +1,18 @@
 {
-  "name": "sfz-asset-management",
+  "name": "inventario",
   "version": "0.1.0",
   "private": true,
-  "description": "Interný systém SFZ na evidenciu a vypožičiavanie majetku. Open-source monorepo (apps/api, apps/docs, packages/*).",
-  "homepage": "https://github.com/jletko/Asset-Management",
+  "description": "Inventario — open-source platforma pre evidenciu a vypožičiavanie majetku. Multi-tenant white-label backend a docs (apps/api, apps/docs, packages/*).",
+  "homepage": "https://inventario.sportup.sk",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jletko/Asset-Management.git"
+    "url": "git+https://github.com/Slovensky-futbalovy-zvaz/Asset-Management.git"
   },
   "bugs": {
-    "url": "https://github.com/jletko/Asset-Management/issues"
+    "url": "https://github.com/Slovensky-futbalovy-zvaz/Asset-Management/issues"
   },
-  "license": "MIT",
-  "author": "Slovenský futbalový zväz",
+  "license": "EUPL-1.2",
+  "author": "Ján Letko / LTK Solutions",
   "type": "module",
   "engines": {
     "node": ">=22.20.0",
