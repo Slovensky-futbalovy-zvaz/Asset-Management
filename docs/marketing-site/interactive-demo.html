@@ -54,7 +54,7 @@ UX:
             content: '';
             position: absolute;
             inset: 0;
-            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'><path d='M0,200 L0,140 L100,90 L220,130 L350,60 L480,110 L600,70 L730,120 L860,80 L980,130 L1100,90 L1200,140 L1200,200 Z' fill='white' opacity='0.06'/><path d='M0,200 L0,160 L120,120 L260,150 L400,100 L540,130 L680,110 L820,140 L960,120 L1080,150 L1200,130 L1200,200 Z' fill='white' opacity='0.09'/></svg>");
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none' aria-hidden="true"><path d='M0,200 L0,140 L100,90 L220,130 L350,60 L480,110 L600,70 L730,120 L860,80 L980,130 L1100,90 L1200,140 L1200,200 Z' fill='white' opacity='0.06'/><path d='M0,200 L0,160 L120,120 L260,150 L400,100 L540,130 L680,110 L820,140 L960,120 L1080,150 L1200,130 L1200,200 Z' fill='white' opacity='0.09'/></svg>");
             background-repeat: no-repeat;
             background-position: bottom center;
             background-size: 100% 55%;
@@ -772,6 +772,8 @@ UX:
 </head>
 <body data-page="demo" data-mode="grid">
 
+    <main id="main">
+
     <!-- ════════════════ HERO ════════════════ -->
     <section class="demo-hero">
         <div class="demo-hero-inner">
@@ -851,7 +853,7 @@ UX:
             <!-- ──── VIEWER MODE: Breadcrumb + thumbnail strip ──── -->
             <div class="sticky-viewer-bar">
                 <button class="sticky-back-btn" id="sticky-back-btn" title="Späť na zoznam obrazoviek (ESC)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0l7 7m-7-7l7-7" />
                     </svg>
                     <span>Všetky obrazovky</span>
@@ -1050,7 +1052,7 @@ UX:
 
             <div class="viewer-back-bottom">
                 <button class="viewer-back-bottom-btn" id="viewer-back-bottom-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     <span>Späť na zoznam všetkých obrazoviek</span>
                 </button>
                 <div class="viewer-keyboard-hint">
@@ -1070,15 +1072,17 @@ UX:
             <div class="demo-cta-buttons">
                 <a href="/pricing" class="demo-cta-btn-primary">
                     Pozrieť cenník
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                 </a>
                 <a href="https://github.com/Slovensky-futbalovy-zvaz/Asset-Management" class="demo-cta-btn-secondary" target="_blank" rel="noopener">
                     GitHub repo
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.04-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4 1.02 0 2.04.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22 0 1.61-.01 2.91-.01 3.3 0 .32.22.7.83.58C20.57 21.79 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.04-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4 1.02 0 2.04.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22 0 1.61-.01 2.91-.01 3.3 0 .32.22.7.83.58C20.57 21.79 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
                 </a>
             </div>
         </div>
     </section>
+
+    </main>
 
     <script src="assets/shared.js"></script>
     <script>

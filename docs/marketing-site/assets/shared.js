@@ -66,8 +66,8 @@
                         <a href="${EXTERNAL_LINKS.docs}" class="nav-link" target="_blank" rel="noopener">
                             Dokumentácia
                         </a>
-                        <a href="${EXTERNAL_LINKS.github}" class="nav-link" target="_blank" rel="noopener" title="GitHub">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -3px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.04-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4 1.02 0 2.04.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22 0 1.61-.01 2.91-.01 3.3 0 .32.22.7.83.58C20.57 21.79 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                        <a href="${EXTERNAL_LINKS.github}" class="nav-link" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub repository">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -3px" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.04-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.18 0 0 1.01-.32 3.3 1.23.96-.27 1.98-.4 3-.4 1.02 0 2.04.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22 0 1.61-.01 2.91-.01 3.3 0 .32.22.7.83.58C20.57 21.79 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
                         </a>
                         <div class="lang-switch" role="group" aria-label="Voľba jazyka">
                             <button class="active" data-lang="sk" aria-pressed="true">SK</button>
@@ -76,17 +76,17 @@
                         <a href="${EXTERNAL_LINKS.github}" class="btn btn-primary" style="padding: 0.55rem 1rem; font-size: 0.85rem;" target="_blank" rel="noopener">
                             Vyskúšať
                         </a>
-                        <button class="nav-mobile-toggle" id="nav-mobile-toggle" aria-label="Otvoriť menu">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        <button class="nav-mobile-toggle" id="nav-mobile-toggle" aria-label="Otvoriť menu" aria-expanded="false" aria-controls="site-nav">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                         </button>
                     </div>
                 </div>
                 <div class="nav-mobile-menu">
                     ${mobileLinksHtml}
                     <a href="${EXTERNAL_LINKS.docs}" class="nav-link" target="_blank" rel="noopener">
-                        Dokumentácia ↗
+                        Dokumentácia <span aria-hidden="true">↗</span><span class="sr-only"> (otvorí v novom okne)</span>
                     </a>
-                    <a href="${EXTERNAL_LINKS.github}" class="nav-link" target="_blank" rel="noopener">GitHub ↗</a>
+                    <a href="${EXTERNAL_LINKS.github}" class="nav-link" target="_blank" rel="noopener">GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (otvorí v novom okne)</span></a>
                 </div>
             </nav>
         `;
@@ -123,10 +123,10 @@
                         <div>
                             <h4 class="footer-heading">Zdroje</h4>
                             <ul class="footer-links">
-                                <li><a href="${EXTERNAL_LINKS.docs}" target="_blank" rel="noopener">Dokumentácia ↗</a></li>
-                                <li><a href="${EXTERNAL_LINKS.github}" target="_blank" rel="noopener">GitHub repo ↗</a></li>
+                                <li><a href="${EXTERNAL_LINKS.docs}" target="_blank" rel="noopener">Dokumentácia <span aria-hidden="true">↗</span><span class="sr-only"> (otvorí v novom okne)</span></a></li>
+                                <li><a href="${EXTERNAL_LINKS.github}" target="_blank" rel="noopener">GitHub repo <span aria-hidden="true">↗</span><span class="sr-only"> (otvorí v novom okne)</span></a></li>
                                 <li><a href="/interactive-demo">Demo aplikácie</a></li>
-                                <li><a href="../decisions/0010-multi-tenant-white-label.md" target="_blank">ADR-0010</a></li>
+                                <li><a href="${EXTERNAL_LINKS.docs}/architecture" target="_blank" rel="noopener">Architektúra <span aria-hidden="true">↗</span><span class="sr-only"> (otvorí v novom okne)</span></a></li>
                             </ul>
                         </div>
                         <div>
@@ -134,7 +134,7 @@
                             <ul class="footer-links">
                                 <li><a href="mailto:${EXTERNAL_LINKS.email}">${EXTERNAL_LINKS.email}</a></li>
                                 <li><a href="/about">O projekte</a></li>
-                                <li><a href="${EXTERNAL_LINKS.sportup}" target="_blank" rel="noopener">${EXTERNAL_LINKS.sportup} ↗</a></li>
+                                <li><a href="${EXTERNAL_LINKS.sportup}" target="_blank" rel="noopener">${EXTERNAL_LINKS.sportup} <span aria-hidden="true">↗</span><span class="sr-only"> (otvorí v novom okne)</span></a></li>
                             </ul>
                         </div>
                     </div>
@@ -157,8 +157,16 @@
     const body = document.body;
     const activePage = body.getAttribute('data-page') || 'home';
 
-    // Insert nav at top
-    body.insertAdjacentHTML('afterbegin', buildNav(activePage));
+    // Insert skip-link as the very first body element (WCAG 2.4.1
+    // Bypass Blocks). Targets #main which every marketing page wraps
+    // around its content sections.
+    body.insertAdjacentHTML(
+      'afterbegin',
+      '<a class="skip-link" href="#main">Preskočiť na hlavný obsah</a>',
+    );
+
+    // Insert nav after skip-link
+    document.querySelector('.skip-link').insertAdjacentHTML('afterend', buildNav(activePage));
 
     // Insert footer at end
     body.insertAdjacentHTML('beforeend', buildFooter());
@@ -168,7 +176,8 @@
     const nav = document.getElementById('site-nav');
     if (toggle && nav) {
       toggle.addEventListener('click', () => {
-        nav.classList.toggle('mobile-open');
+        const isOpen = nav.classList.toggle('mobile-open');
+        toggle.setAttribute('aria-expanded', String(isOpen));
       });
     }
 

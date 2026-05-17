@@ -14,6 +14,15 @@
   --brand-muted: #6b7a8d; /* Muted */
   --brand-white: #ffffff;
 
+  /*
+   * Body-text link color. WCAG 2.1 AA requires 4.5:1 contrast vs the
+   * surrounding background; --brand-accent #388fc3 on white only hits
+   * ~3.5:1, so links in prose use this darker token instead. Buttons,
+   * badges and focus outlines stay on --brand-accent (3:1 minimum for
+   * non-text UI elements is comfortably met).
+   */
+  --brand-link: #1f6699; /* Darker blue, WCAG AA 4.6:1 on white */
+
   /* Semantic */
   --color-success: #10b981;
   --color-warning: #f59e0b;
@@ -566,7 +575,7 @@ p.lead-white {
 }
 
 a {
-  color: var(--brand-accent);
+  color: var(--brand-link);
 }
 
 ul.checklist {
@@ -674,6 +683,53 @@ button:focus-visible {
   outline: 2px solid var(--brand-accent);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/*
+ * Screen-reader-only utility (visually-hidden but accessible).
+ * Used to provide additional context for assistive technology, e.g.
+ * "(otvorí v novom okne)" pre target="_blank" linky, alebo dlhšie
+ * popisy pre ikonkové tlačidlá.
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Skip-to-main-content link (WCAG 2.4.1 Bypass Blocks)
+ *
+ * Injected by shared.js as the first body element. Off-screen by
+ * default; jumps into view when keyboard focus lands on it so
+ * keyboard + screen-reader users can bypass the navigation block
+ * and land directly in the page main content.
+ * ─────────────────────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 0.75rem;
+  z-index: 9999;
+  background: var(--brand-primary);
+  color: white;
+  padding: 0.65rem 1.1rem;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(26, 45, 71, 0.25);
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
 }
 
 /* Scrollbar */
