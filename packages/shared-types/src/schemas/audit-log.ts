@@ -6,12 +6,14 @@ import { ObjectIdSchema, TimestampSchema } from './common.js';
  * Audit log = nemenný (append-only) záznam o každej významnej akcii v systéme.
  *
  * Účel:
- * - Bezpečnostný/súdne použiteľný záznam ("kto, kedy, čo")
+ * - Bezpečnostný / súdne použiteľný záznam ("kto, kedy, čo")
  * - Forenzika incidentov
- * - Compliance (GDPR čl. 30 — záznamy o spracovaní)
+ * - Compliance (GDPR čl. 30 — záznamy o spracovateľských činnostiach)
  *
- * Audit log sa NIKDY nemení ani nemaže. Záznamy sú write-only z aplikácie.
- * Iba systémový retention job ich môže pseudonymizovať po definovanej dobe.
+ * Audit log sa NIKDY nemení ani nemaže z aplikačnej úrovne. Záznamy sú
+ * write-only. Iba systémový retention job ich môže pseudonymizovať po
+ * uplynutí retention obdobia (viď docs/compliance/gdpr-article-30.md,
+ * sekcia "Retention schedule").
  *
  * NEMÁ AuditFields ani SoftDelete — používa iba vlastný `_id` a `at`.
  */
@@ -138,8 +140,78 @@ export const AuditLogSchema = z.object({
   /** Severity pre filtrovanie a alerty. */
   severity: z.enum(['INFO', 'WARNING', 'ERROR', 'CRITICAL']).default('INFO'),
 
+  /**
+   * GDPR článok 30 — právny základ spracovania pre túto akciu.
+   *
+   * Mapping na čl. 6 ods. 1 GDPR. Plný kontext v `docs/compliance/gdpr-article-30.md`.
+   *
+   * Hodnoty:
+   * - `contract`            — čl. 6 ods. 1 písm. b) — plnenie zmluvy s tenantom
+   * - `legal_obligation`    — čl. 6 ods. 1 písm. c) — zákonná povinnosť (audit log samotný)
+   * - `legitimate_interest` — čl. 6 ods. 1 písm. f) — oprávnený záujem (security, prevencia strát)
+   * - `public_task`         — čl. 6 ods. 1 písm. e) — verejný záujem (verejný sektor)
+   * - `consent`             — čl. 6 ods. 1 písm. a) — súhlas (zatiaľ nevyužívané)
+   * - `vital_interests`     — čl. 6 ods. 1 písm. d) — životné záujmy (n/a)
+   * - `n/a`                 — udalosť nespracúva osobné údaje (system config, token rotation)
+   *
+   * Optional pre spätnú kompatibilitu so záznamami zapísanými pred Phase D —
+   * staré rows tento field jednoducho nemajú a Zod sa nesťažuje. Nové akcie
+   * cez `AuditLogService.record(...)` vždy field vyplnia.
+   */
+  legalBasis: z
+    .enum([
+      'contract',
+      'legal_obligation',
+      'legitimate_interest',
+      'public_task',
+      'consent',
+      'vital_interests',
+      'n/a',
+    ])
+    .nullable()
+    .optional(),
+
+  /**
+   * GDPR článok 30 ods. 1 písm. c) — kategórie osobných údajov, ktorých sa akcia dotkla.
+   *
+   * Voľne kombinovateľné kategórie zo zoznamu. Prázdne pole znamená, že akcia
+   * nespracúva osobné údaje (napríklad zmena systémovej konfigurácie alebo
+   * rotácia integration tokenu).
+   *
+   * Hodnoty:
+   * - `identification` — krstné meno, priezvisko, displayName, Entra ID OID
+   * - `contact`        — e-mail, telefón
+   * - `account`        — roly, isActive, lastLoginAt, preferences
+   * - `authentication` — login event metadata: IP, User-Agent, MFA stav
+   * - `asset_custody`  — väzba osoba ↔ pridelené aktívum alebo výpožička
+   * - `audit_metadata` — snapshot dotknutého záznamu pre forenznú stopu
+   *
+   * Optional pre spätnú kompatibilitu so záznamami zapísanými pred Phase D.
+   */
+  dataCategories: z
+    .array(
+      z.enum([
+        'identification',
+        'contact',
+        'account',
+        'authentication',
+        'asset_custody',
+        'audit_metadata',
+      ]),
+    )
+    .optional(),
+
   /** Či je záznam pseudonymizovaný (GDPR). */
   isPseudonymized: z.boolean().default(false),
+
+  /**
+   * Kedy bol záznam pseudonymizovaný retention jobom.
+   *
+   * Null kým `isPseudonymized=false`. Optional pre spätnú kompatibilitu —
+   * pre-Phase-D rows tento field nemajú, no `isPseudonymized` zostáva
+   * autoritatívne (default false).
+   */
+  pseudonymizedAt: TimestampSchema.nullable().optional(),
 });
 
 export type AuditLog = z.infer<typeof AuditLogSchema>;

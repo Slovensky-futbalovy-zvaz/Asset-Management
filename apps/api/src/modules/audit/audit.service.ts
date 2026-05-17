@@ -39,6 +39,18 @@ export interface RecordEventInput {
   changes?: AuditLog['changes'];
   metadata?: AuditLog['metadata'];
   severity?: AuditLog['severity'];
+  /**
+   * GDPR čl. 30 — právny základ spracovania. Voliteľný v call site:
+   * ak nie je poskytnutý, service ho odvodí z `action` cez
+   * `defaultLegalBasisFor(action)`. Override explicit-ne ak má akcia
+   * netradičný kontext (napr. núdzový zmrazený účet — `vital_interests`).
+   */
+  legalBasis?: AuditLog['legalBasis'];
+  /**
+   * GDPR čl. 30 ods. 1 písm. c) — dotknuté kategórie osobných údajov.
+   * Defaultne odvodené z `action` cez `defaultDataCategoriesFor(action)`.
+   */
+  dataCategories?: AuditLog['dataCategories'];
 }
 
 // ---------------------------------------------------------------------------
@@ -81,7 +93,10 @@ export class AuditLogService {
       changes: input.changes ?? null,
       metadata: input.metadata ?? {},
       severity: input.severity ?? 'INFO',
+      legalBasis: input.legalBasis ?? defaultLegalBasisFor(input.action),
+      dataCategories: input.dataCategories ?? defaultDataCategoriesFor(input.action),
       isPseudonymized: false,
+      pseudonymizedAt: null,
     };
 
     await this.repo.insert(record, session);
@@ -91,6 +106,148 @@ export class AuditLogService {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * GDPR čl. 30 default mapping pre `action` → `legalBasis`.
+ *
+ * Používa sa, keď caller v `RecordEventInput` neuvedie `legalBasis`
+ * explicitne. Väčšina akcií predstavuje jeden typ spracovania, takže
+ * hardcoded mapping je jednoduchší než nechávať rozhodovanie na každých
+ * call-site.
+ *
+ * Compliance referenčný dokument: `docs/compliance/gdpr-article-30.md`.
+ */
+function defaultLegalBasisFor(action: AuditLog['action']): AuditLog['legalBasis'] {
+  // Auth events — prevencia podvodov a security → legitimate interest.
+  if (
+    action === 'USER_LOGIN' ||
+    action === 'USER_LOGIN_FAILED' ||
+    action === 'USER_LOGOUT' ||
+    action === 'USER_PASSWORD_CHANGED' ||
+    action === 'USER_PASSWORD_RESET_REQUESTED' ||
+    action === 'USER_MFA_ENABLED' ||
+    action === 'USER_MFA_DISABLED'
+  ) {
+    return 'legitimate_interest';
+  }
+
+  // User lifecycle — plnenie zmluvy.
+  if (
+    action === 'USER_CREATED' ||
+    action === 'USER_UPDATED' ||
+    action === 'USER_DEACTIVATED' ||
+    action === 'USER_REACTIVATED' ||
+    action === 'USER_ROLE_GRANTED' ||
+    action === 'USER_ROLE_REVOKED'
+  ) {
+    return 'contract';
+  }
+
+  // Tenant lifecycle — plnenie zmluvy s tenantom.
+  if (
+    action === 'ORGANISATION_CREATED' ||
+    action === 'ORGANISATION_UPDATED' ||
+    action === 'ORGANISATION_DELETED'
+  ) {
+    return 'contract';
+  }
+
+  // Asset / Category / Location / Loan — plnenie zmluvy (evidenčná služba).
+  if (
+    action.startsWith('ASSET_') ||
+    action.startsWith('CATEGORY_') ||
+    action.startsWith('LOCATION_') ||
+    action.startsWith('LOAN_')
+  ) {
+    return 'contract';
+  }
+
+  // GDPR rights — zákonná povinnosť.
+  if (
+    action === 'DATA_EXPORT_REQUESTED' ||
+    action === 'DATA_DELETION_REQUESTED' ||
+    action === 'USER_PSEUDONYMIZED'
+  ) {
+    return 'legal_obligation';
+  }
+
+  // System actions — žiadne osobné údaje.
+  return 'n/a';
+}
+
+/**
+ * GDPR čl. 30 default mapping pre `action` → `dataCategories[]`.
+ *
+ * Konzervatívny default — ak akcia môže dotknuť kategóriu, je v zozname.
+ * Call-site môže override-núť, ak vie že konkrétny call sa nedotýka
+ * niektorých fields (napr. update štítkov assetu sa nedotýka
+ * `asset_custody`).
+ */
+function defaultDataCategoriesFor(
+  action: AuditLog['action'],
+): NonNullable<AuditLog['dataCategories']> {
+  // Auth
+  if (action === 'USER_LOGIN' || action === 'USER_LOGIN_FAILED' || action === 'USER_LOGOUT') {
+    return ['authentication', 'identification'];
+  }
+  if (
+    action === 'USER_PASSWORD_CHANGED' ||
+    action === 'USER_PASSWORD_RESET_REQUESTED' ||
+    action === 'USER_MFA_ENABLED' ||
+    action === 'USER_MFA_DISABLED'
+  ) {
+    return ['authentication'];
+  }
+
+  // User CRUD
+  if (action === 'USER_CREATED' || action === 'USER_UPDATED') {
+    return ['identification', 'contact', 'account'];
+  }
+  if (
+    action === 'USER_DEACTIVATED' ||
+    action === 'USER_REACTIVATED' ||
+    action === 'USER_ROLE_GRANTED' ||
+    action === 'USER_ROLE_REVOKED'
+  ) {
+    return ['account'];
+  }
+
+  // Organisation lifecycle — obsahuje contact (primaryContactEmail).
+  if (
+    action === 'ORGANISATION_CREATED' ||
+    action === 'ORGANISATION_UPDATED' ||
+    action === 'ORGANISATION_DELETED'
+  ) {
+    return ['contact', 'audit_metadata'];
+  }
+
+  // Asset CRUD — nepriame os. údaje cez createdBy/updatedBy.
+  if (action.startsWith('ASSET_')) {
+    return ['audit_metadata'];
+  }
+
+  // Loan — väzba osoba ↔ aktívum.
+  if (action.startsWith('LOAN_')) {
+    return ['asset_custody', 'audit_metadata'];
+  }
+
+  // Category / Location — nepriame os. údaje cez createdBy/updatedBy.
+  if (action.startsWith('CATEGORY_') || action.startsWith('LOCATION_')) {
+    return ['audit_metadata'];
+  }
+
+  // GDPR rights
+  if (
+    action === 'DATA_EXPORT_REQUESTED' ||
+    action === 'DATA_DELETION_REQUESTED' ||
+    action === 'USER_PSEUDONYMIZED'
+  ) {
+    return ['identification', 'contact', 'account', 'authentication'];
+  }
+
+  // System actions — väčšinou nič.
+  return [];
+}
 
 /**
  * Extracts the client IP from a Fastify request.
