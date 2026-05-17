@@ -1,0 +1,150 @@
+// SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+// SPDX-License-Identifier: EUPL-1.2
+
+'use client';
+
+import Link from 'next/link';
+
+import type { AssetSummary, CategorySummary, LocationSummary } from '@/lib/api-hooks';
+import type { JSX, ReactNode } from 'react';
+
+import { cn } from '@/lib/cn';
+
+/**
+ * AssetsTable — renders a list of assets as an accessible HTML <table>.
+ *
+ * Why a real <table> and not a div grid:
+ *   - Screen readers announce columns + row position natively.
+ *   - Sticky column widths come for free.
+ *   - Pilot users will export to Excel one day; matching semantics now
+ *     means we can wire in `<th scope>` and assistive tags later
+ *     without restructuring the DOM.
+ *
+ * Category / location resolution:
+ *   The asset documents carry only the FK IDs. The list views fetch
+ *   the full category + location lists once and pass them in as a Map
+ *   so each row stays an O(1) lookup. When the lookup misses (race
+ *   between paginated fetches, or a stale cache), the raw ID is shown
+ *   in a muted style — better than blanking out, easier to debug.
+ *
+ * Empty / loading state:
+ *   The parent (AssetsListContent) handles loading skeletons and the
+ *   "no rows" empty state, so this component just renders rows.
+ */
+
+const STATUS_LABELS: Record<string, string> = {
+  AVAILABLE: 'Dostupné',
+  RESERVED: 'Rezervované',
+  BORROWED: 'Zapožičané',
+  IN_SERVICE: 'V servise',
+  DISPOSED: 'Vyradené',
+  LOST: 'Stratené',
+};
+
+/**
+ * Status → token-mapped colour tone. Stick to the same four tones
+ * the StatCard uses so the visual language is consistent across the
+ * app. Tones are mapped to status semantics, not to status order.
+ */
+function statusToneClasses(status: string): string {
+  switch (status) {
+    case 'AVAILABLE':
+      return 'bg-success-bg text-success-fg';
+    case 'RESERVED':
+    case 'IN_SERVICE':
+      return 'bg-info-bg text-info-fg';
+    case 'BORROWED':
+      return 'bg-warning-bg text-warning-fg';
+    case 'DISPOSED':
+    case 'LOST':
+      return 'bg-danger-bg text-danger-fg';
+    default:
+      return 'bg-surface-subtle text-text-secondary';
+  }
+}
+
+interface AssetsTableProps {
+  assets: readonly AssetSummary[];
+  categoriesById: ReadonlyMap<string, CategorySummary>;
+  locationsById: ReadonlyMap<string, LocationSummary>;
+}
+
+export function AssetsTable({
+  assets,
+  categoriesById,
+  locationsById,
+}: AssetsTableProps): JSX.Element {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-card shadow-sm">
+      <table className="min-w-full divide-y divide-border-subtle">
+        <caption className="sr-only">Zoznam evidovaného majetku</caption>
+        <thead className="bg-surface-subtle">
+          <tr>
+            <Th>Inventárne číslo</Th>
+            <Th>Názov</Th>
+            <Th>Stav</Th>
+            <Th>Kategória</Th>
+            <Th>Lokalita</Th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border-subtle bg-surface-card">
+          {assets.map((asset) => {
+            const category = categoriesById.get(asset.categoryId);
+            const location = locationsById.get(asset.locationId);
+            return (
+              <tr
+                key={asset._id}
+                className="transition hover:bg-surface-subtle focus-within:bg-surface-subtle"
+              >
+                <td className="whitespace-nowrap px-4 py-3 font-mono text-sm text-text-primary">
+                  <Link
+                    href={`/assets/${asset._id}`}
+                    className="rounded text-brand-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                  >
+                    {asset.inventoryNumber}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-sm text-text-primary">{asset.name}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm">
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      statusToneClasses(asset.status),
+                    )}
+                  >
+                    {STATUS_LABELS[asset.status] ?? asset.status}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-text-secondary">
+                  {category ? (
+                    category.name
+                  ) : (
+                    <span className="font-mono text-xs text-text-muted">{asset.categoryId}</span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-text-secondary">
+                  {location ? (
+                    location.name
+                  ) : (
+                    <span className="font-mono text-xs text-text-muted">{asset.locationId}</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Th({ children }: { children: ReactNode }): JSX.Element {
+  return (
+    <th
+      scope="col"
+      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-muted"
+    >
+      {children}
+    </th>
+  );
+}
