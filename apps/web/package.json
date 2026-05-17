@@ -21,6 +21,7 @@
   "dependencies": {
     "@azure/msal-browser": "^5.10.1",
     "@azure/msal-react": "^5.4.1",
+    "@hookform/resolvers": "^3.9.1",
     "@inventario/design-tokens": "workspace:*",
     "@inventario/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
@@ -30,6 +31,7 @@
     "openapi-fetch": "^0.13.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
     "tailwind-merge": "^2.5.5",
     "zod": "^3.23.8"
   },
