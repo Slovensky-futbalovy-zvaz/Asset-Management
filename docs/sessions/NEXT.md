@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-17 (po Slice #4 launch — auth shell + dashboard + `/assets` list page + CI fix pre gitignored api-types)
+**Aktualizované**: 2026-05-17 evening (po Slice #4 progresse — auth shell + dashboard + `/assets` list + `/assets/[id]` detail + CI fix + Entra ID end-to-end + JIT user debug)
 
 ---
 
@@ -20,7 +20,7 @@ Frontend (Slice #4) je posledný **zámerne**, aby sa minimalizovali prerábky. 
 - 🅲 **OrganisationId migration** → stabilný API contract s tenant scoping **pred** frontend integráciou ✅ **DONE**
 - 🅳 **EU compliance** (OpenAPI export, SBOM, WCAG, GDPR) → fundamenty pre type generation a verejný sektor ✅ **DONE**
 - 🅴 **Tech debt cleanup** → posledný refresh pred veľkým kusom ✅ **DONE**
-- 🅰 **Slice #4 frontend** → na zelenú lúku s čistým API, tokens, multi-tenancy in place ⬅ **IN PROGRESS** (bootstrap + auth + dashboard + assets list done)
+- 🅰 **Slice #4 frontend** → na zelenú lúku s čistým API, tokens, multi-tenancy in place ⬅ **IN PROGRESS** (bootstrap + auth + dashboard + assets list + assets detail + Entra ID end-to-end done)
 
 ---
 
@@ -50,7 +50,7 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 │   ├── docs/                        → Nextra docs site
 │   │   └── content/                 → 7 MDX stránok
 │   ├── mcp-server/                  → MCP for AI (future)
-│   └── web/                         → frontend Next.js 15 (slice #4 in progress: bootstrap + auth + dashboard + assets list)
+│   └── web/                         → frontend Next.js 15 (slice #4 in progress: bootstrap + auth + dashboard + /assets + /assets/[id])
 ├── packages/
 │   ├── design-tokens/               → @inventario/design-tokens (post-pivot v0.2.0)
 │   │   ├── tokens.json              → W3C source of truth
@@ -128,6 +128,8 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 - ✅ **Dashboard** (2026-05-17, commit `77b51e8`) — personalizovaný greeting z `/v1/me`, 4 stats cards (Majetok/Kategórie/Lokality/Výpožičky), quick navigation grid, TanStack Query api-hooks vrstva (`useMe`, `useAssets`, `useCategories`, `useLocations`)
 - ✅ **`/assets` list page** (2026-05-17, commit `a5e8b2e`) — server-side pagination + client-side filter/search (status + free text), FK resolution cez `Map<id, summary>` O(1) lookup, accessible semantic `<table>` so `<th scope>` + `aria-live` výsledkový stav, page sizes 20/50/100, status badge tone mapping
 - ✅ **CI infra fix** (2026-05-17, commit `8766c93`) — `pretypecheck`/`prelint`/`prebuild` lifecycle hooks v `apps/web/package.json` automaticky regenerujú gitignored `api-types.ts` z `apps/api/openapi.json`. CI #84 green.
+- ✅ **`/assets/[id]` detail page** (2026-05-17, commit _pending push_) — toggle read/edit mode, react-hook-form s dirty-fields-only PATCH payload, HTML5 validation (shared schema je full `.partial()`, Zod resolver neviem chytiť required-blank), generic specs key-value table s `humanizeKey()`, RBAC cez `useCanEditAssets()` (EMPLOYEE read-only, ASSET_MANAGER+ADMIN môžu edit-ovať). Tabs (história zmien / prílohy / výpožičky) **odložené** kým nemáme audit + loans + attachments API endpointy.
+- ✅ **Microsoft Entra ID setup completed** (2026-05-17 evening) — frontend SPA app registration + backend „Expose an API“ konfigurácia + `access_as_user` scope + pre-authorization frontend klienta. Login end-to-end funguje, JIT user + tenant provisioning sa rozbieha pri prvej návšteve.
 
 ### Compliance + brand
 
@@ -143,32 +145,30 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ## 🎯 Next session — Slice #4 continue
 
-Slice #4 frontend je **rozbehnutý**: bootstrap + auth + dashboard + assets list page fungujú. CI green. Pokračovaná cesta podľa mockup-ov v `docs/design/screens/`:
+Slice #4 frontend pokračuje: bootstrap + auth + dashboard + `/assets` list + `/assets/[id]` detail fungujú, Entra ID login je live, JIT user + tenant provisioning v poriadku. CI green. Ďalšie obrazovky podľa P0 priority z `docs/design/screens/`:
 
-### Horúci kandidát — `/assets/[id]` asset detail page ⬅ **PRÍŠTÍ KROK**
+### Horúci kandidát — `/categories` + `/locations` list pages ⬅ **PRÍŠTÍ KROK**
 
-Logicky druhý z 6 P0 obrazoviek. Riadky tabuľky na `/assets` už majú `<Link href="/assets/${_id}">` na inventory number — ten link teraz vedie do 404.
+Jednoduchšie ako assets (malé datasety, pravdepodobne bez paginácie v pilote), ale je tu jeden **non-triviálny UX problem** — FK protection feedback. Backend (slice #3 K9) odmietne `DELETE /v1/categories/:id` ak ju asset referencuje, s message ako `"Cannot delete category 'IT vybavenie': 12 assets reference it. Reassign or delete those assets first."`. UI musí:
 
-**Z mockupu (`docs/design/screens/`)**:
+1. Pri klike na **Vymazať** zobraziť confirm dialog
+2. Ak backend odmietne (400 BadRequestError) — zobraziť user-friendly toast/banner s poučením čo robiť ďalej
+3. Parse-ovať message a zobraziť nicely (názov entity + count)
 
-- **Detail header**: inventory number + name + status badge + akcie (Edit / Vyradiť / Zapožičať)
-- **Vlastnosti** — form-style read view: kategória, lokalita, popis, nákupná cena, dátum nákupu, supplier, ...
-- **História zmien** — audit log entries pre daný asset (vyžaduje admin audit endpoint zo Slice #5, alebo placeholder)
-- **História výpožičiek** — zoznam minulých a aktuálnej výpožičky (loans modul, ešte neexistuje)
-- **Prílohy** — attachments (ešte neexistuje endpoint)
+**Z mockupu** (`docs/design/screens/` ak existuje, inak follow `/assets` patterns):
 
-Pre tento moment **realistický scope**:
+- Tabuľka kategórií (názov / slug / parent / assetType / # assets / Akcie)
+- Tree-view volitelná druhá iterácia (parent-child hierarchy do MAX_HIERARCHY_DEPTH = 4)
+- New category modal alebo `/categories/new` page
+- Edit cez `/categories/[id]` (PATCH form, podobný ako asset detail)
+- RBAC: GET všetci, POST/PATCH ASSET_MANAGER+, DELETE iba ADMIN
 
-- `GET /v1/assets/:id` — fetch hook (`useAsset(id)`)
-- Render vlastností + FK lookup pre kategóriu/lokalitu
-- Edit form mode (PATCH `/v1/assets/:id`) s `UpdateAssetSchema` zo shared-types pre validation
-- Placeholders pre históriu + prílohy s "Modul čoskoro" badge — rovnaký pattern ako dashboard "Výpožičky: 0" karta
-- RBAC: edit gombík len pre ASSET_MANAGER+ — číta sa z `useMe()` (`roles`)
+Rovnaký pattern pre `/locations`.
 
-### Ďalej v Slice #4 queue (poradie podľa P0 priority)
+### Ďalšie v Slice #4 queue
 
-- **`/categories` + `/locations`** list pages — jednoduchšie ako assets (nepotrebujú pagination v pilote, ale potrebujú dať dobrý feedback keď delete zlyhá lebo asset referencuje FK)
-- **`/loans/request`** — loan request form (P0, ale **vyžaduje loans API ktoré ešte neexistuje** — možno cross-slice)
+- **`/users` admin page** — viac alebo menej priamy CRUD ako asset, ale s role management (povyšovanie EMPLOYEE → ADMIN cez UI namiesto Mongo Atlas ručného edit-u). Posledný-admin guardrail už je na backende, UI musí iba zobraziť chybový toast
+- **`/loans/request`** — loan request form (P0, ale **vyžaduje loans API ktoré ešte neexistuje** — cross-slice s #5)
 - **`/my-loans`** — user's vlastné výpožičky (rovnaký block ako vyššie)
 - **Polish**: empty states, error boundaries, loading skeletons, mobile responsive overrides, dark mode
 
@@ -180,6 +180,7 @@ Keď budú približne 4 z 6 stran funkčných: vytvoriť Vercel projekt pre `app
 - Vercel UI — Root Directory: `apps/web`, Install Command: `cd ../.. && pnpm install --frozen-lockfile`
 - DNS — CNAME `app` → cname.vercel-dns.com (rovnaký pattern ako `docs`)
 - ENV vars — `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_ENTRA_*` (z `.env.example`)
+- Azure Portal — pridať production redirect URI `https://app.inventario.sportup.sk` do frontend SPA app registration (popri lokálnom `http://localhost:3001`)
 
 ---
 
@@ -192,6 +193,11 @@ Tracked pre eventuálnu cleanup session. Po Phase E je toto už značne zoštíh
 - **`marketing-site/shared.css`** migrate `--brand-*` → `@inventario/design-tokens/tokens.css` — marketing site funguje samostatne so svojimi inline CSS vars; migration na shared package je čistá konsolidácia bez user-facing benefitu. Robí sa keď budeme upravovať tokens.css beztak
 - **`AssetUpdatePatch / CategoryUpdatePatch / LocationUpdatePatch types`** type-narrow cez `Pick` — schema layer (Zod) už blokuje mutation `organisationId`, type-level narrowing je estetické vylepšenie pre IDE autocomplete
 - **`apps/docs/vercel.json`** UI override migration — **closed/non-issue**: `vercel.json` už obsahuje len headers, žiadny UI override netreba migrovať (Build Command / Install Command pre docs sú prázdne v UI, čo je rovnaké ako neuvedené v vercel.json)
+
+### Z 2026-05-17 Slice #4 launch — defensive coding hardening
+
+- **`auth.ts` `loadCurrentUser` legacy user defense** — keď `findOrProvision` vráti existujúceho usera, jeho `organisationId` field môže byť `undefined` (pre-Phase-C legacy record). Aktuálne sa to silently pretlačí do service vrstvy, ktorá neskôr padne s `Malformed organisationId "undefined"`. Defensive check by mal priísť priamo do `loadCurrentUser`: ak `user.organisationId !== request.organisationId`, vyhodiť `UnauthorizedError('User record is missing tenant binding — re-provision required')`. Chytí legacy records pri zdroji s jasnou message namiesto silent corruption v service layer-i. Detaily v `docs/sessions/2026-05-17-day-summary.md` (Krok 4 večerného debug-u)
+- **`db:reset` skript** — dôležitý pre dev workflow po veľkých migration-och. Aktuálne sa legacy records musia mažať manuálne cez Mongo Atlas UI. Pridanie `apps/api/scripts/db-reset.ts` ktorý vymaže user + organisation collections pre dev DB by zlepšilo iteráciu
 
 ### Z Phase D — GDPR retention infra (Slice #5)
 
