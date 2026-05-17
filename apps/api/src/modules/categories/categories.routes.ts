@@ -14,15 +14,15 @@
  *   - POST uses a local `ApiCreateCategoryBodySchema` that mirrors
  *     `CreateCategorySchema` from shared-types except `slug` is OPTIONAL.
  *     When omitted, the service derives it from `name` (K3 slug auto-gen).
- *   - PATCH uses an inline partial schema (UpdateCategorySchema is not yet
- *     in shared-types).
+ *   - PATCH uses `UpdateCategorySchema` from shared-types (partial of
+ *     writable category fields, audit + identity columns excluded).
  *
  * Future K4 hook:
  *   When cycle detection lands, the PATCH service-level parentId check
  *   will gain a tree traversal up to a max-depth limit.
  */
 
-import { ASSET_TYPE_VALUES, type AssetType } from '@inventario/shared-types';
+import { ASSET_TYPE_VALUES, UpdateCategorySchema, type AssetType } from '@inventario/shared-types';
 import { z } from 'zod';
 
 import { AssetsRepository } from '../assets/assets.repository.js';
@@ -32,6 +32,20 @@ import { CategoriesService } from './categories.service.js';
 
 import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
+
+// ---------------------------------------------------------------------------
+// Local helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Permissive boolean coercion for query strings. `z.coerce.boolean()` does
+ * `Boolean(value)`, which means the string `"false"` becomes `true` (any
+ * non-empty string is truthy). Accept the four canonical spellings and
+ * map them explicitly.
+ */
+const BooleanQueryParam = z
+  .enum(['true', 'false', '1', '0'])
+  .transform((v) => v === 'true' || v === '1');
 
 // ---------------------------------------------------------------------------
 // Request / response schemas
@@ -48,7 +62,7 @@ const ListCategoriesQuerySchema = z.object({
   /** Filter by assetType (IT, SPORT, OFFICE...). */
   assetType: z.string().optional(),
   /** Filter to active categories only. */
-  isActive: z.coerce.boolean().optional(),
+  isActive: BooleanQueryParam.optional(),
 });
 
 const CategoryIdParamsSchema = z.object({
@@ -100,41 +114,12 @@ const ApiCreateCategoryBodySchema = z
   .describe('Telo pre vytvorenie kategórie; slug je voliteľný (server odvodí z name).');
 
 /**
- * PATCH body schema. Mirrors what the service accepts: a partial of the
- * writable category fields. Audit + identity columns are excluded.
- *
- * NOTE: This is defined locally rather than imported from shared-types
- * because there's no UpdateCategorySchema there yet. When we add one in
- * a future cleanup, this gets swapped out.
+ * PATCH body schema. Re-exports `UpdateCategorySchema` from shared-types
+ * with a localized description for Swagger.
  */
-const UpdateCategoryBodySchema = z
-  .object({
-    name: z.string().min(1).max(200).trim(),
-    slug: z
-      .string()
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug musí byť lowercase s pomlčkami.')
-      .max(200),
-    parentId: z
-      .string()
-      .regex(/^[a-f\d]{24}$/i, 'parentId musí byť 24 hex znakov.')
-      .nullable(),
-    assetType: z.enum(
-      ASSET_TYPE_VALUES as unknown as [string, ...string[]],
-    ) as z.ZodType<AssetType>,
-    description: z.string().max(1000).nullable(),
-    icon: z.string().max(50).nullable(),
-    color: z
-      .string()
-      .regex(/^#[0-9a-fA-F]{6}$/, 'Farba musí byť hex.')
-      .nullable(),
-    approverIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)),
-    requiresApprovalByDefault: z.boolean(),
-    maxLoanDays: z.number().int().positive().max(3650).nullable(),
-    isActive: z.boolean(),
-    sortOrder: z.number().int(),
-  })
-  .partial()
-  .describe('Čiastočná aktualizácia kategórie; všetky polia voliteľné.');
+const UpdateCategoryBodySchema = UpdateCategorySchema.describe(
+  'Čiastočná aktualizácia kategórie; všetky polia voliteľné.',
+);
 
 const CategoryResponseSchema = z.record(z.string(), z.unknown());
 

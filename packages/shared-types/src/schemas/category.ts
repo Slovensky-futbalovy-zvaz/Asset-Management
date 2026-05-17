@@ -83,3 +83,22 @@ export const CreateCategorySchema = CategorySchema.omit({
 });
 
 export type CreateCategoryInput = z.infer<typeof CreateCategorySchema>;
+
+/**
+ * Patch schéma pre update kategórie. Všetky polia voliteľné — caller
+ * posíla iba tie, ktoré chce zmeniť. Audit + identity polia (`_id`,
+ * `organisationId`, `createdAt`, `createdBy`, `updatedAt`, `updatedBy`,
+ * `deletedAt`, `deletedBy`) sú vylúčené — spravuje ich server.
+ */
+export const UpdateCategorySchema = CategorySchema.omit({
+  _id: true,
+  organisationId: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
+  deletedAt: true,
+  deletedBy: true,
+}).partial();
+
+export type UpdateCategoryInput = z.infer<typeof UpdateCategorySchema>;

@@ -1526,7 +1526,13 @@
           },
           {
             "schema": {
-              "type": "boolean"
+              "type": "string",
+              "enum": [
+                "true",
+                "false",
+                "1",
+                "0"
+              ]
             },
             "in": "query",
             "name": "isActive",
@@ -1775,7 +1781,9 @@
                   "parentId": {
                     "type": "string",
                     "pattern": "^[a-f\\d]{24}$",
-                    "nullable": true
+                    "description": "MongoDB ObjectId (24 hex znakov)",
+                    "nullable": true,
+                    "default": null
                   },
                   "assetType": {
                     "type": "string",
@@ -1792,40 +1800,49 @@
                   "description": {
                     "type": "string",
                     "maxLength": 1000,
-                    "nullable": true
+                    "nullable": true,
+                    "default": null
                   },
                   "icon": {
                     "type": "string",
                     "maxLength": 50,
-                    "nullable": true
+                    "nullable": true,
+                    "default": null
                   },
                   "color": {
                     "type": "string",
                     "pattern": "^#[0-9a-fA-F]{6}$",
-                    "nullable": true
+                    "nullable": true,
+                    "default": null
                   },
                   "approverIds": {
                     "type": "array",
                     "items": {
                       "type": "string",
-                      "pattern": "^[a-f\\d]{24}$"
-                    }
+                      "pattern": "^[a-f\\d]{24}$",
+                      "description": "MongoDB ObjectId (24 hex znakov)"
+                    },
+                    "default": []
                   },
                   "requiresApprovalByDefault": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": true
                   },
                   "maxLoanDays": {
                     "type": "integer",
                     "exclusiveMinimum": true,
                     "minimum": 0,
                     "maximum": 3650,
-                    "nullable": true
+                    "nullable": true,
+                    "default": null
                   },
                   "isActive": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": true
                   },
                   "sortOrder": {
-                    "type": "integer"
+                    "type": "integer",
+                    "default": 0
                   }
                 },
                 "additionalProperties": false,
@@ -1960,7 +1977,13 @@
           },
           {
             "schema": {
-              "type": "boolean"
+              "type": "string",
+              "enum": [
+                "true",
+                "false",
+                "1",
+                "0"
+              ]
             },
             "in": "query",
             "name": "isActive",
@@ -2257,7 +2280,8 @@
                       }
                     },
                     "additionalProperties": false,
-                    "nullable": true
+                    "nullable": true,
+                    "default": null
                   },
                   "coordinates": {
                     "type": "object",
@@ -2278,25 +2302,32 @@
                       "lng"
                     ],
                     "additionalProperties": false,
-                    "nullable": true
+                    "nullable": true,
+                    "default": null
                   },
                   "parentId": {
                     "type": "string",
                     "pattern": "^[a-f\\d]{24}$",
-                    "nullable": true
+                    "description": "MongoDB ObjectId (24 hex znakov)",
+                    "nullable": true,
+                    "default": null
                   },
                   "description": {
                     "type": "string",
                     "maxLength": 2000,
-                    "nullable": true
+                    "nullable": true,
+                    "default": null
                   },
                   "managerId": {
                     "type": "string",
                     "pattern": "^[a-f\\d]{24}$",
-                    "nullable": true
+                    "description": "MongoDB ObjectId (24 hex znakov)",
+                    "nullable": true,
+                    "default": null
                   },
                   "isActive": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": true
                   }
                 },
                 "additionalProperties": false,

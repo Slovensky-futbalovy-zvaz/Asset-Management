@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { LocationType } from '../enums/location-type.js';
+
 import {
   BaseDocumentSchema,
   ObjectIdSchema,
@@ -10,10 +12,7 @@ import {
 /**
  * Lokalita = fyzické miesto, kde sa majetok nachádza.
  *
- * Typy lokalít:
- * - Hlavné sklady (Centrála Bratislava, Akadémia Senec)
- * - Kancelárie (per zamestnanec)
- * - Externé miesta (klubové štadióny, zahraničie počas výjazdov)
+ * Typy lokalít sú definované v `LocationType` enum (viď `enums/location-type.ts`).
  */
 export const LocationSchema = BaseDocumentSchema.merge(SoftDeleteSchema)
   .merge(OrganisationScopedSchema)
@@ -31,14 +30,7 @@ export const LocationSchema = BaseDocumentSchema.merge(SoftDeleteSchema)
       .max(200),
 
     /** Typ lokality. */
-    type: z.enum([
-      'WAREHOUSE', // Hlavný sklad
-      'OFFICE', // Kancelária
-      'STADIUM', // Štadión
-      'TRAINING_CENTER', // Tréningové centrum
-      'EXTERNAL', // Externé miesto (klub, zahraničie)
-      'IN_TRANSIT', // V preprave
-    ]),
+    type: z.enum(Object.values(LocationType) as [string, ...string[]]) as z.ZodType<LocationType>,
 
     /** Voliteľná adresa. */
     address: z
@@ -87,3 +79,25 @@ export const CreateLocationSchema = LocationSchema.omit({
 });
 
 export type CreateLocationInput = z.infer<typeof CreateLocationSchema>;
+
+/**
+ * Patch schéma pre update lokality. Všetky polia voliteľné — caller posiela
+ * iba tie, ktoré chce zmeniť. `slug` je voliteľné v PATCH (na rozdiel od
+ * povinnosti v `LocationSchema`) — keď nie je v body, zostáva ako predtým.
+ *
+ * Audit + identity polia (`_id`, `organisationId`, `createdAt`, `createdBy`,
+ * `updatedAt`, `updatedBy`, `deletedAt`, `deletedBy`) sú vylúčené —
+ * spravuje ich server.
+ */
+export const UpdateLocationSchema = LocationSchema.omit({
+  _id: true,
+  organisationId: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+  updatedBy: true,
+  deletedAt: true,
+  deletedBy: true,
+}).partial();
+
+export type UpdateLocationInput = z.infer<typeof UpdateLocationSchema>;

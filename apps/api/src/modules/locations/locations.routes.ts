@@ -18,10 +18,11 @@
  *   - POST uses a local `ApiCreateLocationBodySchema` that mirrors
  *     `CreateLocationSchema` from shared-types except `slug` is OPTIONAL.
  *     The service derives it from `name` if absent.
- *   - PATCH uses an inline partial schema (UpdateLocationSchema is not yet
- *     in shared-types).
+ *   - PATCH uses `UpdateLocationSchema` from shared-types (partial of
+ *     writable location fields, audit + identity columns excluded).
  */
 
+import { LOCATION_TYPE_VALUES, UpdateLocationSchema } from '@inventario/shared-types';
 import { z } from 'zod';
 
 import { AssetsRepository } from '../assets/assets.repository.js';
@@ -33,17 +34,22 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 // ---------------------------------------------------------------------------
-// Shared sub-schemas (address + coordinates)
+// Local helpers
 // ---------------------------------------------------------------------------
 
-const LOCATION_TYPE_VALUES = [
-  'WAREHOUSE',
-  'OFFICE',
-  'STADIUM',
-  'TRAINING_CENTER',
-  'EXTERNAL',
-  'IN_TRANSIT',
-] as const;
+/**
+ * Permissive boolean coercion for query strings. `z.coerce.boolean()` does
+ * `Boolean(value)`, which means the string `"false"` becomes `true` (any
+ * non-empty string is truthy). Accept the four canonical spellings and
+ * map them explicitly.
+ */
+const BooleanQueryParam = z
+  .enum(['true', 'false', '1', '0'])
+  .transform((v) => v === 'true' || v === '1');
+
+// ---------------------------------------------------------------------------
+// Shared sub-schemas (address + coordinates)
+// ---------------------------------------------------------------------------
 
 const AddressSchema = z.object({
   street: z.string().max(200).optional(),
@@ -70,9 +76,9 @@ const ListLocationsQuerySchema = z.object({
     .regex(/^([a-f\d]{24}|null)$/i, 'parentId musí byť 24 hex znakov alebo "null".')
     .optional(),
   /** Filter by location type (WAREHOUSE, OFFICE, STADIUM...). */
-  type: z.enum(LOCATION_TYPE_VALUES).optional(),
+  type: z.enum(LOCATION_TYPE_VALUES as unknown as [string, ...string[]]).optional(),
   /** Filter to active locations only. */
-  isActive: z.coerce.boolean().optional(),
+  isActive: BooleanQueryParam.optional(),
 });
 
 const LocationIdParamsSchema = z.object({
@@ -96,7 +102,7 @@ const ApiCreateLocationBodySchema = z
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug musí byť lowercase s pomlčkami.')
       .max(200)
       .optional(),
-    type: z.enum(LOCATION_TYPE_VALUES),
+    type: z.enum(LOCATION_TYPE_VALUES as unknown as [string, ...string[]]),
     address: AddressSchema.nullable().default(null),
     coordinates: CoordinatesSchema.nullable().default(null),
     parentId: z
@@ -115,31 +121,12 @@ const ApiCreateLocationBodySchema = z
   .describe('Telo pre vytvorenie lokality; slug je voliteľný (server odvodí z name).');
 
 /**
- * PATCH body schema. Partial of writable location fields.
+ * PATCH body schema. Re-exports `UpdateLocationSchema` from shared-types
+ * with a localized description for Swagger.
  */
-const UpdateLocationBodySchema = z
-  .object({
-    name: z.string().min(1).max(200).trim(),
-    slug: z
-      .string()
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug musí byť lowercase s pomlčkami.')
-      .max(200),
-    type: z.enum(LOCATION_TYPE_VALUES),
-    address: AddressSchema.nullable(),
-    coordinates: CoordinatesSchema.nullable(),
-    parentId: z
-      .string()
-      .regex(/^[a-f\d]{24}$/i, 'parentId musí byť 24 hex znakov.')
-      .nullable(),
-    description: z.string().max(2000).nullable(),
-    managerId: z
-      .string()
-      .regex(/^[a-f\d]{24}$/i, 'managerId musí byť 24 hex znakov.')
-      .nullable(),
-    isActive: z.boolean(),
-  })
-  .partial()
-  .describe('Čiastočná aktualizácia lokality; všetky polia voliteľné.');
+const UpdateLocationBodySchema = UpdateLocationSchema.describe(
+  'Čiastočná aktualizácia lokality; všetky polia voliteľné.',
+);
 
 const LocationResponseSchema = z.record(z.string(), z.unknown());
 
