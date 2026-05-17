@@ -77,11 +77,19 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────
   # Job 2: Unit tests
+  #
+  # Why 30 minutes:
+  #   Integration tests hit MongoDB Atlas Flex in eu-region from GitHub
+  #   Actions runners in US East. The round-trip latency is roughly
+  #   5-6x what we see on a developer machine in Slovakia (~3.5 min
+  #   locally), so 327 tests run ~13-18 min on CI. 30 min gives
+  #   comfortable headroom for transient Atlas spikes without masking
+  #   a genuinely runaway test.
   # ─────────────────────────────────────────────────────────────────
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     needs: quality
 
     steps:
@@ -164,6 +172,9 @@ jobs:
           # script boots the real server (which connects to Mongo) and
           # then dumps the OpenAPI document. We can't avoid the DB
           # connection without a deeper refactor of the swagger plugin.
+          # The openapi:export script in apps/api/package.json uses
+          # --env-file-if-exists so the missing .env.local on CI is fine
+          # — these env vars take over.
           MONGO_URI: ${{ secrets.MONGO_URI_TEST }}
           ENTRA_API_CLIENT_ID: ${{ secrets.ENTRA_API_CLIENT_ID_TEST }}
           ENTRA_TENANT_ID: ${{ secrets.ENTRA_TENANT_ID_TEST }}
