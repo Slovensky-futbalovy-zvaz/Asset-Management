@@ -1,0 +1,81 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Ján Letko / LTK Solutions
+ * SPDX-License-Identifier: EUPL-1.2
+ *
+ * Global stylesheet for apps/web.
+ *
+ * Order matters:
+ *   1. Inventario design tokens (CSS custom properties for the Inventario
+ *      brand, plus the multi-tenant override slots `[data-tenant="..."]`).
+ *      All Tailwind utilities then resolve via these vars.
+ *   2. Tailwind base + components + utilities — applied on top of tokens.
+ *   3. Project-specific resets and global element styles.
+ *
+ * The `@inventario/design-tokens/tokens.css` import is the *only* place
+ * tokens are loaded for the app. Components reach tokens through Tailwind
+ * utilities (bg-brand-primary, text-text-primary, etc.) — they should
+ * almost never touch `var(--inv-...)` directly.
+ */
+
+@import '@inventario/design-tokens/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ----------------------------------------------------------------------
+ * Global resets and small project-wide overrides
+ * ------------------------------------------------------------------- */
+
+@layer base {
+  html {
+    /* Prevent iOS text-size auto-bumping in landscape */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-surface-page text-text-primary font-sans antialiased;
+  }
+
+  /* WCAG 2.4.7 — make focus indicators visible across all interactive
+     elements by default. Components can opt-out per element if they
+     ship their own ring treatment. */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-border-focus ring-offset-2 ring-offset-surface-page;
+  }
+}
+
+@layer components {
+  /* Skip-link mirrors the marketing-site pattern from Phase E. It's hidden
+     off-screen until keyboard focus brings it into view. */
+  .skip-link {
+    position: absolute;
+    left: -10000px;
+    top: 0;
+    z-index: 100;
+    padding: 0.75rem 1.25rem;
+    background: var(--inv-semantic-surface-inverse);
+    color: var(--inv-semantic-text-inverse);
+    border-radius: 0 0 0.625rem 0;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .skip-link:focus {
+    left: 0;
+  }
+
+  /* Visually hidden but readable by screen readers (mirrors marketing
+     .sr-only added in Phase E1). */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}

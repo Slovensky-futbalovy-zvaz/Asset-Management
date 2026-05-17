@@ -1,0 +1,52 @@
+{
+  "name": "@inventario/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Inventario · Frontend webová aplikácia (inventario.sportup.sk/app). Next.js 15 + TanStack Query + Tailwind + shadcn/ui.",
+  "license": "EUPL-1.2",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'TODO: vitest + react-testing-library' && exit 0",
+    "clean": "rm -rf .next .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@inventario/design-tokens": "workspace:*",
+    "@inventario/shared-types": "workspace:*",
+    "@tanstack/react-query": "^5.62.7",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.469.0",
+    "next": "~15.5.0",
+    "openapi-fetch": "^0.13.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.5.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "openapi-typescript": "^7.4.4",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "keywords": [
+    "inventario",
+    "frontend",
+    "nextjs",
+    "react",
+    "tailwind",
+    "multi-tenant"
+  ]
+}

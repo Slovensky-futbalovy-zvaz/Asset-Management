@@ -1,0 +1,19 @@
+# Next.js
+.next/
+out/
+build/
+next-env.d.ts
+
+# Production
+*.tsbuildinfo
+
+# Misc
+.DS_Store
+.turbo/
+
+# Local env files
+.env.local
+.env.*.local
+
+# Vercel
+.vercel

@@ -58,6 +58,12 @@ path = "apps/docs/README.md"
 SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
 SPDX-License-Identifier = "CC-BY-4.0"
 
+# README.md v apps/web/ je dokumentaciá.
+[[annotations]]
+path = "apps/web/README.md"
+SPDX-FileCopyrightText = "2026 Ján Letko / LTK Solutions"
+SPDX-License-Identifier = "CC-BY-4.0"
+
 # ─── 4. Zdieľané packages (packages/) — EUPL-1.2 ───
 # shared-types (Zod schémy), design-tokens, api-client, ui komponenty.
 # Tieto sú zdrojový kód projektu, takže EUPL.
