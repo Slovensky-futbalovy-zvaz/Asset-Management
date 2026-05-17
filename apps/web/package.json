@@ -7,9 +7,12 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --port 3001",
+    "prebuild": "pnpm generate:api-types",
     "build": "next build",
     "start": "next start --port 3001",
+    "prelint": "pnpm generate:api-types",
     "lint": "eslint src --max-warnings 0",
+    "pretypecheck": "pnpm generate:api-types",
     "typecheck": "tsc --noEmit",
     "test": "echo 'TODO: vitest + react-testing-library' && exit 0",
     "generate:api-types": "openapi-typescript ../api/openapi.json -o src/lib/api-types.ts",
