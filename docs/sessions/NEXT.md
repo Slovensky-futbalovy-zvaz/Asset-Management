@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-17 (po dokončení Phase E Blok 1-5 — WCAG marketing fixy + shared-types exports + audit test stability — **CELÁ PHASE E COMPLETE**)
+**Aktualizované**: 2026-05-17 (po Slice #4 launch — auth shell + dashboard + `/assets` list page + CI fix pre gitignored api-types)
 
 ---
 
@@ -20,7 +20,7 @@ Frontend (Slice #4) je posledný **zámerne**, aby sa minimalizovali prerábky. 
 - 🅲 **OrganisationId migration** → stabilný API contract s tenant scoping **pred** frontend integráciou ✅ **DONE**
 - 🅳 **EU compliance** (OpenAPI export, SBOM, WCAG, GDPR) → fundamenty pre type generation a verejný sektor ✅ **DONE**
 - 🅴 **Tech debt cleanup** → posledný refresh pred veľkým kusom ✅ **DONE**
-- 🅰 **Slice #4 frontend** → na zelenú lúku s čistým API, tokens, multi-tenancy in place ⬅ **PRÍŠTÍ KROK**
+- 🅰 **Slice #4 frontend** → na zelenú lúku s čistým API, tokens, multi-tenancy in place ⬅ **IN PROGRESS** (bootstrap + auth + dashboard + assets list done)
 
 ---
 
@@ -50,7 +50,7 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 │   ├── docs/                        → Nextra docs site
 │   │   └── content/                 → 7 MDX stránok
 │   ├── mcp-server/                  → MCP for AI (future)
-│   └── web/                         → frontend (slice #4, neexistuje)
+│   └── web/                         → frontend Next.js 15 (slice #4 in progress: bootstrap + auth + dashboard + assets list)
 ├── packages/
 │   ├── design-tokens/               → @inventario/design-tokens (post-pivot v0.2.0)
 │   │   ├── tokens.json              → W3C source of truth
@@ -121,6 +121,14 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 - ✅ Docs site Nextra deployed → `docs.inventario.sportup.sk`
 - ✅ "Čoskoro" badge revertovaný — všetky docs linky active
 
+### Slice #4 frontend (apps/web) — in progress
+
+- ✅ **Bootstrap** — Next.js 15 + Tailwind + design tokens preset wired up
+- ✅ **MSAL auth shell** (2026-05-17, commit `0cac2e6`) — Entra ID login/logout, openapi-fetch klient s token middleware, AuthGate / AppShell
+- ✅ **Dashboard** (2026-05-17, commit `77b51e8`) — personalizovaný greeting z `/v1/me`, 4 stats cards (Majetok/Kategórie/Lokality/Výpožičky), quick navigation grid, TanStack Query api-hooks vrstva (`useMe`, `useAssets`, `useCategories`, `useLocations`)
+- ✅ **`/assets` list page** (2026-05-17, commit `a5e8b2e`) — server-side pagination + client-side filter/search (status + free text), FK resolution cez `Map<id, summary>` O(1) lookup, accessible semantic `<table>` so `<th scope>` + `aria-live` výsledkový stav, page sizes 20/50/100, status badge tone mapping
+- ✅ **CI infra fix** (2026-05-17, commit `8766c93`) — `pretypecheck`/`prelint`/`prebuild` lifecycle hooks v `apps/web/package.json` automaticky regenerujú gitignored `api-types.ts` z `apps/api/openapi.json`. CI #84 green.
+
 ### Compliance + brand
 
 - ✅ EUPL-1.2 + CC-BY-4.0 + REUSE 3.3 (272/272 súborov)
@@ -133,23 +141,45 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 ---
 
-## 🎯 Next session — Slice #4
+## 🎯 Next session — Slice #4 continue
 
-Phase E tech debt cleanup je **COMPLETE** (Blok 1-5 všetko done). Backend zarovnaný, marketing site WCAG-clean, technický dlh upratovaný. Ďalej už iba **Slice #4**:
+Slice #4 frontend je **rozbehnutý**: bootstrap + auth + dashboard + assets list page fungujú. CI green. Pokračovaná cesta podľa mockup-ov v `docs/design/screens/`:
 
-### 🅵 Slice #4 — Frontend (apps/web) — multi-day projekt 🏁 **PRÍŠTÍ KROK**
+### Horúci kandidát — `/assets/[id]` asset detail page ⬅ **PRÍŠTÍ KROK**
 
-**Veľký krok — frontend aplikácia ktorú zatiaľ máme len ako mockupy. Backend je production-ready a čaká na konzumenta. Robíme posledný — design tokens, tenant scoping, OpenAPI export, GDPR audit log polia, WCAG plan — všetko už je hotové.**
+Logicky druhý z 6 P0 obrazoviek. Riadky tabuľky na `/assets` už majú `<Link href="/assets/${_id}">` na inventory number — ten link teraz vedie do 404.
 
-- **Stack**: Next.js 15 + TanStack Query + shadcn/ui + Tailwind
-- **Tailwind preset** z `@inventario/design-tokens/tailwind` (ready ✅)
-- **HTTP klient**: `openapi-typescript` + `openapi-fetch` z `apps/api/openapi.json` (ready ✅)
-- **Shared schemas**: PATCH forms importujú `UpdateCategorySchema` / `UpdateLocationSchema` zo shared-types (ready ✅)
-- **6 P0 stránok** podľa mockupov v `docs/design/screens/`
-- **Microsoft Entra ID** SSO login flow
-- **Multi-tenant** `data-tenant` root attribute (ready ✅)
-- **Accessibility**: `eslint-plugin-jsx-a11y` + `@axe-core/react` + `@axe-core/cli` v CI (plan ✅ — viz `docs/compliance/wcag-2.1-aa-audit.md`)
-- **Sub-tasks**: bootstrap → auth → assets list → asset detail → loan workflow → polish
+**Z mockupu (`docs/design/screens/`)**:
+
+- **Detail header**: inventory number + name + status badge + akcie (Edit / Vyradiť / Zapožičať)
+- **Vlastnosti** — form-style read view: kategória, lokalita, popis, nákupná cena, dátum nákupu, supplier, ...
+- **História zmien** — audit log entries pre daný asset (vyžaduje admin audit endpoint zo Slice #5, alebo placeholder)
+- **História výpožičiek** — zoznam minulých a aktuálnej výpožičky (loans modul, ešte neexistuje)
+- **Prílohy** — attachments (ešte neexistuje endpoint)
+
+Pre tento moment **realistický scope**:
+
+- `GET /v1/assets/:id` — fetch hook (`useAsset(id)`)
+- Render vlastností + FK lookup pre kategóriu/lokalitu
+- Edit form mode (PATCH `/v1/assets/:id`) s `UpdateAssetSchema` zo shared-types pre validation
+- Placeholders pre históriu + prílohy s "Modul čoskoro" badge — rovnaký pattern ako dashboard "Výpožičky: 0" karta
+- RBAC: edit gombík len pre ASSET_MANAGER+ — číta sa z `useMe()` (`roles`)
+
+### Ďalej v Slice #4 queue (poradie podľa P0 priority)
+
+- **`/categories` + `/locations`** list pages — jednoduchšie ako assets (nepotrebujú pagination v pilote, ale potrebujú dať dobrý feedback keď delete zlyhá lebo asset referencuje FK)
+- **`/loans/request`** — loan request form (P0, ale **vyžaduje loans API ktoré ešte neexistuje** — možno cross-slice)
+- **`/my-loans`** — user's vlastné výpožičky (rovnaký block ako vyššie)
+- **Polish**: empty states, error boundaries, loading skeletons, mobile responsive overrides, dark mode
+
+### Slice #4 deployment plan
+
+Keď budú približne 4 z 6 stran funkčných: vytvoriť Vercel projekt pre `apps/web`. Pravdepodobne **app.inventario.sportup.sk** subdoména. Nutné zmeny:
+
+- `apps/web/vercel.json` — framework: nextjs + buildCommand override `pnpm build` (z monorepo root, kvôli prebuild hooku)
+- Vercel UI — Root Directory: `apps/web`, Install Command: `cd ../.. && pnpm install --frozen-lockfile`
+- DNS — CNAME `app` → cname.vercel-dns.com (rovnaký pattern ako `docs`)
+- ENV vars — `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_ENTRA_*` (z `.env.example`)
 
 ---
 
@@ -208,6 +238,7 @@ Tracked pre eventuálnu cleanup session. Po Phase E je toto už značne zoštíh
 | Pricing strategy              | `docs/sessions/2026-05-15-pricing-strategy.md`           |
 | Design pivot history          | `docs/sessions/2026-05-15-design-pivot.md`               |
 | Phase C session               | `docs/sessions/2026-05-16-day-summary.md`                |
+| Slice #4 launch + CI debug    | `docs/sessions/2026-05-17-day-summary.md` ← **NEW**      |
 | Vercel docs deploy guide      | `infra/vercel/DOCS-DEPLOYMENT.md`                        |
 | All Vercel projects           | `infra/vercel/README.md`                                 |
 | Backend slice completion logs | `docs/milestones/`                                       |
