@@ -200,6 +200,147 @@ export const useCategories = makeListHook<CategorySummary>('categories', '/v1/ca
 export const useLocations = makeListHook<LocationSummary>('locations', '/v1/locations');
 
 // ---------------------------------------------------------------------------
+// Categories — create + delete
+// ---------------------------------------------------------------------------
+
+/**
+ * Input shape for creating a category. Mirrors the backend's
+ * `ApiCreateCategoryBodySchema` in apps/api/src/modules/categories/
+ * categories.routes.ts — `slug` is optional (server derives from
+ * name), every other field has a sensible default the route applies.
+ *
+ * Most fields are intentionally optional even though the backend's
+ * Zod schema accepts them: the K1 UI sends a minimal payload (name +
+ * assetType + maybe description/parentId), and the backend default
+ * does the rest. Once the categories edit form lands we'll expose
+ * the remaining knobs (color, icon, approvers, maxLoanDays) — until
+ * then this hook keeps the call site small.
+ */
+export interface CreateCategoryInput {
+  name: string;
+  assetType: string;
+  description?: string | null | undefined;
+  parentId?: string | null | undefined;
+  slug?: string | undefined;
+}
+
+/**
+ * Full category shape as returned by the API. Wider than
+ * `CategorySummary` (which is just the projection the list views
+ * need); pages that show all fields (e.g. edit form) use this.
+ */
+export interface CategoryDetail {
+  _id: string;
+  organisationId: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+  assetType: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  approverIds: string[];
+  requiresApprovalByDefault: boolean;
+  maxLoanDays: number | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt: string | null;
+  deletedBy: string | null;
+}
+
+/**
+ * POST /v1/categories. On success invalidates the categories list
+ * cache so list pages re-fetch and the new row appears.
+ *
+ * Backend RBAC: ASSET_MANAGER + ADMIN can call this. We don't enforce
+ * RBAC client-side here — `useCanManageTaxonomy()` is the helper UI
+ * uses to gate the "+ Pridať" button. The mutation will still hit
+ * 403 for an unauthorized caller; we just don't surface the button.
+ */
+export function useCreateCategory(): UseMutationResult<CategoryDetail, Error, CreateCategoryInput> {
+  const queryClient = useQueryClient();
+
+  return useMutation<CategoryDetail, Error, CreateCategoryInput>({
+    mutationFn: async (input) => {
+      // Strip undefined values — Zod's defaults only apply when the
+      // field is absent from the JSON body, not when it's `undefined`.
+      // Send `null` for parentId/description if the user left them
+      // empty (those are nullable in the schema).
+      const body: Record<string, unknown> = {
+        name: input.name,
+        assetType: input.assetType,
+        parentId: input.parentId ?? null,
+        description:
+          input.description == null || input.description === '' ? null : input.description,
+      };
+      if (input.slug !== undefined && input.slug !== '') {
+        body['slug'] = input.slug;
+      }
+
+      const { data, error } = await apiClient.POST('/v1/categories', {
+        body: body as never,
+      });
+      if (error) {
+        const errObj = error as unknown as { message?: unknown };
+        throw new Error(
+          typeof errObj.message === 'string' ? errObj.message : 'Failed to create category',
+        );
+      }
+      if (!data) {
+        throw new Error('Empty response after category create');
+      }
+      return data as unknown as CategoryDetail;
+    },
+    onSuccess: () => {
+      // Refresh every cached page of the categories list. Cheaper
+      // than reconciling and prevents stale per-page caches from
+      // hiding the new row when the user paginates.
+      void queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+}
+
+/**
+ * DELETE /v1/categories/:id. Server-side this is a soft-delete with
+ * two FK protection checks:
+ *   - Refuse if the category has any non-deleted child categories
+ *     (would orphan a subtree).
+ *   - Refuse if any non-deleted asset references this category.
+ *
+ * Both cases surface as a 400 with a message naming the offending
+ * count + category name (e.g. "12 assets reference it. Reassign or
+ * delete those assets first."). The caller renders that message
+ * verbatim — the backend already phrased it for end users.
+ *
+ * RBAC: ADMIN only. Client-side, the delete button is hidden behind
+ * `useCanDeleteTaxonomy()`.
+ */
+export function useDeleteCategory(): UseMutationResult<void, Error, { id: string }> {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { id: string }>({
+    mutationFn: async ({ id }) => {
+      const { error } = await apiClient.DELETE('/v1/categories/{id}', {
+        params: { path: { id } },
+      });
+      if (error) {
+        const errObj = error as unknown as { message?: unknown };
+        throw new Error(
+          typeof errObj.message === 'string' ? errObj.message : 'Failed to delete category',
+        );
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Single asset — detail + update
 // ---------------------------------------------------------------------------
 
@@ -399,4 +540,29 @@ export function useCanEditAssets(): boolean {
   const me = useMe();
   const roles = me.data?.roles ?? [];
   return roles.includes('ASSET_MANAGER') || roles.includes('ADMIN');
+}
+
+/**
+ * Returns whether the current user can create or edit taxonomy
+ * entries (categories, locations). Matches backend RBAC for POST /
+ * PATCH on those collections: ASSET_MANAGER + ADMIN.
+ *
+ * Pessimistic during /v1/me load — same reasoning as useCanEditAssets.
+ */
+export function useCanManageTaxonomy(): boolean {
+  const me = useMe();
+  const roles = me.data?.roles ?? [];
+  return roles.includes('ASSET_MANAGER') || roles.includes('ADMIN');
+}
+
+/**
+ * Returns whether the current user can delete taxonomy entries.
+ * Backend reserves DELETE for ADMIN only (FK protection blocks the
+ * delete if assets / child categories reference the row, but the
+ * authorization gate is stricter than the create/edit gate).
+ */
+export function useCanDeleteTaxonomy(): boolean {
+  const me = useMe();
+  const roles = me.data?.roles ?? [];
+  return roles.includes('ADMIN');
 }
