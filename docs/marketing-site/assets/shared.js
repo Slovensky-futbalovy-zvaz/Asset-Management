@@ -103,7 +103,7 @@
                                 <div class="wordmark" style="color: white; font-size: 1.5rem;">Inventario</div>
                             </div>
                             <p class="footer-tagline">
-                                Otvorená multi-tenant platforma pre evidenciu a vypožičiavanie majetku. Bez vendor lock-in.
+                                Otvorená multi-tenant platforma pre evidenciu a vypožičiavanie majetku. Bez <span lang="en">vendor lock-in</span>.
                             </p>
                             <div style="display: flex; gap: 0.5rem; margin-top: 1.25rem; flex-wrap: wrap;">
                                 <span class="badge badge-white">🇪🇺 EUPL-1.2</span>

@@ -772,6 +772,15 @@ UX:
 </head>
 <body data-page="demo" data-mode="grid">
 
+    <!--
+      ARIA live region for assistive technology. shared.js + the demo
+      JS below update this with short status messages whenever the
+      tenant or viewport switches, or when the user opens / closes
+      a screen. polite = announce when the user is idle (no
+      interruption). visually-hidden via .sr-only utility class.
+    -->
+    <div id="demo-announce" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
     <main id="main">
 
     <!-- ════════════════ HERO ════════════════ -->
@@ -783,7 +792,7 @@ UX:
                 Klikni a presvedč sa.
             </h1>
             <p class="subtitle">
-                6 obrazoviek pokrývajúcich celý user journey — od prihlásenia, cez evidenciu majetku, po vypožičanie a vrátenie. Funguje na mobile, tablete aj desktope. Štyri demo organizácie (klub, mesto, škola, default) ukazujú silu multi-tenant white-labelingu.
+                6 obrazoviek pokrývajúcich celý user journey — od prihlásenia, cez evidenciu majetku, po vypožičanie a vrátenie. Funguje na mobile, tablete aj desktope. Štyri demo organizácie (klub, mesto, škola, default) ukazujú silu multi-tenant <span lang="en">white-label</span>ingu.
             </p>
 
             <div class="demo-hero-meta">
@@ -1067,7 +1076,7 @@ UX:
         <div class="demo-cta-inner">
             <h2>Páči sa ti čo vidíš? <em>Skús to.</em></h2>
             <p>
-                Free tier ti stačí na pokrytie celej organizácie do 5 používateľov. Žiadna kreditka, žiadny vendor lock-in.
+                Free tier ti stačí na pokrytie celej organizácie do 5 používateľov. Žiadna kreditka, žiadny <span lang="en">vendor lock-in</span>.
             </p>
             <div class="demo-cta-buttons">
                 <a href="/pricing" class="demo-cta-btn-primary">
@@ -1201,6 +1210,35 @@ UX:
         ];
 
         // ══════════════════════════════════════════════════════════════
+        // ARIA LIVE ANNOUNCEMENTS
+        // ══════════════════════════════════════════════════════════════
+
+        const announceEl = document.getElementById('demo-announce');
+
+        function announce(message) {
+            if (!announceEl) return;
+            // Re-set on every update so the screen reader announces it even
+            // when the text happens to match the previous value.
+            announceEl.textContent = '';
+            // Tiny delay so the DOM mutation registers as a new value.
+            window.setTimeout(() => {
+                announceEl.textContent = message;
+            }, 50);
+        }
+
+        const TENANT_LABELS = {
+            default: 'Inventario',
+            inter: 'ŠK Inter Bratislava',
+            pezinok: 'Mesto Pezinok',
+            kremnica: 'Stredná škola Kremnica',
+        };
+        const VIEWPORT_LABELS = {
+            mobile: 'mobil',
+            tablet: 'tablet',
+            desktop: 'desktop',
+        };
+
+        // ══════════════════════════════════════════════════════════════
         // STATE
         // ══════════════════════════════════════════════════════════════
 
@@ -1318,6 +1356,9 @@ UX:
             // Switch body mode
             body.setAttribute('data-mode', 'viewer');
 
+            // Announce to assistive tech
+            announce(`Otvorená obrazovka ${screen.num}: ${screen.title}.`);
+
             // URL hash + browser history
             if (!skipHistory) {
                 if (previousScreen) {
@@ -1354,6 +1395,8 @@ UX:
                 const target = document.getElementById('screens-section');
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
+
+            announce('Vrátený zoznam všetkých obrazoviek.');
         }
 
         function reloadCurrentScreenIframe() {
@@ -1391,12 +1434,14 @@ UX:
         document.querySelectorAll('[data-tenant]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const newTenant = btn.getAttribute('data-tenant');
+                if (newTenant === currentTenant) return;
                 currentTenant = newTenant;
                 // Sync active state across BOTH tenant button sets
                 document.querySelectorAll('[data-tenant]').forEach((b) => {
                     b.classList.toggle('active', b.getAttribute('data-tenant') === newTenant);
                 });
                 reloadCurrentScreenIframe();
+                announce(`Tenant zmenený na ${TENANT_LABELS[newTenant] || newTenant}.`);
             });
         });
 
@@ -1404,6 +1449,7 @@ UX:
         document.querySelectorAll('.control-btn[data-viewport]').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const newViewport = btn.getAttribute('data-viewport');
+                if (newViewport === currentViewport) return;
                 currentViewport = newViewport;
                 document.querySelectorAll('.control-btn[data-viewport]').forEach((b) => {
                     b.classList.toggle('active', b.getAttribute('data-viewport') === newViewport);
@@ -1411,6 +1457,7 @@ UX:
                 if (currentScreen) {
                     viewerFrameContainer.setAttribute('data-viewport', currentViewport);
                 }
+                announce(`Zobrazenie zmenené na ${VIEWPORT_LABELS[newViewport] || newViewport}.`);
             });
         });
 
