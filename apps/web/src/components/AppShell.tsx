@@ -12,6 +12,7 @@ import { LogoutButton } from './LogoutButton';
 
 import type { JSX, ReactNode } from 'react';
 
+import { useMe } from '@/lib/api-hooks';
 import { cn } from '@/lib/cn';
 
 /**
@@ -24,15 +25,16 @@ import { cn } from '@/lib/cn';
  * Layout:
  *
  *   ┌─ Header ────────────────────────────────────────────────┐
- *   │ [logo] Inventario          [user name] [logout]         │
+ *   │ [logo] Inventario          [user name + roles] [logout] │
  *   ├──────┬──────────────────────────────────────────────────┤
  *   │ Side │                                                  │
  *   │ bar  │  <main id="main">  page content                  │
  *   │      │                                                  │
  *   └──────┴──────────────────────────────────────────────────┘
  *
- * Sidebar is collapsible on mobile (hamburger pattern) but for K2
- * bootstrap we keep it always visible — mobile responsive lands in K9.
+ * Sidebar is collapsible on mobile (hamburger pattern) but for K3
+ * we keep it always visible on >= md, hidden on mobile — full mobile
+ * responsive lands in K9 polish.
  */
 
 interface NavItem {
@@ -50,14 +52,34 @@ const NAV_ITEMS: readonly NavItem[] = [
   { href: '/users', label: 'Používatelia', icon: Users },
 ] as const;
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrátor',
+  ASSET_MANAGER: 'Správca majetku',
+  TEAM_MANAGER: 'Vedúci tímu',
+  EMPLOYEE: 'Zamestnanec',
+  EXTERNAL: 'Externý',
+};
+
+function formatRoles(roles: readonly string[]): string {
+  return roles.map((role) => ROLE_LABELS[role] ?? role).join(' · ');
+}
+
 export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   const { accounts } = useMsal();
   const account = useAccount(accounts[0]);
+  const me = useMe();
   const pathname = usePathname();
+
+  // Prefer the backend-resolved displayName (which the JIT-provision
+  // step pulled from Entra) over MSAL's account.name. They usually
+  // agree, but the backend's value is what other users see when this
+  // person creates an asset, so showing it builds trust in the data.
+  const displayName = me.data?.displayName ?? account?.name ?? account?.username ?? 'Používateľ';
+  const roles = me.data?.roles ?? [];
 
   return (
     <div className="min-h-screen bg-surface-page">
-      <Header userName={account?.name ?? account?.username ?? 'Používateľ'} />
+      <Header userName={displayName} roles={roles} />
       <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8">
         <Sidebar pathname={pathname} />
         <main id="main" className="min-w-0 flex-1">
@@ -68,7 +90,7 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   );
 }
 
-function Header({ userName }: { userName: string }): JSX.Element {
+function Header({ userName, roles }: { userName: string; roles: readonly string[] }): JSX.Element {
   return (
     <header className="border-b border-border-subtle bg-surface-card">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
@@ -80,7 +102,10 @@ function Header({ userName }: { userName: string }): JSX.Element {
           Inventario
         </Link>
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-text-secondary sm:inline">{userName}</span>
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-medium text-text-primary">{userName}</p>
+            {roles.length > 0 && <p className="text-xs text-text-muted">{formatRoles(roles)}</p>}
+          </div>
           <LogoutButton />
         </div>
       </div>
