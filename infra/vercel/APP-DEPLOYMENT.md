@@ -7,7 +7,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 > **Cieľ:** Nasadiť `apps/web/` (Next.js 15 + MSAL + design tokens) na `app.inventario.sportup.sk`
 > **Predpokladaná dĺžka:** ~45 minút (vrátane Azure Portal + DNS propagácie)
-> **Status:** Pripravené na execution (Slice #4 = 5/6 P0 stránok hotových)
+> **Status:** Krok 1 hotový (2026-05-18). Krok 2-9 čakajú.
+
+---
+
+## 📦 Pred-deploy status (2026-05-18)
+
+✅ **Krok 1 KOMPLET**: `asset-management-api` Vercel projekt je LIVE
+
+- Node 24 LTS runtime (Active LTS, supported do Apr 2028)
+- `CORS_ORIGINS` env var: `https://app.inventario.sportup.sk,http://localhost:3001`
+- Live URL: `https://api.inventario.sportup.sk`
+- CORS verified live
+
+⏳ **Krok 2-9 next session**: vytvoriť `inventario-app` Vercel projekt + Azure Portal redirect URI + Websupport DNS + smoke test.
 
 ---
 

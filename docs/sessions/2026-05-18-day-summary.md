@@ -5,11 +5,13 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Day summary · 2026-05-18 (Monday)
 
-> Slice #4 dotiahnutie. Od `/categories` cez `/locations` po ADMIN-only `/users` admin page, plus mobile responsive polish naprieč celou appkou. Večerný pivot do dependabot inbox-u: Tailwind 4 deferral decision, CI dependabot gating fix, tri merge-y a dva clean closures.
+> Slice #4 dotiahnutie. Od `/categories` cez `/locations` po ADMIN-only `/users` admin page, plus mobile responsive polish naprieč celou appkou. Večerný pivot do dependabot inbox-u: Tailwind 4 deferral decision, CI dependabot gating fix, tri merge-y a dva clean closures. **Neskorý večerný side quest**: Vercel deploy `asset-management-api` na Node 24 LTS — 3.5-hodinová bitka s Production Override locks, `engines.node` syntax peklom a stale UI overrides. Win-ovaný cez Cesta A reset všetkých Project Settings overrides. CORS verified live na `api.inventario.sportup.sk`.
 
 ---
 
 ## TL;DR
+
+Deň mal **dve fázy**: (1) Slice #4 finalization 9:00-16:00, (2) Dependabot cleanup 16:00-17:30, (3) Vercel deploy battle 17:30-21:00.
 
 Slice #4 je z 5/6 P0 stránok hotový. Posledná chýbajúca (`/loans/request` + `/my-loans`) je **blocked na Slice #5 backend** (loans API endpointy ešte neexistujú). Frontend `apps/web` má teraz:
 
@@ -276,6 +278,140 @@ Pridal som ignore do `dependabot.yml` (commit pending push):
 
 ---
 
+## 7. Vercel deploy `asset-management-api` — Node 24 LTS battle
+
+Po dependabot cleanup-e (17:30) som chcel pokračovať na Vercel deploy `app.inventario.sportup.sk` (Krok 2 z `infra/vercel/APP-DEPLOYMENT.md`). Plán bol jednoduchý: update `CORS_ORIGINS` env var v existing `asset-management-api` projekte, potom vytvoriť `inventario-app`. **Realita:** 3.5 hodiny boja s Vercel Production Override locks.
+
+### Chronológia
+
+#### 17:30 — Krok 1 sa zdal byť trivial
+
+Pridať `https://app.inventario.sportup.sk` do `CORS_ORIGINS` env var. Backend už má **runtime-dynamic CORS** cez `app.config.CORS_ORIGINS` (comma-separated list z env var-u) — pekné zistenie, žiadny code change netreba.
+
+Update env var v Vercel UI, redeploy najnovší deployment. **Build padol** s:
+
+```
+Error: Found invalid Node.js Version: "24.x". Please set Node.js Version to 22.x in your Project Settings to use Node.js 22.
+```
+
+Pôvodný plán bol bump na Node 22.22.3 ešte ráno (lint-staged@17 unblock), ale Vercel mal **Production Override locked na Node 24.x** z minulých deploys. Conflict: Project Settings 22.x vs Production Override 24.x ⇒ build refuse.
+
+#### 18:00 — Bump na Node 24 LTS naprieč code base
+
+Namiesto boja s Vercel override sme aliňovali celú code base na Node 24 LTS. 8 súborov:
+
+```
+.nvmrc                              22.20.0    → 24.15.0
+.github/workflows/ci.yml            22.22.3    → 24.15.0
+.github/workflows/sbom.yml          22.22.3    → 24.15.0
+.github/workflows/docs.yml          22.22.3    → 24.15.0
+package.json (root)         >=22.22.3  → >=24.15.0  → "24.x"
+apps/api/package.json       >=22.22.3  → >=24.15.0  → "24.x"
+apps/web/package.json       >=22.22.3  → >=24.15.0  → "24.x"
+apps/docs/package.json      >=22.22.3  → >=24.15.0  → "24.x"
+```
+
+Lokálne `nvm install 24.15.0 && pnpm install` + 327/327 testy green. Push commit `ci: bump Node 22.22.3 → 24.15.0 (Active LTS)`.
+
+#### 18:08 — Deploy limit hit
+
+Dependabot chaos + bumpy + redeploys vyčerpali Hobby tier **100 deploys/day**. Upgrade na **Pro tier** ($20/month). Empty commit `git commit --allow-empty` + push pre fresh webhook trigger.
+
+#### 18:13 — Nový error: ERR_PNPM_UNSUPPORTED_ENGINE
+
+```
+ERR_PNPM_UNSUPPORTED_ENGINE
+Expected version: >=24.15.0
+Got: v22.22.2
+```
+
+**Diagnóza:** `apps/api/vercel.json` malo hardcoded `"runtime": "@vercel/node@5.0.0"` v functions config. To prepisuje `engines.node` aj Project Settings a pinninguje Node 22.22.2 pre Serverless Functions runtime. Build phase = Node 24, ale Functions builder = Node 22. Pre `pnpm install --frozen-lockfile` v function build phase to znamenalo conflict s `engines.node: ">=24.15.0"`.
+
+**Fix:** odstrániť explicit `runtime` field zo `apps/api/vercel.json`. Vercel potom auto-deteguje verziu z `engines.node` override.
+
+#### 18:17 — Tretí error variant: "Found invalid Node.js Version: 24.x"
+
+```
+Error: Found invalid Node.js Version: "24.x". Please set Node.js Version to 22.x in your Project Settings.
+```
+
+**Root cause cez Vercel docs:** Vercel nemá rád `>=24.15.0` range syntax v `engines.node` lebo to môže match-núť Node 26, 28 v budúcnosti pri breaking changes. **Vercel chce iba major-only syntax: `24.x`.**
+
+> _"Defining the node property inside engines of a package.json file will override the selection made in the Project Settings. Only major versions can be specified. Please avoid greater than ranges, such as >14.x or >=14."_ — Vercel docs
+
+**Fix:** 4 package.json files `>=24.15.0` → `24.x`. Build prešiel ďalej... ale stále padol s **rovnakým errorom**.
+
+#### 18:19 — Screenshot diagnóza: Project Settings má stale `@sfz/shared-types`
+
+User poslal screenshot Vercel Settings → Build and Deployment. **Bingo!** V Project Settings **Build Command override toggle ON**:
+
+```
+Production Overrides:  cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @inventario/shared-types build
+Project Settings:      cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @sfz/shared-types build
+                                                                              ^^^^ STARÝ NÁZOV (pre-rename Inventario)
+```
+
+Vercel UI mal hardcoded override z dávneho času keď bol package menovaný `@sfz/shared-types` (pred rename na `@inventario/shared-types` v Phase E E4 commit `8dffa49`). Stale override pretláčal aktuálny `vercel.json` config.
+
+#### 18:21 — Cesta A: Reset všetkých UI overrides
+
+**Vypnúť VŠETKY Override toggles** v Project Settings:
+
+- Build Command — Override **OFF** (zruší stale `@sfz/...` názov)
+- Output Directory — Override **OFF**
+- Install Command — Override **OFF**
+- Development Command — Override **OFF**
+
+→ **Save** → Redeploy bez cache.
+
+#### 18:23 — 🎉 ZELENÉ! Build passed!
+
+Vercel použil `vercel.json` z repo + `engines.node: "24.x"` z package.json. Node 24 runtime pre build aj Functions. Deploy READY.
+
+#### 18:24 — CORS verify
+
+```bash
+curl -I -H "Origin: https://app.inventario.sportup.sk" https://api.inventario.sportup.sk/v1/me
+```
+
+Response:
+
+```
+HTTP/2 401                                                       ← OK, no JWT
+access-control-allow-credentials: true
+access-control-allow-origin: https://app.inventario.sportup.sk   ✅
+vary: Origin
+strict-transport-security: max-age=15552000; includeSubDomains
+x-ratelimit-limit: 100
+```
+
+**✅ Krok 1 KOMPLETNE HOTOVÝ.** `asset-management-api` je LIVE na Node 24 LTS s CORS allowed pre `app.inventario.sportup.sk`.
+
+### Lessons learned z Vercel battle
+
+1. **Vercel `engines.node` chce major-only syntax** (`"24.x"`), nie range (`">=24.15.0"`). Range syntax sa interpretuje ako "future major upgrades allowed" a Vercel to flag-ne ako conflict. Toto je **Vercel-specific quirk** — v normal Node.js ecosystem je `>=24.15.0` bežný pattern.
+
+2. **Vercel Production Override sa nedá editovať priamo cez UI** — je to read-only snapshot z minulého úspešného Production deploy. Updatuje sa **iba** novým úspešným Production deploy.
+
+3. **`vercel.json` `runtime` field má najvyššiu precedenciu** pre Serverless Functions. Hardcoded `"@vercel/node@5.0.0"` ignoruje aj Project Settings aj `engines.node`. **Default:** vynechaj `runtime` field a nech Vercel auto-deteguje.
+
+4. **Project Settings UI overrides sú "sticky"** — keď ich raz nastavíš cez UI, zostávajú aj po code commit-och ktoré by ich mali prepísať. Pri pre-rename / refactor migrations treba **explicitne vypnúť Override toggles** alebo update-núť hodnoty v UI.
+
+5. **Vercel Hobby tier 100 deploys/day limit** — easy hit počas debugging session-y. Pro tier ($20/month) je rozumné upgrade pre production launch.
+
+6. **Build cache môže maskovať issues** — pri debug-u vždy uncheck "Use existing Build Cache" v Redeploy dialógu.
+
+### Akčný cleanup pre Vercel deploy guide
+
+`infra/vercel/APP-DEPLOYMENT.md` treba aktualizovať so:
+
+- Warning section o `engines.node` `"24.x"` syntax requirement
+- Postup pre vyčistenie stale Project Settings overrides
+- Vercel Hobby vs Pro deploy limit
+- Build cache off pre debugging
+
+---
+
 ## 7. Files created/modified today
 
 ### Slice #4 frontend dotiahnutie
@@ -297,8 +433,34 @@ apps/web/src/components/AssetDetailContent.tsx     (removed nested AppShell)
 ### CI + dependabot infra
 
 ```
-.github/workflows/ci.yml                 (dependabot skip gates)
-.github/dependabot.yml                   (tailwindcss + pnpm/action-setup ignores)
+.github/workflows/ci.yml                 (dependabot skip gates + Node 22.22.3 → 24.15.0)
+.github/workflows/sbom.yml               (Node 22.22.3 → 24.15.0)
+.github/workflows/docs.yml               (Node 22.22.3 → 24.15.0)
+.github/dependabot.yml                   (tailwindcss + pnpm/action-setup ignores + Round 2/3 majors)
+commitlint.config.js                     (body-max-line-length 100 → 200)
+.nvmrc                                   (22.20.0 → 24.15.0)
+```
+
+### Node 24 LTS bump (8 súborov)
+
+```
+package.json (root)                      engines.node: >=22.22.3 → "24.x"
+apps/api/package.json                    engines.node: >=22.22.3 → "24.x"
+apps/web/package.json                    engines.node: >=22.22.3 → "24.x"
+apps/docs/package.json                   engines.node: >=22.22.3 → "24.x"
+.nvmrc                                   22.20.0 → 24.15.0
+.github/workflows/ci.yml                 NODE_VERSION env var
+.github/workflows/sbom.yml               NODE_VERSION env var
+.github/workflows/docs.yml               node-version literal
+```
+
+### Vercel deploy infra
+
+```
+apps/api/vercel.json                     removed "runtime": "@vercel/node@5.0.0" pin
+apps/web/vercel.json                     added security headers (X-Frame-Options DENY, HSTS, etc.)
+infra/vercel/APP-DEPLOYMENT.md           NEW — 9-step deploy guide for app.inventario.sportup.sk
+infra/vercel/README.md                   added inventario-app row (4 projects table)
 ```
 
 ---
@@ -310,6 +472,11 @@ apps/web/src/components/AssetDetailContent.tsx     (removed nested AppShell)
 3. **PageNotFoundError `/_not-found` lokálne** — stale `.next` cache, fix: `rm -rf apps/web/.next`
 4. **Dependabot PR-ky padali na test+openapi** — security-by-design GitHub policy, fix: skip gates
 5. **Nested AppShell v AssetDetailContent** — duplicate sidebar na mobile
+6. **Vercel Production Override locked na Node 24.x** — fix: align code base na Node 24 LTS namiesto boja s override
+7. **`ERR_PNPM_UNSUPPORTED_ENGINE` v Vercel Functions build** — fix: odstrániť `"runtime": "@vercel/node@5.0.0"` z `apps/api/vercel.json`
+8. **Vercel "Found invalid Node.js Version 24.x"** — fix: `engines.node` `">=24.15.0"` → `"24.x"` (major-only syntax)
+9. **Vercel stale UI override `@sfz/shared-types`** — fix: Cesta A reset všetkých Project Settings Override toggles
+10. **Commitlint body-max-line-length 100 char limit** — dependabot URLs prekračovali, raise na 200
 
 ---
 
@@ -370,8 +537,17 @@ Tailwind 4 deferral decision mi dala dobrý pocit z disciplíny — pred 6 mesia
 
 **Otvorené pre zajtra:**
 
-- Push commit s `pnpm/action-setup` ignore
-- Decision point: **Slice #5 backend (loans)** vs **Vercel deploy `apps/web` na `app.inventario.sportup.sk`** s 5/6 P0 stránkami
+- **Krok 2-9 deploy `app.inventario.sportup.sk`** — `asset-management-api` je LIVE, ďalej:
+  - Vytvoriť `inventario-app` Vercel projekt (Root: `apps/web`)
+  - 4 NEXT*PUBLIC*\* env vars (API_BASE_URL, ENTRA_CLIENT_ID, ENTRA_TENANT_ID, ENTRA_API_CLIENT_ID)
+  - Azure Portal pridať redirect URI `https://app.inventario.sportup.sk`
+  - Websupport DNS CNAME `app` → `cname.vercel-dns.com`
+  - DNS + SSL wait (~5-30 min)
+  - 10-bodový smoke test E2E flow (login → dashboard → 5 P0 pages → mobile → logout)
+
+- Príprava pred Krok 2: pripraviť **3 Entra ID hodnoty** z Azure Portal (Tenant ID, Frontend SPA Client ID, Backend API Client ID)
+
+- Decision point pre po-deploy: **Slice #5 backend (loans)** alebo **first pilot tenant onboarding**
 
 ---
 

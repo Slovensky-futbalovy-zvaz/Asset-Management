@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC-BY-4.0
 > **Living document** — vždy aktuálny stav projektu, najbližšie kroky, technical debt.
 > Pri novej Claude session si prečítaj **najprv toto**, potom najnovší day-summary.
 
-**Aktualizované**: 2026-05-18 evening (po Slice #4 dokončení — `/categories` + `/locations` + `/users` admin + mobile responsive polish + dependabot inbox cleanup + Tailwind 4 deferral)
+**Aktualizované**: 2026-05-18 late evening (po Slice #4 + dependabot cleanup + Vercel deploy battle — `asset-management-api` LIVE na Node 24 LTS)
 
 ---
 
@@ -26,19 +26,19 @@ Frontend (Slice #4) je posledný **zámerne**, aby sa minimalizovali prerábky. 
 
 ## 🌐 Production stav — všetko LIVE
 
-| URL                                        | Stav        | Posledný update | Stack                             |
-| ------------------------------------------ | ----------- | --------------- | --------------------------------- |
-| **inventario.sportup.sk**                  | ✅ LIVE     | 2026-05-17      | Static HTML/CSS/JS (Vercel)       |
-| **inventario.sportup.sk/interactive-demo** | ✅ LIVE     | 2026-05-17      | + 6 product mockups v iframe      |
-| **docs.inventario.sportup.sk**             | ✅ LIVE     | 2026-05-16      | Nextra v4.6.0 + Next.js 15.5      |
-| **app.inventario.sportup.sk**              | ⏳ **NEXT** | Code ready      | Next.js 15 + MSAL + design tokens |
-| **api.inventario.sportup.sk**              | ⏳ Q3 2026  | Backend ready   | Fastify + MongoDB Atlas + Vercel  |
+| URL                                        | Stav        | Posledný update | Stack                                          |
+| ------------------------------------------ | ----------- | --------------- | ---------------------------------------------- |
+| **inventario.sportup.sk**                  | ✅ LIVE     | 2026-05-17      | Static HTML/CSS/JS (Vercel)                    |
+| **inventario.sportup.sk/interactive-demo** | ✅ LIVE     | 2026-05-17      | + 6 product mockups v iframe                   |
+| **docs.inventario.sportup.sk**             | ✅ LIVE     | 2026-05-16      | Nextra v4.6.0 + Next.js 15.5                   |
+| **api.inventario.sportup.sk**              | ✅ **LIVE** | **2026-05-18**  | Fastify + MongoDB Atlas + Vercel (Node 24 LTS) |
+| **app.inventario.sportup.sk**              | ⏳ **NEXT** | Code ready      | Next.js 15 + MSAL + design tokens              |
 
-**Tri Vercel projekty v `ltksolutions-projects` team** (4. pripravujeme):
+**Štyri Vercel projekty v `ltksolutions-projects` team** (5. pripravujeme):
 
 1. `inventario-marketing` → marketing site, Root: `docs/marketing-site`
 2. `inventario-docs` → docs site, Root: `apps/docs`, custom build+install commands cez UI override
-3. `asset-management-api` → existing, Root: `apps/api`
+3. `asset-management-api` → backend Fastify, Root: `apps/api`, Node 24 LTS, CORS allowlist hotový pre `app.inventario.sportup.sk`
 4. `inventario-app` → **TBD** — `apps/web` Next.js 15, plánovaný next session
 
 ---
@@ -155,7 +155,108 @@ Asset-Management/                    (root, pnpm monorepo, EUPL-1.2)
 
 5/6 P0 stránok Slice #4 je hotových a code-ready. Posledné dve (`/loans/request` + `/my-loans`) sú blocked na Slice #5 backend (loans API endpointy ešte neexistujú), ale **5/6 je dostatočné na pilot tenant onboarding**. Strategicky preto deploy ide pred Slice #5 — real-world feedback z prvého pilotu unlockne lepšie loans design decisions (single vs multi-approver, notifikácie, delegácia).
 
-### Pre-deploy checklist
+**Krok 1 hotový (2026-05-18):** `asset-management-api` Vercel projekt je LIVE na Node 24 LTS s CORS allowlist pre `app.inventario.sportup.sk`. Pózri day-summary `2026-05-18-day-summary.md` sekcia 7 "Vercel deploy battle" pre 3.5-hodinový debug story (Production Override locks, engines.node syntax, stale UI overrides).
+
+### Pre-deploy checklist (Krok 2-9)
+
+Komplet 9-krokový guide je v [`infra/vercel/APP-DEPLOYMENT.md`](../../infra/vercel/APP-DEPLOYMENT.md). Stručný zoznam:
+
+#### Krok 2: Vytvoriť `inventario-app` Vercel projekt
+
+- vercel.com/new → import `Slovensky-futbalovy-zvaz/Asset-Management`
+- Project Name: `inventario-app`
+- Framework: Next.js (auto-detect)
+- Root Directory: `apps/web` (kliknuť Edit a nastaviť)
+- **Build/Install/Output:** všetko nechať default — Vercel auto-deteguje cez `pnpm-workspace.yaml` + `apps/web/vercel.json`
+- **DON'T set UI overrides!** — to bola príčina večerného boja s `asset-management-api`. Nechať všetky Override toggles **OFF** a riadiť všetko cez `vercel.json` + `package.json`.
+- **Node.js Version**: ne-nastavovať (Vercel auto-deteguje z `engines.node: "24.x"` v package.json)
+
+#### Krok 3: Environment Variables (Production + Preview)
+
+```
+NEXT_PUBLIC_API_BASE_URL=https://api.inventario.sportup.sk
+NEXT_PUBLIC_ENTRA_CLIENT_ID=<frontend SPA app registration client ID>
+NEXT_PUBLIC_ENTRA_TENANT_ID=<tenant UUID>
+NEXT_PUBLIC_ENTRA_API_CLIENT_ID=<backend API app registration client ID>
+```
+
+**Pozor:** všetky `NEXT_PUBLIC_*` vars sú **embed-nuté v client bundle** — vidí ich každý kto si stiahne `.js` zo siete. To je OK pre Entra public client IDs (sú navrhnuté pre verejnú expozíciu), ale **žiadne secrets sem nikdy**.
+
+#### Krok 4: First deploy + preview URL test
+
+```bash
+curl -sI https://<preview-url>/
+curl -sI https://<preview-url>/login
+```
+
+Mali by vrátiť **HTTP/2 200**.
+
+#### Krok 5: Azure Portal — frontend SPA app registration
+
+- **Authentication → Redirect URIs** → pridať: `https://app.inventario.sportup.sk`
+- Necháme zachovaný `http://localhost:3001` pre dev work
+- **Žiadne zmeny pre backend app registration** (Expose an API už je hotové z 2026-05-17)
+
+#### Krok 6: Vercel custom doména
+
+- Vercel dashboard → `inventario-app` → Settings → Domains → pridať `app.inventario.sportup.sk`
+
+#### Krok 7: DNS na Websupport
+
+- Login na https://admin.websupport.sk
+- Domény → `sportup.sk` → DNS záznamy → Pridať záznam
+- Typ: `CNAME`, Názov: `app`, Hodnota: `cname.vercel-dns.com.` (s bodkou na konci)
+
+#### Krok 8: Čakať na DNS propagáciu + SSL (~5-30 min)
+
+```bash
+dig app.inventario.sportup.sk CNAME +short
+# Očakávaný výsledok: cname.vercel-dns.com.
+
+curl -sI https://app.inventario.sportup.sk
+# HTTP/2 200 ✓
+```
+
+#### Krok 9: 10-bodový smoke test
+
+```
+1. https://app.inventario.sportup.sk → vidí Login page
+2. Prihlásiť sa cez Microsoft → Entra consent → redirect späť
+3. /dashboard → vidí stats cards a personalizovaný greeting
+4. /assets → list načítaný, paginácia + filter + search funguje
+5. /assets/[id] → detail loaded, edit toggle, save patch funguje
+6. /categories → list, Pridať dialog, create funguje
+7. /locations → list, Pridať dialog, create funguje
+8. /users → vidí AccessDenied ak nie ADMIN, alebo list ak je ADMIN
+9. Mobile (Chrome DevTools narrow) → hamburger → drawer → navigation → zatvoriť
+10. Logout → redirect na /login
+```
+
+Každý úspešný krok = ✅ commit s screenshot do `docs/sessions/2026-05-19-deploy-day-summary.md`.
+
+### Príprava pred Krok 2
+
+Otvor v separátnom tab-e a paste do Apple Notes:
+
+1. **Tenant ID** — Azure Portal → Entra ID → Overview → Tenant ID
+2. **Frontend SPA Client ID** — App registrations → frontend SPA app → Overview → Application (client) ID
+3. **Backend API Client ID** — App registrations → backend API app → Overview → Application (client) ID
+
+### Po deploy — milestone doc
+
+Vytvoriť `docs/milestones/slice-4-frontend-web.md` (rovnaký pattern ako `phase-d-eu-compliance.md`) so:
+
+- Zoznam 5 P0 stránok + build sizes + commit references
+- Tech stack: Next.js 15, MSAL, openapi-fetch, TanStack Query, react-hook-form, Tailwind + design tokens
+- a11y achievements: aria-live regions, semantic table headers, keyboard navigation, role labels
+- Mobile responsive notes
+- Vercel deploy guide (cross-link na `infra/vercel/APP-DEPLOYMENT.md`)
+- Outstanding work: `/loans/request` + `/my-loans` (blocked na Slice #5)
+- Vercel deploy battle lessons learned (Node 24 LTS, engines.node syntax, stale UI overrides)
+
+### Pre-deploy checklist (OLD — nahradené kompletným guide vyššie + `infra/vercel/APP-DEPLOYMENT.md`)
+
+_Táto sekcia bola pôvodná čerstvá verzia z 2026-05-17 keď sme ešte nemali deploy guide ani vyčistené lekcie z Vercel battle. Zachovaná pre historickú referenciu, ale nepoužívať — použi guide vyššie._
 
 #### 1. `apps/web/vercel.json` config
 
@@ -251,6 +352,7 @@ Vytvoriť `docs/milestones/slice-4-frontend-web.md` (rovnaký pattern ako `phase
 - Mobile responsive notes
 - Vercel deploy guide (cross-link na `infra/vercel/APP-DEPLOYMENT.md`)
 - Outstanding work: `/loans/request` + `/my-loans` (blocked na Slice #5)
+- Vercel deploy battle lessons learned (Node 24 LTS, engines.node syntax, stale UI overrides)
 
 ### Po milestone doc — Slice #5 (loans backend)
 
