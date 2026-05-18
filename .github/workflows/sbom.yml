@@ -54,7 +54,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "22.20.0"
+  # Bumped 22.20.0 → 22.22.3 alongside ci.yml. See ci.yml for rationale.
+  NODE_VERSION: "22.22.3"
   PNPM_VERSION: "9.12.0"
 
 jobs:
