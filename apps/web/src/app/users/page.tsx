@@ -4,31 +4,33 @@
 import type { JSX } from 'react';
 
 import { AuthGate } from '@/components/AuthGate';
-import { ComingSoonContent } from '@/components/ComingSoonContent';
+import { UsersContent } from '@/components/UsersContent';
 
 /**
- * /users — placeholder until the users admin UI ships.
+ * /users — admin panel for managing users in the current tenant.
  *
- * Backend is ready (slice #3 K10): GET /v1/users, GET /:id, PATCH
- * /:id with role + isActive editing and a last-active-admin guardrail.
- * The UI just needs the list page + edit modal — defensive checks
- * for self-demotion and the last-admin case are server-side and only
- * need to render a clean toast on 400.
+ * Server component that defers everything interactive to AuthGate +
+ * UsersContent. UsersContent itself gates non-ADMIN viewers behind
+ * an AccessDenied state (rather than the page-level component
+ * hiding the route entirely) so users with the wrong role land on
+ * a clear message instead of an unexplained 404.
+ *
+ * RBAC:
+ *   - GET /v1/users      ADMIN only
+ *   - PATCH /v1/users/:id ADMIN only
+ *
+ * The backend additionally enforces guardrails on PATCH:
+ *   - self-demote (can't strip your own ADMIN role)
+ *   - self-deactivate
+ *   - last-active-admin (can't demote / deactivate the last ADMIN)
+ *
+ * Both pre-emptive UI guards (for self) and the verbatim backend
+ * message (for last-admin) live in UserEditDialog.
  */
 export default function UsersPage(): JSX.Element {
   return (
     <AuthGate>
-      <ComingSoonContent
-        title="Používatelia"
-        description="Správa používateľov tenanta — roly, aktívnosť a oprávnenia."
-        preview={[
-          'Zoznam používateľov s filtrami podľa role a aktívnosti',
-          'Povyšovanie a degradovanie rolí (EMPLOYEE / ASSET_MANAGER / ADMIN)',
-          'Deaktivovanie účtov bez straty histórie',
-          'Ochrana proti odobratiu poslednej aktívnej ADMIN role v tenante',
-          'Audit log všetkých zmien rolí a aktívnosti',
-        ]}
-      />
+      <UsersContent />
     </AuthGate>
   );
 }

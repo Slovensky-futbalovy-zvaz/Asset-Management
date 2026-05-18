@@ -4,29 +4,29 @@
 import type { JSX } from 'react';
 
 import { AuthGate } from '@/components/AuthGate';
-import { ComingSoonContent } from '@/components/ComingSoonContent';
+import { LocationsContent } from '@/components/LocationsContent';
 
 /**
- * /locations — placeholder until the locations admin UI ships.
+ * /locations — admin list page for the physical-locations taxonomy.
  *
- * Backend mirrors categories (slice #3 K1-K9): full CRUD with FK
- * protection against assets that reference the location. The UI
- * pattern will mirror /categories as well — same list+edit+delete
- * surface, different domain model (LocationType vs AssetType).
+ * Server component that defers everything interactive to AuthGate +
+ * LocationsContent. Same shape as /categories and /assets:
+ *   pre-login → LoginScreen
+ *   authenticated → AppShell with the locations list
+ *
+ * RBAC:
+ *   - GET (list) — all authenticated roles
+ *   - POST (create) — ASSET_MANAGER + ADMIN
+ *   - DELETE — ADMIN only
+ *
+ * The UI gates the create button via `useCanManageTaxonomy()` and
+ * the delete buttons via `useCanDeleteTaxonomy()` — same helpers as
+ * /categories, because the role matrix is identical on the backend.
  */
 export default function LocationsPage(): JSX.Element {
   return (
     <AuthGate>
-      <ComingSoonContent
-        title="Lokality"
-        description="Fyzické umiestnenia, kde sa majetok nachádza — sklady, kancelárie, šatne."
-        preview={[
-          'Zoznam lokalít s typom (sklad, kancelária, šatňa, sklad výstroje, ...)',
-          'Vytváranie a úpravy lokalít pre správcov majetku',
-          'Ochrana proti zmazaniu, ak v lokalite leží aspoň jeden kus majetku',
-          'Per-tenant slug a možnosť deaktivácie bez zmazania',
-        ]}
-      />
+      <LocationsContent />
     </AuthGate>
   );
 }

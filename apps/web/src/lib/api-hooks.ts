@@ -341,6 +341,161 @@ export function useDeleteCategory(): UseMutationResult<void, Error, { id: string
 }
 
 // ---------------------------------------------------------------------------
+// Locations — create + delete
+// ---------------------------------------------------------------------------
+
+/**
+ * Input shape for creating a location. Mirrors the backend's
+ * `ApiCreateLocationBodySchema` in apps/api/src/modules/locations/
+ * locations.routes.ts — `slug` is optional (server derives from
+ * name), every other field has a sensible default the route applies.
+ *
+ * The MVP create modal only collects name + type + description +
+ * parentId; richer fields (address, coordinates, managerId) get
+ * filled in via the (yet-to-be-built) edit form. The hook exposes
+ * the full shape so future call sites don't need a second hook.
+ */
+export interface CreateLocationInput {
+  name: string;
+  type: string;
+  description?: string | null | undefined;
+  parentId?: string | null | undefined;
+  slug?: string | undefined;
+  address?:
+    | {
+        street?: string | undefined;
+        city?: string | undefined;
+        postalCode?: string | undefined;
+        country?: string | undefined;
+      }
+    | null
+    | undefined;
+  coordinates?: { lat: number; lng: number } | null | undefined;
+  managerId?: string | null | undefined;
+  isActive?: boolean | undefined;
+}
+
+/**
+ * Full location shape as returned by the API. Wider than
+ * `LocationSummary` (which is just the projection the list views
+ * need); pages that show every field (e.g. edit form) use this.
+ */
+export interface LocationDetail {
+  _id: string;
+  organisationId: string;
+  name: string;
+  slug: string;
+  type: string;
+  parentId: string | null;
+  description: string | null;
+  address: {
+    street?: string | null;
+    city?: string | null;
+    postalCode?: string | null;
+    country: string;
+  } | null;
+  coordinates: { lat: number; lng: number } | null;
+  managerId: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedAt: string | null;
+  deletedBy: string | null;
+}
+
+/**
+ * POST /v1/locations. On success invalidates the locations list
+ * cache so list pages re-fetch and the new row appears.
+ *
+ * Backend RBAC: ASSET_MANAGER + ADMIN can call this. Client-side the
+ * "+ Pridať" button is gated behind `useCanManageTaxonomy()` — same
+ * helper as categories, same role set.
+ */
+export function useCreateLocation(): UseMutationResult<LocationDetail, Error, CreateLocationInput> {
+  const queryClient = useQueryClient();
+
+  return useMutation<LocationDetail, Error, CreateLocationInput>({
+    mutationFn: async (input) => {
+      // Same strip-undefined pattern as useCreateCategory — Zod
+      // defaults only fire when a field is absent from the body, not
+      // when it's `undefined`. Send `null` for nullable fields if the
+      // user left them empty.
+      const body: Record<string, unknown> = {
+        name: input.name,
+        type: input.type,
+        parentId: input.parentId ?? null,
+        description:
+          input.description == null || input.description === '' ? null : input.description,
+        address: input.address ?? null,
+        coordinates: input.coordinates ?? null,
+        managerId: input.managerId ?? null,
+      };
+      if (input.slug !== undefined && input.slug !== '') {
+        body['slug'] = input.slug;
+      }
+      if (input.isActive !== undefined) {
+        body['isActive'] = input.isActive;
+      }
+
+      const { data, error } = await apiClient.POST('/v1/locations', {
+        body: body as never,
+      });
+      if (error) {
+        const errObj = error as unknown as { message?: unknown };
+        throw new Error(
+          typeof errObj.message === 'string' ? errObj.message : 'Failed to create location',
+        );
+      }
+      if (!data) {
+        throw new Error('Empty response after location create');
+      }
+      return data as unknown as LocationDetail;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['locations'] });
+    },
+  });
+}
+
+/**
+ * DELETE /v1/locations/:id. Server-side this is a soft-delete with
+ * two FK protection checks (mirrors categories):
+ *   - Refuse if the location has any non-deleted child locations
+ *     (would orphan a subtree).
+ *   - Refuse if any non-deleted asset references this location.
+ *
+ * Both cases surface as a 400 with a user-friendly message naming
+ * the offending count + location name. The caller renders the
+ * message verbatim through ConfirmDeleteDialog.
+ *
+ * RBAC: ADMIN only. Client-side the delete button hides behind
+ * `useCanDeleteTaxonomy()`.
+ */
+export function useDeleteLocation(): UseMutationResult<void, Error, { id: string }> {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { id: string }>({
+    mutationFn: async ({ id }) => {
+      const { error } = await apiClient.DELETE('/v1/locations/{id}', {
+        params: { path: { id } },
+      });
+      if (error) {
+        const errObj = error as unknown as { message?: unknown };
+        throw new Error(
+          typeof errObj.message === 'string' ? errObj.message : 'Failed to delete location',
+        );
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['locations'] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Single asset — detail + update
 // ---------------------------------------------------------------------------
 
@@ -515,8 +670,222 @@ export function useUpdateAsset(): UseMutationResult<
 }
 
 // ---------------------------------------------------------------------------
-// Role helpers
+// Users — admin list, detail, update
 // ---------------------------------------------------------------------------
+
+/**
+ * Minimal user shape used by the admin list page. The full User
+ * schema has many more fields; the projection here is what the list
+ * UI actually renders (display + filter columns + identity for the
+ * edit modal).
+ */
+export interface UserSummary {
+  _id: string;
+  email: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  accountType: string;
+  roles: string[];
+  isActive: boolean;
+  lastLoginAt: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Full user shape as returned by GET /v1/users/:id. Same field set
+ * as MeResponse plus the admin-only fields (organisationId,
+ * createdAt etc.) for the edit dialog.
+ */
+export interface UserDetail {
+  _id: string;
+  organisationId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  accountType: string;
+  roles: string[];
+  isActive: boolean;
+  lastLoginAt: string | null;
+  preferences: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Patch body for PATCH /v1/users/:id. K10 exposes only `roles` and
+ * `isActive`; the service supports more (name, preferences) but the
+ * admin endpoint deliberately stays narrow.
+ */
+export interface UserUpdatePatch {
+  roles?: string[] | undefined;
+  isActive?: boolean | undefined;
+}
+
+interface UsersListQueryOptions {
+  limit?: number;
+  skip?: number;
+  role?: string | undefined;
+  isActive?: boolean | undefined;
+  /** Free-text search across email + displayName + firstName + lastName. */
+  q?: string | undefined;
+}
+
+/**
+ * GET /v1/users — paginated user list with filters. ADMIN-only on
+ * the backend; the client mirrors that with `useCanAdminUsers()`
+ * gating the whole route.
+ *
+ * The query key includes every filter so different filter
+ * combinations don't share a cache. `q` is debounced upstream —
+ * the page-level component holds the search input state and only
+ * passes the debounced value down.
+ */
+export function useUsers(
+  options: UsersListQueryOptions = {},
+): UseQueryResult<ListResponse<UserSummary>, Error> {
+  const { limit = 50, skip = 0, role, isActive, q } = options;
+  const isAuthenticated = useIsAuthenticated();
+
+  return useQuery<ListResponse<UserSummary>, Error>({
+    queryKey: ['users', { limit, skip, role, isActive, q }],
+    enabled: isAuthenticated,
+    queryFn: async () => {
+      // Build the query object incrementally so undefined values
+      // never make it into the wire format. openapi-fetch passes the
+      // object straight to URLSearchParams, which would serialise
+      // `undefined` as the literal string "undefined".
+      const query: Record<string, unknown> = { limit, skip };
+      if (role !== undefined) {
+        query['role'] = role;
+      }
+      if (isActive !== undefined) {
+        // The backend accepts the literal strings 'true' / 'false'
+        // (see the isActive enum in ListUsersQuerySchema). Send the
+        // canonical lowercase form.
+        query['isActive'] = isActive ? 'true' : 'false';
+      }
+      if (q !== undefined && q.length > 0) {
+        query['q'] = q;
+      }
+
+      const { data, error } = await apiClient.GET('/v1/users', {
+        params: { query: query as never },
+      });
+      if (error) {
+        const errObj = error as unknown as { message?: unknown };
+        throw new Error(
+          typeof errObj.message === 'string' ? errObj.message : 'Failed to load users',
+        );
+      }
+      if (!data) {
+        throw new Error('Empty response from /v1/users');
+      }
+      return data as unknown as ListResponse<UserSummary>;
+    },
+  });
+}
+
+/**
+ * GET /v1/users/:id — single user for the edit modal. Returns
+ * isError + 404-aware error so the dialog can render a "not found"
+ * state distinct from "server unreachable".
+ *
+ * Mirrors `useAsset` precisely — same status-code extraction
+ * pattern through the openapi-fetch result.
+ */
+export function useUser(id: string | null): UseQueryResult<UserDetail, Error> {
+  const isAuthenticated = useIsAuthenticated();
+
+  return useQuery<UserDetail, Error>({
+    queryKey: ['user', id],
+    enabled: isAuthenticated && typeof id === 'string' && id.length > 0,
+    queryFn: async () => {
+      if (!id) {
+        throw new Error('User ID is required.');
+      }
+      const result = await apiClient.GET('/v1/users/{id}', {
+        params: { path: { id } },
+      });
+      const { data, error } = result;
+      const response = (result as unknown as { response?: Response }).response;
+      if (error) {
+        const errObj = error as unknown as { message?: unknown };
+        const msg = typeof errObj.message === 'string' ? errObj.message : 'Failed to load user';
+        const wrapped = new Error(msg) as Error & { status?: number };
+        if (response?.status != null) {
+          wrapped.status = response.status;
+        }
+        throw wrapped;
+      }
+      if (!data) {
+        throw new Error('Empty response from /v1/users/:id');
+      }
+      return data as unknown as UserDetail;
+    },
+  });
+}
+
+/**
+ * PATCH /v1/users/:id. On success invalidates the users list and
+ * patches the single-user cache so the edit dialog can close
+ * immediately and the list reflects the change without an extra
+ * round-trip.
+ *
+ * The backend enforces guardrails (self-demote, self-deactivate,
+ * last-active-admin) and rejects with a user-facing 400 message.
+ * The caller surfaces that message verbatim through the dialog's
+ * error state.
+ */
+export function useUpdateUser(): UseMutationResult<
+  UserDetail,
+  Error,
+  { id: string; patch: UserUpdatePatch }
+> {
+  const queryClient = useQueryClient();
+
+  return useMutation<UserDetail, Error, { id: string; patch: UserUpdatePatch }>({
+    mutationFn: async ({ id, patch }) => {
+      const { data, error } = await apiClient.PATCH('/v1/users/{id}', {
+        params: { path: { id } },
+        body: patch as unknown as never,
+      });
+      if (error) {
+        const errObj = error as unknown as { message?: unknown };
+        throw new Error(
+          typeof errObj.message === 'string' ? errObj.message : 'Failed to update user',
+        );
+      }
+      if (!data) {
+        throw new Error('Empty response after user update');
+      }
+      return data as unknown as UserDetail;
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['user', updated._id], updated);
+      void queryClient.invalidateQueries({ queryKey: ['users'] });
+      // If the admin updated themselves (e.g. toggled their own
+      // preferences — currently impossible via this UI, but possible
+      // via future flows), invalidate /v1/me too so the header reflects
+      // it. Cheap; just one extra refetch.
+      void queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+}
+
+/**
+ * Returns whether the current user can administer users (list +
+ * edit). Backend reserves the whole admin users surface for ADMIN.
+ *
+ * Pessimistic during /v1/me load — same reasoning as the other
+ * role-gating helpers.
+ */
+export function useCanAdminUsers(): boolean {
+  const me = useMe();
+  const roles = me.data?.roles ?? [];
+  return roles.includes('ADMIN');
+}
 
 /**
  * Roles defined by the backend. Kept in sync with packages/shared-types
