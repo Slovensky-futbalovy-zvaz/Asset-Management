@@ -45,6 +45,15 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
+    ignore:
+      # pnpm/action-setup v6 má známe bugy s pnpm version detection
+      # (pnpm/action-setup#225, #227, #228) — ignoruje pinned `version`
+      # input a inštaluje pnpm v11 namiesto nášho 9.12.0, výsledkom je
+      # ERR_PNPM_BROKEN_LOCKFILE na `pnpm install --frozen-lockfile`.
+      # Držíme sa v4 kým sa v6 nestabilizuje. Re-evaluovať pri v7 alebo
+      # ak sa issues uzavrú.
+      - dependency-name: "pnpm/action-setup"
+        update-types: ["version-update:semver-major"]
 
   # Docker images v infra/docker
   - package-ecosystem: "docker"
