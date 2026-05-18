@@ -21,6 +21,18 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Tailwind v4 je major architektonický shift (JS config → CSS @theme,
+      # JS preset deprecation, PostCSS plugin rename, browser support cut
+      # Safari 16.4+/Chrome 111+/Firefox 128+). Vyžaduje manuálnu migráciu
+      # @inventario/design-tokens preset-u a re-test multi-tenant override
+      # pattern-u. Deferred until post-pilot launch — trackované v NEXT.md
+      # tech debt sekcii. Tailwind 3.4.x je supported, žiadne security advisories.
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      # @tailwindcss/* org packages (postcss plugin, vite plugin, etc.) by
+      # pošlo s tailwindcss v4 ako dependency; ignorované tiež až do migrácie.
+      - dependency-name: "@tailwindcss/*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
