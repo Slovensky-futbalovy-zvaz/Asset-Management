@@ -91,6 +91,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: quality
+    # Same reasoning as the openapi job below — dependabot PRs don't get
+    # repo secrets, and integration tests need a real Atlas connection.
+    # Skipping for dependabot keeps their PRs unblocked on quality
+    # signals (lint + typecheck + build), which is what we actually
+    # want for dep bumps.
+    if: github.actor != 'dependabot[bot]'
 
     steps:
       - name: Checkout code
@@ -142,6 +148,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: quality
+    # Skipped for dependabot PRs because GitHub does not expose repo
+    # secrets to dependabot-authored PRs (security policy: external bot
+    # PRs are treated as untrusted). Without MONGO_URI / ENTRA_* the
+    # export script can't boot Fastify (the swagger plugin transitively
+    # depends on the mongo plugin). Dependabot bumps almost never touch
+    # the OpenAPI surface anyway — they're npm patch/minor and GitHub
+    # Action version bumps. Real OpenAPI-affecting changes come through
+    # human-authored PRs which DO get secrets.
+    if: github.actor != 'dependabot[bot]'
 
     steps:
       - name: Checkout code
