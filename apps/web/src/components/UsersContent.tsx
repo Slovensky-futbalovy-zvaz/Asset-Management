@@ -158,7 +158,7 @@ function UsersAdminPanel({ currentUserId }: { currentUserId: string | null }): J
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            className="w-full rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:w-auto"
           >
             <option value="">Všetky roly</option>
             {USER_ROLE_VALUES.map((role) => (
@@ -174,7 +174,7 @@ function UsersAdminPanel({ currentUserId }: { currentUserId: string | null }): J
           <select
             value={activeFilter}
             onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
-            className="rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            className="w-full rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:w-auto"
           >
             <option value="all">Všetci</option>
             <option value="active">Iba aktívni</option>
@@ -187,7 +187,7 @@ function UsersAdminPanel({ currentUserId }: { currentUserId: string | null }): J
           <select
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value) as PageSize)}
-            className="rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            className="w-full rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:w-auto"
           >
             {PAGE_SIZES.map((size) => (
               <option key={size} value={size}>
@@ -237,9 +237,10 @@ function UsersAdminPanel({ currentUserId }: { currentUserId: string | null }): J
           type="button"
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page <= 1 || usersQuery.isLoading}
-          className="rounded-lg border border-border-default bg-surface-card px-4 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          className="rounded-lg border border-border-default bg-surface-card px-3 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-4"
         >
-          ← Predchádzajúca
+          <span aria-hidden="true">←</span>
+          <span className="sr-only sm:not-sr-only sm:ml-1">Predchádzajúca</span>
         </button>
         <span className="text-text-secondary">
           {page} / {totalPages}
@@ -248,9 +249,10 @@ function UsersAdminPanel({ currentUserId }: { currentUserId: string | null }): J
           type="button"
           onClick={() => setPage((p) => p + 1)}
           disabled={!hasMore || usersQuery.isLoading}
-          className="rounded-lg border border-border-default bg-surface-card px-4 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          className="rounded-lg border border-border-default bg-surface-card px-3 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-4"
         >
-          Ďalšia →
+          <span className="sr-only sm:not-sr-only sm:mr-1">Ďalšia</span>
+          <span aria-hidden="true">→</span>
         </button>
       </nav>
 
@@ -277,8 +279,8 @@ interface UsersTableProps {
 
 function UsersTable({ users, currentUserId, onEdit }: UsersTableProps): JSX.Element {
   return (
-    <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-sm">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-card shadow-sm">
+      <table className="w-full min-w-[720px] text-sm">
         <thead className="border-b border-border-subtle bg-surface-subtle text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
           <tr>
             <th scope="col" className="px-4 py-3">

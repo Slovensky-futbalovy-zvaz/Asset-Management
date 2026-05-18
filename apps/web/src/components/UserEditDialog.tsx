@@ -300,9 +300,11 @@ function DialogBody({
           {USER_ROLE_VALUES.map((role) => {
             const checked = roles.has(role);
             const isAdminSelfLock = isSelf && role === 'ADMIN';
+            const inputId = `user-edit-role-${role}`;
             return (
               <li key={role}>
                 <label
+                  htmlFor={inputId}
                   className={cn(
                     'flex items-start gap-3 rounded-lg border border-border-subtle bg-surface-card p-3 transition',
                     isAdminSelfLock
@@ -311,10 +313,12 @@ function DialogBody({
                   )}
                 >
                   <input
+                    id={inputId}
                     type="checkbox"
                     checked={checked}
                     disabled={isAdminSelfLock}
                     onChange={() => onToggleRole(role, isAdminSelfLock)}
+                    aria-label={ROLE_LABELS[role] ?? role}
                     className="mt-0.5 h-4 w-4 cursor-pointer rounded border-border-default text-brand-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed"
                   />
                   <span className="flex flex-1 flex-col">
@@ -345,21 +349,41 @@ function DialogBody({
             : 'Deaktivovaný účet nemôže pristupovať do aplikácie, ale jeho história zostane zachovaná.'
         }
       >
-        <label
+        {/*
+          Inline checkbox + label. We attach explicit htmlFor/id rather
+          than relying on the implicit-association pattern (input nested
+          in label) because the codebase's jsx-a11y config flags the
+          implicit form here. Other dialogs avoid the flag by routing
+          their inputs through Field's `children` slot — which is what
+          we'd do too, except this control deliberately keeps the
+          checkbox + caption on the SAME visual row (Field's column
+          layout would stack them), so an inline `<label htmlFor>` is
+          the cleaner fit.
+        */}
+        <div
           className={cn(
             'inline-flex items-center gap-2',
             isSelf ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
           )}
         >
           <input
+            id="user-edit-is-active"
             type="checkbox"
             checked={isActive}
             disabled={isSelf}
             onChange={onToggleActive}
             className="h-4 w-4 rounded border-border-default text-brand-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus disabled:cursor-not-allowed"
           />
-          <span className="text-sm text-text-primary">Účet je aktívny</span>
-        </label>
+          <label
+            htmlFor="user-edit-is-active"
+            className={cn(
+              'text-sm text-text-primary',
+              isSelf ? 'cursor-not-allowed' : 'cursor-pointer',
+            )}
+          >
+            Účet je aktívny
+          </label>
+        </div>
       </Field>
     </div>
   );

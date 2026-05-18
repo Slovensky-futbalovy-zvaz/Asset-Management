@@ -26,10 +26,11 @@ export function LogoutButton(): JSX.Element {
     <button
       type="button"
       onClick={handleLogout}
+      aria-label="Odhlásiť sa"
       className="inline-flex items-center gap-2 rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm font-medium text-text-primary transition hover:bg-surface-subtle"
     >
       <LogOut aria-hidden="true" className="h-4 w-4" />
-      Odhlásiť sa
+      <span className="hidden sm:inline">Odhlásiť sa</span>
     </button>
   );
 }

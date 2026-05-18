@@ -7,7 +7,6 @@ import { AlertCircle, ArrowLeft, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { AppShell } from './AppShell';
 import { AssetDetailEditForm } from './AssetDetailEditForm';
 import { AssetDetailReadView } from './AssetDetailReadView';
 
@@ -27,6 +26,12 @@ import { useAsset, useCanEditAssets, useCategories, useLocations } from '@/lib/a
  *      the URL might still be valid in seconds (transient outage).
  *   3. Loaded → toggleable read view / edit form.
  *
+ * Composition note: AuthGate (in the page-level component) already
+ * wraps children in AppShell, so this component renders only the
+ * page-body content. Earlier iterations wrapped a second AppShell
+ * here, which silently nested two headers + (post mobile-polish) two
+ * hamburger drawers. The fix is to trust the page wrapper.
+ *
  * Reference-data fetching (categories, locations):
  *   Done at this level rather than inside the read view so the edit
  *   form can show the same name resolution + use the same options
@@ -41,65 +46,63 @@ export function AssetDetailContent({ assetId }: { assetId: string }): JSX.Elemen
   const canEdit = useCanEditAssets();
 
   return (
-    <AppShell>
-      <div className="mx-auto max-w-5xl">
-        <nav className="mb-6 flex items-center gap-2 text-sm" aria-label="Drobky">
-          <Link
-            href="/assets"
-            className="inline-flex items-center gap-1 rounded text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-          >
-            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-            Späť na zoznam
-          </Link>
-        </nav>
+    <div className="mx-auto max-w-5xl">
+      <nav className="mb-6 flex items-center gap-2 text-sm" aria-label="Drobky">
+        <Link
+          href="/assets"
+          className="inline-flex items-center gap-1 rounded text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+        >
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Späť na zoznam
+        </Link>
+      </nav>
 
-        {assetQuery.isLoading ? (
-          <DetailSkeleton />
-        ) : assetQuery.isError ? (
-          <ErrorState error={assetQuery.error} assetId={assetId} />
-        ) : assetQuery.data ? (
-          <>
-            <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="font-mono text-xs uppercase tracking-wider text-text-muted">
-                  {assetQuery.data.inventoryNumber}
-                </p>
-                <h1 className="mt-1 text-2xl font-bold text-text-primary sm:text-3xl">
-                  {assetQuery.data.name}
-                </h1>
-              </div>
+      {assetQuery.isLoading ? (
+        <DetailSkeleton />
+      ) : assetQuery.isError ? (
+        <ErrorState error={assetQuery.error} assetId={assetId} />
+      ) : assetQuery.data ? (
+        <>
+          <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-wider text-text-muted">
+                {assetQuery.data.inventoryNumber}
+              </p>
+              <h1 className="mt-1 text-2xl font-bold text-text-primary sm:text-3xl">
+                {assetQuery.data.name}
+              </h1>
+            </div>
 
-              {canEdit && mode === 'read' ? (
-                <button
-                  type="button"
-                  onClick={() => setMode('edit')}
-                  className="inline-flex items-center gap-2 self-start rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2"
-                >
-                  <Pencil aria-hidden="true" className="h-4 w-4" />
-                  Upraviť
-                </button>
-              ) : null}
-            </header>
+            {canEdit && mode === 'read' ? (
+              <button
+                type="button"
+                onClick={() => setMode('edit')}
+                className="inline-flex items-center gap-2 self-start rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2"
+              >
+                <Pencil aria-hidden="true" className="h-4 w-4" />
+                Upraviť
+              </button>
+            ) : null}
+          </header>
 
-            {mode === 'read' ? (
-              <AssetDetailReadView
-                asset={assetQuery.data}
-                categoriesById={new Map((categoriesQuery.data?.data ?? []).map((c) => [c._id, c]))}
-                locationsById={new Map((locationsQuery.data?.data ?? []).map((l) => [l._id, l]))}
-              />
-            ) : (
-              <AssetDetailEditForm
-                asset={assetQuery.data}
-                categories={categoriesQuery.data?.data ?? []}
-                locations={locationsQuery.data?.data ?? []}
-                onCancel={() => setMode('read')}
-                onSaved={() => setMode('read')}
-              />
-            )}
-          </>
-        ) : null}
-      </div>
-    </AppShell>
+          {mode === 'read' ? (
+            <AssetDetailReadView
+              asset={assetQuery.data}
+              categoriesById={new Map((categoriesQuery.data?.data ?? []).map((c) => [c._id, c]))}
+              locationsById={new Map((locationsQuery.data?.data ?? []).map((l) => [l._id, l]))}
+            />
+          ) : (
+            <AssetDetailEditForm
+              asset={assetQuery.data}
+              categories={categoriesQuery.data?.data ?? []}
+              locations={locationsQuery.data?.data ?? []}
+              onCancel={() => setMode('read')}
+              onSaved={() => setMode('read')}
+            />
+          )}
+        </>
+      ) : null}
+    </div>
   );
 }
 

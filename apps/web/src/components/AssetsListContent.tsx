@@ -145,7 +145,7 @@ export function AssetsListContent(): JSX.Element {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            className="w-full rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:w-auto"
           >
             <option value="">Všetky stavy</option>
             {ASSET_STATUS_VALUES.map((status) => (
@@ -164,7 +164,7 @@ export function AssetsListContent(): JSX.Element {
               setPageSize(Number(e.target.value) as PageSize);
               setPage(1);
             }}
-            className="rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            className="w-full rounded-lg border border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:border-border-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:w-auto"
           >
             {PAGE_SIZES.map((size) => (
               <option key={size} value={size}>
@@ -214,9 +214,10 @@ export function AssetsListContent(): JSX.Element {
           type="button"
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page <= 1 || assetsQuery.isLoading}
-          className="rounded-lg border border-border-default bg-surface-card px-4 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          className="rounded-lg border border-border-default bg-surface-card px-3 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-4"
         >
-          ← Predchádzajúca
+          <span aria-hidden="true">←</span>
+          <span className="sr-only sm:not-sr-only sm:ml-1">Predchádzajúca</span>
         </button>
         <span className="text-text-secondary">
           {page} / {totalPages}
@@ -225,9 +226,10 @@ export function AssetsListContent(): JSX.Element {
           type="button"
           onClick={() => setPage((p) => p + 1)}
           disabled={!hasMore || assetsQuery.isLoading}
-          className="rounded-lg border border-border-default bg-surface-card px-4 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          className="rounded-lg border border-border-default bg-surface-card px-3 py-2 font-medium text-text-primary transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-4"
         >
-          Ďalšia →
+          <span className="sr-only sm:not-sr-only sm:mr-1">Ďalšia</span>
+          <span aria-hidden="true">→</span>
         </button>
       </nav>
 

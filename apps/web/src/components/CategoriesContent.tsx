@@ -141,8 +141,8 @@ function CategoriesTable({
   onDelete,
 }: CategoriesTableProps): JSX.Element {
   return (
-    <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-card shadow-sm">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface-card shadow-sm">
+      <table className="w-full min-w-[640px] text-sm">
         <thead className="border-b border-border-subtle bg-surface-subtle text-left text-xs font-semibold uppercase tracking-wide text-text-muted">
           <tr>
             <th scope="col" className="px-4 py-3">
