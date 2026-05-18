@@ -34,6 +34,57 @@ updates:
       # pošlo s tailwindcss v4 ako dependency; ignorované tiež až do migrácie.
       - dependency-name: "@tailwindcss/*"
 
+      # ---------------------------------------------------------------
+      # 2026-05-18 batch defer — stabilita pred Vercel deploy app.inventario
+      # ---------------------------------------------------------------
+      # Tieto majors odložené do post-deploy stabilizácie. Po úspešnom
+      # `app.inventario.sportup.sk` launch + pilot tenant onboarding sa
+      # vrátime k upgrade audit-u: každý dep dostane vlastnú stabilization
+      # session kde si prečítame changelog, spústime full test suite, a
+      # postupne odstránime ignore tu.
+
+      # Next.js 16 — major bump počas pred-deploy stabilizing window-u je
+      # vyslovene zlý nápad. App Router + RSC + middleware API zmeny vyžadujú
+      # full regression test celého apps/web (login flow, MSAL redirect,
+      # 5 P0 stránok). Next 15.5.x je supported, žiadne security advisories.
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+
+      # @types/node 25 — musi cestovať s runtime Node verziou. Máme
+      # engines.node ">=22.20.0" a Vercel runtime Node 22. Types z 25
+      # exposujú API ktoré runtime nemá, spôsobia false-positive typecheck
+      # errors. Bumpne sa súčasne s runtime bump-om (Node 24 LTS — Apr 2025).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+      # mongodb driver 7.x — major bump mongodb driveru vyžaduje:
+      # (1) overiť Atlas server version compat, (2) plne bežať 327 backend
+      # testov vrátane cross-tenant isolation, (3) audit changelog pre
+      # connection pool, transaction API, type changes. Backend je stable,
+      # pred Vercel deploy nemá hodnotu rozkolombovať risk-y.
+      - dependency-name: "mongodb"
+        update-types: ["version-update:semver-major"]
+
+      # lucide-react 1.x — major bump v ikonkach často znamená renamed/
+      # removed icons. Ikony máme cez celý apps/web (AppShell sidebar, action
+      # buttons, status badges) + interactive demo. Poďme cez audit script
+      # ktorý zoznam používaných ikon vytáhne zo súborov a porovná s v1.x exports.
+      - dependency-name: "lucide-react"
+        update-types: ["version-update:semver-major"]
+
+      # @hookform/resolvers 5.x — nepoužívame Zod resolver (HTML5 validation
+      # pattern), ale dep je v apps/web. Major bump môže zmeniť type
+      # exports / react-hook-form 7.x compat. Re-evaluovať spätne ak budeme
+      # niekedy migrate-ovať na Zod-based form validation.
+      - dependency-name: "@hookform/resolvers"
+        update-types: ["version-update:semver-major"]
+
+      # @fastify/helmet 13.x — security plugin major bump môže zmeniť CSP
+      # defaults. Po Vercel deploy by mohli niektoré fonty/scripty padať ak
+      # je CSP utiahnutý. Read changelog + manuálny CSP audit pred merge.
+      - dependency-name: "@fastify/helmet"
+        update-types: ["version-update:semver-major"]
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
