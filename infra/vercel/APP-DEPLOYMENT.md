@@ -269,6 +269,46 @@ Každý úspešný krok = ✅ commit pre `docs/sessions/2026-05-19-deploy-day-su
 
 ---
 
+## 💡 Lessons learned z asset-management-api deploy battle (2026-05-18)
+
+3.5-hodinový debug session odhalil viacero Vercel-specific quirks. Aplikuj na `inventario-app` deploy session:
+
+### 1. engines.node musí byť major-only syntax
+
+- BAD: `">=24.15.0"` — Vercel to flag-ne ako conflict
+- GOOD: `"24.x"` — major-only, Vercel happy
+
+Z Vercel docs: "Only major versions can be specified. Please avoid greater than ranges."
+
+### 2. Nehardco-duj runtime v vercel.json
+
+- BAD: `"runtime": "@vercel/node@5.0.0"` v functions config (prepisuje engines.node)
+- GOOD: vynechaj runtime field, nech Vercel auto-deteguje
+
+### 3. NEPOUŽÍVAJ Vercel UI Project Settings overrides
+
+Všetko cez vercel.json v repo. UI overrides sa stanú stale pri rename packages (zistili sme stale `@sfz/shared-types` aj po rename na `@inventario/shared-types`).
+
+Pre inventario-app setup:
+
+- DON'T set: Build/Install/Output/Development Command (Override toggles OFF)
+- DO set: Root Directory `apps/web`
+- DON'T set: Node.js Version (auto-deteguj z engines.node)
+
+### 4. Vercel Production Override = read-only snapshot
+
+Updatuje sa iba novým úspešným Production deploy. Nie cez UI dropdown (často disabled).
+
+### 5. Build cache pri debug-u OFF
+
+Pri debug-u vždy uncheck "Use existing Build Cache" v Redeploy dialógu.
+
+### 6. Hobby tier limit 100 deploys/day
+
+Debug session rýchlo vyčerpá. Pro tier ($20/month) je rozumné pre production launch.
+
+---
+
 ## 📊 Architektúra deployu (full picture)
 
 ```
