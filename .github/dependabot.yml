@@ -85,6 +85,59 @@ updates:
       - dependency-name: "@fastify/helmet"
         update-types: ["version-update:semver-major"]
 
+      # ---------------------------------------------------------------
+      # 2026-05-18 round 2 batch defer — dependabot reconcile po Node bump
+      # ---------------------------------------------------------------
+      # Tieto majors odložené spolu s round 1 do post-Vercel-deploy
+      # stabilization window-u. Rovnaká logika: pred deploy chceme
+      # stabilitu, nie nové major bumpy ktoré vyžadujú audit + test.
+
+      # @fastify/cors 11.x — CORS plugin major bump môže zmeniť origin
+      # matching semantics. Počas Vercel deploy session-y budeme CORS
+      # beztak ladiť (pridanie app.inventario.sportup.sk do allowlistu);
+      # vtedy je ideálny moment na cors major audit. Pred deploy necháme
+      # cors 10.x stable.
+      - dependency-name: "@fastify/cors"
+        update-types: ["version-update:semver-major"]
+
+      # @fastify/jwt 10.x — JWT plugin major. V páre s jose v6, lebo
+      # @fastify/jwt v10 depend-uje na jose v6. Backend používa pre Entra
+      # ID JWT validation, kritický auth path. Test plan: 327 testov
+      # vrátane all auth tests, manuálne skúšanie login flow.
+      - dependency-name: "@fastify/jwt"
+        update-types: ["version-update:semver-major"]
+
+      # jose 6.x — JWT/JWE library major. ESM-only, removed legacy crypto
+      # APIs. Backend používa v auth.ts pre token verification. Páruje sa
+      # s @fastify/jwt v10 — mergovať spolu po audit-e oboch changelogov.
+      - dependency-name: "jose"
+        update-types: ["version-update:semver-major"]
+
+      # pino 10.x — backend logger major. Pino v10 zmenil transport API
+      # a pino-pretty integration. Backend používa logger cez každý
+      # request/response/error path — production observability je
+      # kritická. Test plan: full test suite + manuálne skúšanie dev mode
+      # so pino-pretty.
+      - dependency-name: "pino"
+        update-types: ["version-update:semver-major"]
+
+      # tailwind-merge 3.x — utility na merge Tailwind className konfliktov.
+      # apps/web ho používa cez `cn()` helper v src/lib/cn.ts. Major bump
+      # v3 má new conflict resolution rules + breaking changes pre custom
+      # class group config. Pred Vercel deploy necháme 2.x stable.
+      - dependency-name: "tailwind-merge"
+        update-types: ["version-update:semver-major"]
+
+      # @commitlint/* 21.x — commitlint v20+ posilnili body-leading-blank
+      # pravidlá a zmenili niektoré default rules. Máme už špeciálny
+      # "Word:" footer pattern kvoli našim prose paragraphom — v21 ho
+      # môže odmietnuť. Test plan: po merge pretestovať cez dummy commit
+      # so všetkými style-mi ktoré používame v history.
+      - dependency-name: "@commitlint/cli"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@commitlint/config-conventional"
+        update-types: ["version-update:semver-major"]
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
