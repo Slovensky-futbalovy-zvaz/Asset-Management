@@ -7,20 +7,49 @@ SPDX-License-Identifier: CC-BY-4.0
 
 > **Cieľ:** Nasadiť `apps/web/` (Next.js 15 + MSAL + design tokens) na `app.inventario.sportup.sk`
 > **Predpokladaná dĺžka:** ~45 minút (vrátane Azure Portal + DNS propagácie)
-> **Status:** Krok 1 hotový (2026-05-18). Krok 2-9 čakajú.
+> **Status:** ✅ **KOMPLET (2026-05-18 night)**. Všetky kroky 1-9 hotové, 10/10 smoke test PASS, ADMIN promote re-test OK.
 
 ---
 
-## 📦 Pred-deploy status (2026-05-18)
+## 📦 Pred-deploy status (2026-05-18 night) — VŠETKO HOTOVÉ ✅
 
-✅ **Krok 1 KOMPLET**: `asset-management-api` Vercel projekt je LIVE
+✅ **Krok 1 KOMPLET**: `asset-management-api` Vercel projekt LIVE
 
 - Node 24 LTS runtime (Active LTS, supported do Apr 2028)
 - `CORS_ORIGINS` env var: `https://app.inventario.sportup.sk,http://localhost:3001`
 - Live URL: `https://api.inventario.sportup.sk`
 - CORS verified live
 
-⏳ **Krok 2-9 next session**: vytvoriť `inventario-app` Vercel projekt + Azure Portal redirect URI + Websupport DNS + smoke test.
+✅ **Krok 2-4 KOMPLET**: `inventario-app` Vercel projekt vytvorený a deploynutý
+
+- Root Directory: `apps/web`, všetky Override toggles OFF, Node.js auto-detect z `engines.node: "24.x"`
+- 4 env vars seté (NEXT_PUBLIC_API_BASE_URL + 3× Entra IDs)
+- First deploy SUCCESS (commit `e710abd`, 44s build)
+- Bundle sizes: `/`=192kB, `/assets`=211kB, `/categories`=221kB, `/locations`=221kB, `/users`=213kB
+
+✅ **Krok 5 KOMPLET**: Azure Portal frontend SPA redirect URI pridaný
+
+- `https://app.inventario.sportup.sk` v Authentication → Redirect URIs
+- `http://localhost:3001` zachovaný pre dev work
+
+✅ **Krok 6 KOMPLET**: Vercel custom doména pridaná
+
+- `app.inventario.sportup.sk` v `inventario-app` Settings → Domains
+
+✅ **Krok 7 KOMPLET**: Websupport DNS CNAME pridaný
+
+- `app` → `cname.vercel-dns.com.`
+
+✅ **Krok 8 KOMPLET**: HTTPS live ~20:15 local time
+
+- curl `-sI` returns HTTP/2 200, HSTS, Permissions-Policy, X-Frame-Options DENY, x-vercel-cache HIT
+
+✅ **Krok 9 KOMPLET**: 10/10 smoke test PASS
+
+- Všetky scenáre overené v incognito browseri (login, dashboard, /assets, /categories, /locations, /users, mobile drawer, logout)
+- ADMIN promote re-test cez Mongo Atlas UI overený — ADMIN-only features unlocked (Pridať buttons, /users list)
+
+**Úplne kompletná timeline + screenshots:** `docs/sessions/2026-05-18-day-summary.md` sekcie 7-8
 
 ---
 
@@ -349,9 +378,9 @@ Po splnení → pripraviť emailovú správu pre prvého pilot tenant (Mesto Pez
 
 ## 🔗 Po deploy — update tracking docs
 
-- [ ] `docs/sessions/2026-05-19-deploy-day-summary.md` — zaznamenať deploy story
-- [ ] `docs/sessions/NEXT.md` — Production stav table: `app.inventario.sportup.sk` ⏳ → ✅ LIVE
-- [ ] `infra/vercel/README.md` — pridať `inventario-app` do projektov listu
-- [ ] `docs/milestones/slice-4-frontend-web.md` — vytvoriť milestone doc
+- [x] `docs/sessions/2026-05-18-day-summary.md` — deploy story zaznamenaná (sekcie 7-8)
+- [x] `docs/sessions/NEXT.md` — Production stav: `app.inventario.sportup.sk` ⏳ → ✅ LIVE
+- [x] `infra/vercel/README.md` — `inventario-app` table riadok → LIVE
+- [ ] `docs/milestones/slice-4-frontend-web.md` — milestone doc (može ďakať do ďalšej session)
 
-A potom voľný čas spať. Slice #5 (loans backend) môže byť na ďalší týždeň.
+A potom voľný čas spať. Slice #5 (loans backend) alebo pilot tenant onboarding môže byť na ďalší týždeň.

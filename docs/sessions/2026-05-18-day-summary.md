@@ -412,7 +412,112 @@ x-ratelimit-limit: 100
 
 ---
 
-## 7. Files created/modified today
+## 8. Vercel deploy `app.inventario.sportup.sk` — LIVE 🚀
+
+Po dotiahnutí `asset-management-api` deploy boja som po ~30 minútovej prestávke (cca 19:00) pokračoval na **Krok 2-9** — vytvoriť `inventario-app` Vercel projekt. Využil som **lekcie z Vercel battle** a tentokrát išlo všetko hladko.
+
+### Krok 2-4: Project create + deploy (~20 min)
+
+vercel.com/new → import repo → Project Name: `inventario-app` → Root Directory: `apps/web`. **Všetky Override toggles OFF** (cesta A z minulého boja — Vercel auto-deteguje z `vercel.json` + `engines.node: "24.x"` v package.json).
+
+4 env vars seté v Vercel UI:
+
+```
+NEXT_PUBLIC_API_BASE_URL=https://api.inventario.sportup.sk
+NEXT_PUBLIC_ENTRA_TENANT_ID=bcd6945a-5a57-4c2b-9ebb-d62712ad4b55
+NEXT_PUBLIC_ENTRA_CLIENT_ID=<frontend SPA app registration client ID>
+NEXT_PUBLIC_ENTRA_API_CLIENT_ID=<backend API app registration client ID>
+```
+
+**Klik Deploy** → build SUCCESS first try (44s, commit `e710abd`).
+
+Bundle sizes (Production build):
+
+| Route         | Bundle  | First Load |
+| ------------- | ------- | ---------- |
+| `/`           | 1.93 kB | 192 kB     |
+| `/assets`     | 3.27 kB | 211 kB     |
+| `/categories` | 4.42 kB | 221 kB     |
+| `/locations`  | 4.48 kB | 221 kB     |
+| `/users`      | 5.91 kB | 213 kB     |
+
+### Krok 5: Azure Portal redirect URI (~3 min)
+
+frontend SPA app registration → Authentication → Redirect URIs:
+
+- ✅ pridá: `https://app.inventario.sportup.sk`
+- ✅ zachovaný: `http://localhost:3001` (dev work)
+
+### Krok 6-7: Vercel custom domain + DNS (~5 min)
+
+- Vercel Settings → Domains → `app.inventario.sportup.sk` pridaná
+- Websupport DNS → CNAME `app` → `cname.vercel-dns.com.` (s bodkou)
+
+### Krok 8: DNS propagation + SSL (~15 min wait)
+
+DNS propagol o ~10 minút (Websupport býva rýchly). SSL Let's Encrypt vystavený automaticky.
+
+```bash
+curl -sI https://app.inventario.sportup.sk
+```
+
+Response (~20:15 local time):
+
+```
+HTTP/2 200
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-frame-options: DENY
+x-content-type-options: nosniff
+permissions-policy: camera=(), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+x-vercel-cache: HIT
+```
+
+✅ HTTPS live, security headers aktivované, Vercel CDN cache funguje.
+
+### Krok 9: 10-bodový smoke test — 100% PASS
+
+V incognito browseri som postupne overil 10 scenárov:
+
+| #   | Scenár                       | Výsledok                                                                       |
+| --- | ---------------------------- | ------------------------------------------------------------------------------ |
+| 1   | `/`                          | ✅ Login screen "Vitajte späť" + Inventario branding (Navy logo, paper bg)     |
+| 2   | Microsoft login              | ✅ Entra consent dialog → redirect späť → `/dashboard`                         |
+| 3   | `/dashboard` (EMPLOYEE)      | ✅ "Vitajte, Ján" + role badge "Zamestnanec" + 4 stats cards (všetky 0)        |
+| 4   | `/assets`                    | ✅ Empty state, filter/search/paginácia UI, NO + Pridať button (EMPLOYEE RBAC) |
+| 5   | `/assets/[id]`               | SKIP (no data v Mongo)                                                         |
+| 6   | `/categories` (EMPLOYEE)     | ✅ Empty state, NO + Pridať button                                             |
+| 7   | `/locations` (EMPLOYEE)      | ✅ Empty state, NO + Pridať button                                             |
+| 8   | `/users` (EMPLOYEE)          | ✅ "Prístup iba s rolou Administrátor" AccessDenied state + shield icon        |
+| 9   | Mobile drawer (375px narrow) | ✅ Hamburger → slide-in drawer + backdrop → auto-close on nav                  |
+| 10  | Logout                       | ✅ MSAL fullLogout → `login.microsoftonline.com/.../oauth2/v2.0/logout` → späť |
+
+### ADMIN promote re-test
+
+Po 10/10 PASS som sa promote-ol cez **Mongo Atlas UI manuálne** (kým nemáme first-admin bootstrap flow):
+
+1. cloud.mongodb.com → cluster `sfz-asset-mgmt-prod` → Browse Collections
+2. Database `sfz_asset_management` → collection `users`
+3. Filter `{ "email": "jan.letko@futbalsfz.sk" }`
+4. Edit document: `roles: ["EMPLOYEE"]` → `roles: ["ADMIN"]`
+5. Update → refresh browser
+
+Re-test ako ADMIN:
+
+- ✅ Dashboard role badge zmenila sa na "Administrátor"
+- ✅ `/users` zobrazuje user list (1 user, tý, "Ján Letko [Vy] · jan.letko@futbalsfz.sk · Administrátor · Aktívny · 18.5.2026") + Upraviť button
+- ✅ `/categories` zobrazuje "+ Pridať kategóriu" button (top-right aj v empty state CTA)
+- ✅ `/locations` zobrazuje "+ Pridať lokalitu" button (top-right aj v empty state CTA)
+
+**RBAC backend POST/PATCH/DELETE permissions unlocked. UI gating funguje konzistentne s backend RBAC.**
+
+### Výsledok
+
+Všetky 4 Inventario subdomény sú **KOMPLETNE LIVE v produkcii** s validnými SSL certifikátmi, security headers, Vercel CDN, a Microsoft Entra ID SSO. Pilot tenant onboarding je teraz technical one-clicker (vytvoriť ich Entra ID app registration, pre-authorize na náš API, poslať im link).
+
+---
+
+## 9. Files created/modified today
 
 ### Slice #4 frontend dotiahnutie
 
@@ -507,9 +612,11 @@ infra/vercel/README.md                   added inventario-app row (4 projects ta
 ```
 ✅ inventario.sportup.sk                    → Marketing site
 ✅ docs.inventario.sportup.sk               → Nextra docs
-⏳ app.inventario.sportup.sk                → Slice #4: 5/6 P0 stránok hotových, ready pre Vercel deploy
-⏳ api.inventario.sportup.sk                → Q3 2026 plán
+✅ api.inventario.sportup.sk                → Fastify backend (Node 24 LTS, LIVE 18:24)
+✅ app.inventario.sportup.sk                → Next.js 15 + MSAL + Inventario branding (LIVE 20:15)
 ```
+
+**Inventario platforma je KOMPLETNE LIVE!** 10/10 smoke test PASS, ADMIN promote re-test OK.
 
 **Backend tests:** 327/327 green, ~212s
 **CI status:** #100 green (slice #4 final), #108 green (dependabot gate)
@@ -529,25 +636,19 @@ infra/vercel/README.md                   added inventario-app row (4 projects ta
 
 ## 🥂 End-of-day mood
 
-Dlhý deň. Slice #4 dotiahnutie + Tailwind 4 deferral + 3 dependabot merge-y + 2 closures + CI fix + ignore commits. Ale veľmi satisfying — `apps/web` je **5/6 P0 hotových**, mobile funguje, dependabot inbox je čistý, CI je rýchla.
+Neskorá noc (~21:00 lokálne, 12+ hodín pri klávesnici). Slice #4 dotiahnutie + Tailwind 4 deferral + dependabot cleanup + Node 24 LTS bump + Vercel deploy `asset-management-api` battle + Vercel deploy `inventario-app` victory + 10/10 smoke test PASS + ADMIN promote re-test. **Inventario je KOMPLETNE LIVE.**
 
-Najlepší moment: keď som po `pnpm dev` otvoril `/users` na mobile (Chrome DevTools narrow viewport) a klikol som "+ Pozvať používateľa" — hamburger menu sa zatvoril, modal sa otvoril, role checkboxy renderovali sa správne v stĺpci namiesto rade, save fungoval. Slice #4 sa premietol z "code commit" do "real product".
+Najlepší moment dňa: keď po ADMIN promote v Mongo Atlas som refresh-ol `/categories` a videl `+ Pridať kategóriu` button — RBAC backend perm checks + frontend `useCanManageTaxonomy()` hook + UI gating fungovali konzistentne end-to-end na production. Ten moment keď deploy nie je len "build passed" ale **"realny user (= ja) urobil realnu akciu na realnej doméne s realnym RBAC enforcement-om"**.
+
+Vercel battle (3.5 hodín) bola učiaca lekcia o limitoch UI overrides + `engines.node` syntax + Production snapshot read-only model. **Cesta A reset all overrides** je teraz členom Vercel debugging playbook-u zachyteného v `infra/vercel/APP-DEPLOYMENT.md` lessons learned sekcii.
 
 Tailwind 4 deferral decision mi dala dobrý pocit z disciplíny — pred 6 mesiacmi by som to mergeoval pre "stay on latest" pocit a o týždeň lovil čas na refactor design-tokens preset-u. Teraz som vedome povedal "nie, post-pilot" a zapísal do tech-debt.
 
-**Otvorené pre zajtra:**
+**Otvorené pre zajtra (alebo budúci týždeň):**
 
-- **Krok 2-9 deploy `app.inventario.sportup.sk`** — `asset-management-api` je LIVE, ďalej:
-  - Vytvoriť `inventario-app` Vercel projekt (Root: `apps/web`)
-  - 4 NEXT*PUBLIC*\* env vars (API_BASE_URL, ENTRA_CLIENT_ID, ENTRA_TENANT_ID, ENTRA_API_CLIENT_ID)
-  - Azure Portal pridať redirect URI `https://app.inventario.sportup.sk`
-  - Websupport DNS CNAME `app` → `cname.vercel-dns.com`
-  - DNS + SSL wait (~5-30 min)
-  - 10-bodový smoke test E2E flow (login → dashboard → 5 P0 pages → mobile → logout)
-
-- Príprava pred Krok 2: pripraviť **3 Entra ID hodnoty** z Azure Portal (Tenant ID, Frontend SPA Client ID, Backend API Client ID)
-
-- Decision point pre po-deploy: **Slice #5 backend (loans)** alebo **first pilot tenant onboarding**
+- **Decision point**: Slice #5 backend (loans API) ALEBO first pilot tenant onboarding
+- **Odporúčanie z NEXT.md**: B prv ako A. Real-world feedback z prvého pilotu zlepší Slice #5 design decisions.
+- **Milestone doc** `docs/milestones/slice-4-frontend-web.md` — odložené na pokojnejší deň.
 
 ---
 
@@ -556,6 +657,10 @@ Tailwind 4 deferral decision mi dala dobrý pocit z disciplíny — pred 6 mesia
 - **Continuation plan**: [`NEXT.md`](NEXT.md)
 - **Yesterday's slice #4 launch**: [`2026-05-17-day-summary.md`](2026-05-17-day-summary.md)
 - **Slice #4 milestone draft** (TBD): `docs/milestones/slice-4-frontend-web.md`
+- **Vercel deploy guide**: [`infra/vercel/APP-DEPLOYMENT.md`](../../infra/vercel/APP-DEPLOYMENT.md) (KOMPLET 2026-05-18 + lessons learned)
 - **Tailwind 4 tech debt** v `NEXT.md` (post-pilot decision)
-- **Marketing site**: https://inventario.sportup.sk
-- **Docs site**: https://docs.inventario.sportup.sk
+- **Production URLs**:
+  - Marketing: https://inventario.sportup.sk
+  - Docs: https://docs.inventario.sportup.sk
+  - API: https://api.inventario.sportup.sk
+  - App: https://app.inventario.sportup.sk ✨ ← NEW

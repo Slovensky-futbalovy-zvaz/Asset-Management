@@ -21,14 +21,14 @@ Vercel konfigurácia a deployment guides pre Inventario projekt.
 
 V repe máme **štyri samostatné Vercel projekty**, všetky v `ltksolutions-projects` team:
 
-| Projekt                | Cesta                  | Doména                       | Status                                           |
-| ---------------------- | ---------------------- | ---------------------------- | ------------------------------------------------ |
-| `inventario-marketing` | `docs/marketing-site/` | `inventario.sportup.sk`      | ✅ **LIVE** (15. máj 2026)                       |
-| `inventario-docs`      | `apps/docs/`           | `docs.inventario.sportup.sk` | ✅ **LIVE** (16. máj 2026)                       |
-| `inventario-app`       | `apps/web/`            | `app.inventario.sportup.sk`  | ⏳ **Plánovaný** (18. máj 2026, Slice #4 5/6 P0) |
-| `asset-management-api` | `apps/api/`            | `api.inventario.sportup.sk`  | Existuje (slice #2+), čaká na rebrand z dev URL  |
+| Projekt                | Cesta                  | Doména                       | Status                                        |
+| ---------------------- | ---------------------- | ---------------------------- | --------------------------------------------- |
+| `inventario-marketing` | `docs/marketing-site/` | `inventario.sportup.sk`      | ✅ **LIVE** (15. máj 2026)                    |
+| `inventario-docs`      | `apps/docs/`           | `docs.inventario.sportup.sk` | ✅ **LIVE** (16. máj 2026)                    |
+| `asset-management-api` | `apps/api/`            | `api.inventario.sportup.sk`  | ✅ **LIVE** (18. máj 2026, Node 24 LTS)       |
+| `inventario-app`       | `apps/web/`            | `app.inventario.sportup.sk`  | ✅ **LIVE** (18. máj 2026, Next.js 15 + MSAL) |
 
-> **Budúce projekty** (slice #5+): `loans` modul backend route + dedicated DSAR endpoint subdomain ak bude treba.
+> **Budúce projekty** (slice #5+): plný loans backend a frontend (`/loans/request` + `/my-loans`), DSAR endpoint subdomain ak bude treba.
 
 ### `inventario-docs` build config (pamataj)
 
