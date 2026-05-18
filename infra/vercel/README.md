@@ -13,20 +13,22 @@ Vercel konfigurácia a deployment guides pre Inventario projekt.
 | ---------------------------------------------------------- | --------------------------------------------------------- |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md)                           | Krok-po-kroku návod ako nasadiť marketing site na Vercel  |
 | [`DOCS-DEPLOYMENT.md`](DOCS-DEPLOYMENT.md)                 | Krok-po-kroku návod ako nasadiť docs site (Nextra)        |
+| [`APP-DEPLOYMENT.md`](APP-DEPLOYMENT.md)                   | Krok-po-kroku návod ako nasadiť web app (Next.js + MSAL)  |
 | [`DNS-SETUP.md`](DNS-SETUP.md)                             | DNS konfigurácia pre `inventario.sportup.sk`              |
 | [`marketing-site.vercel.json`](marketing-site.vercel.json) | Template pre `vercel.json` (clean URLs, security headers) |
 
 ## Architektúra
 
-V repe máme **tri samostatné Vercel projekty**, všetky v `ltksolutions-projects` team:
+V repe máme **štyri samostatné Vercel projekty**, všetky v `ltksolutions-projects` team:
 
-| Projekt                | Cesta                  | Doména                       | Status                                          |
-| ---------------------- | ---------------------- | ---------------------------- | ----------------------------------------------- |
-| `inventario-marketing` | `docs/marketing-site/` | `inventario.sportup.sk`      | ✅ **LIVE** (15. máj 2026)                      |
-| `inventario-docs`      | `apps/docs/`           | `docs.inventario.sportup.sk` | ✅ **LIVE** (16. máj 2026)                      |
-| `asset-management-api` | `apps/api/`            | `api.inventario.sportup.sk`  | Existuje (slice #2+), čaká na rebrand z dev URL |
+| Projekt                | Cesta                  | Doména                       | Status                                           |
+| ---------------------- | ---------------------- | ---------------------------- | ------------------------------------------------ |
+| `inventario-marketing` | `docs/marketing-site/` | `inventario.sportup.sk`      | ✅ **LIVE** (15. máj 2026)                       |
+| `inventario-docs`      | `apps/docs/`           | `docs.inventario.sportup.sk` | ✅ **LIVE** (16. máj 2026)                       |
+| `inventario-app`       | `apps/web/`            | `app.inventario.sportup.sk`  | ⏳ **Plánovaný** (18. máj 2026, Slice #4 5/6 P0) |
+| `asset-management-api` | `apps/api/`            | `api.inventario.sportup.sk`  | Existuje (slice #2+), čaká na rebrand z dev URL  |
 
-> **Budúce projekty** (slice #4+): `inventario-web` (Next.js app pre konečných používateľov).
+> **Budúce projekty** (slice #5+): `loans` modul backend route + dedicated DSAR endpoint subdomain ak bude treba.
 
 ### `inventario-docs` build config (pamataj)
 
