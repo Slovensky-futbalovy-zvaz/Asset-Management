@@ -312,6 +312,21 @@ Unblockne posledné 2 P0 frontend pages.
 
 Tracked pre eventuálnu cleanup session. Po Phase E je toto už značne zoštíhlený zoznam:
 
+### Z 2026-05-18 night — post-deploy polish
+
+- **MSAL logout flow ukáže Microsoft account picker namiesto rovno redirect na `/login`** — pri kliku "Odhlásiť sa" v aplikácii MSAL pošle `oauth2/v2.0/logout` request, ale Microsoft Entra ID zobrazí intermediate "Vybrať konto · Z ktorého konta sa chcete odhlásiť?" obrazovku namiesto okamžitého redirect-u na `postLogoutRedirectUri`. Toto je MSAL multi-account default behavior. Fix: pridať `logoutHint` parameter do `logoutRedirect()` call-u v `apps/web/src/components/AppShell.tsx` (alebo kde je logout handler):
+
+  ```typescript
+  const account = msalInstance.getActiveAccount();
+  await msalInstance.logoutRedirect({
+    account,
+    postLogoutRedirectUri: window.location.origin + '/login',
+    logoutHint: account?.idTokenClaims?.login_hint ?? account?.username,
+  });
+  ```
+
+  `logoutHint` je opaque string ktorý Entra ID povie "odhlasujeme tohto konkrétneho usera" → preskočí account picker → straight redirect na `/login`. Detekovaný v Krok 9 smoke testu 2026-05-18 (sekcia 10 logout). Nie deploy blocker, ale UX rough edge pre pilot tenants. ~10 minút work + commit + Vercel auto-deploy.
+
 ### Z 2026-05-18 — strategic deferrals
 
 - **Tailwind v4 migration** ⏰ POST-PILOT — Tailwind 4 je major architektonický shift (CSS `@theme` namiesto JS preset, `@tailwindcss/postcss` premenované, browser support cut na Safari 16.4+ / Chrome 111+ / Firefox 128+ z Mar 2023). Náš `@inventario/design-tokens` v0.2.0 má **62 token mappings** v `src/tailwind-preset.js` a multi-tenant override pattern `:root[data-tenant='X']` priamo závisí od JS preset run-time merge-u. Refactor vyžaduje:
