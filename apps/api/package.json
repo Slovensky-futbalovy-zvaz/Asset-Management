@@ -42,7 +42,7 @@
     "vitest": "^2.1.2"
   },
   "engines": {
-    "node": ">=22.22.3"
+    "node": ">=24.15.0"
   },
   "keywords": [
     "inventario",

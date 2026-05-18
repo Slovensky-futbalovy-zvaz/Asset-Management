@@ -12,13 +12,15 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Bumped 22.20.0 → 22.22.3 (latest 22.x maintenance LTS as of May 2026).
-  # Required because lint-staged@17 declares engines.node >=22.22.1.
-  # 22.22.3 includes CVE-2026-21637 (TLS error handler) + crypto stability
-  # fixes from 22.22.0 round (CVE-2025-59465, 59466, 55130-32). Same major
-  # so no runtime semantics change; Vercel Node 22 runtime still picks the
-  # binary off our engines field. Local dev needs `nvm install 22.22.3`.
-  NODE_VERSION: "22.22.3"
+  # Bumped 22.22.3 → 24.15.0 (Active LTS since Oct 2025, latest patch as of
+  # May 2026, supported until Apr 2028). Earlier attempt at 22.22.3 fought
+  # with Vercel "Production Override" locked to Node 24.x on existing
+  # asset-management-api project, causing build fail at Vercel runtime
+  # selection. Moving to Node 24 LTS aligns CI workflows with Vercel
+  # default and unblocks @types/node 25 dependabot defer for future.
+  # Includes V8 13.x performance gains and npm 11 (we use pnpm so npm
+  # version is moot for our workflows). Local dev needs `nvm install 24.15.0`.
+  NODE_VERSION: "24.15.0"
   PNPM_VERSION: "9.12.0"
 
 jobs:
